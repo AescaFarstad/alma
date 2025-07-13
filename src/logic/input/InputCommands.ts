@@ -4,12 +4,35 @@
  */
 export interface CmdInput {
     name: string;
+    playerId: string;
 }
 
-/**
- * An example command.
- */
-export interface CmdDoSomething extends CmdInput {
-    name: 'CmdDoSomething';
-    payload: string;
+export interface CmdInstallModule extends CmdInput {
+    name: 'CmdInstallModule';
+    buildingId: string;
+    slotIndex: number;
+    moduleId: string;
+}
+
+export interface CmdAssignUnitToModule extends CmdInput {
+    name: 'CmdAssignUnitToModule';
+    playerId: string;
+    unitId: string;
+    buildingId: string;
+    slotIndex: number;
+}
+
+export interface CmdHireUnit extends CmdInput {
+    name: 'CmdHireUnit';
+    playerId: string;
+}
+
+export interface CmdQueryBuilding extends CmdInput {
+    name: 'CmdQueryBuilding';
+    mapId: number;
+}
+
+export interface CmdVerifyBuildings extends CmdInput {
+    name: 'CmdVerifyBuildings';
+    center: { lng: number, lat: number };
 } 

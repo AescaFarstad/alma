@@ -30,10 +30,7 @@ layers:
         attributes:
           - key: highway
           - key: name
-          - key: surface
-          - key: oneway
           - key: lanes
-          - key: maxspeed
       - source: "osm"
         geometry: "point"
         include_when:

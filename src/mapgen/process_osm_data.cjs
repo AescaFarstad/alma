@@ -28,7 +28,7 @@ const REMOVE_YES_BUILDINGS = false;      // Remove all generic "yes" buildings e
 // Features to extract (comment out lines to exclude features)
 const FEATURES_TO_EXTRACT = {
     // Built environment
-    buildings: 'w/building',
+    buildings: 'nwr/building',
     roads: 'w/highway',
     // railways: 'w/railway',
     // barriers: 'w/barrier',
@@ -136,6 +136,7 @@ const CONFIG = {
     sourceDir: './data',
     outputDir: './public/data',
     tempDir: './temp',
+    sourceFile: './data/almaty_c.pbf', // Explicitly set the source file
     selectedArea: AREA_DEFINITIONS[AREA_TO_EXTRACT]
 };
 
@@ -152,7 +153,7 @@ class OSMProcessor {
         await this.ensureDir(CONFIG.tempDir);
         
         // Find source file
-        this.sourceFile = await this.findSourceFile();
+        this.sourceFile = CONFIG.sourceFile;
         console.log(`Source file: ${this.sourceFile}`);
     }
     
@@ -256,7 +257,7 @@ class OSMProcessor {
             await this.runCommand(extractCmd, `Extracting ${featureType}`);
             
             // Convert to GeoJSON
-            const convertCmd = `osmium export "${tempFile}" -o "${outputFile}" --overwrite -f geojson`;
+            const convertCmd = `osmium export "${tempFile}" -o "${outputFile}" --overwrite -f geojson --add-unique-id=type_id`;
             
             try {
                 await this.runCommand(convertCmd, `Converting ${featureType} to GeoJSON`);
@@ -273,6 +274,8 @@ class OSMProcessor {
                 await fs.writeFile(outputFile, JSON.stringify(emptyGeoJSON), 'utf8');
             }
         }
+        
+        console.log('\nGeoJSON conversion complete!');
     }
     
     async optimizeGeoJSON() {

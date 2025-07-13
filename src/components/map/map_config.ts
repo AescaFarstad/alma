@@ -34,17 +34,21 @@ export const mapStyle = {
         "source": "almaty-tiles",
         "source-layer": "building",
         "paint": {
-            // "fill-color": "#cccccc", // <-- Replace this
             "fill-color": [
-            "interpolate",
-            ["linear"],
-            ["to-number", ["get", "building:levels"], 1], // Get building:levels, default to 1 if not present
-            1, "#e3e3e3",
-            2, "#dbdbdb",
-            3, "#d3d3d3",
-            4, "#cbcbcb",
-            5, "#c3c3c3",
-            10, "#bdbdbd"
+                "case",
+                ["==", ["feature-state", "team"], 1], "#d4edda", // Player-owned: light green
+                // Fallback for neutral buildings (team 0 or undefined)
+                [
+                    "interpolate",
+                    ["linear"],
+                    ["to-number", ["get", "building:levels"], 1],
+                    1, "#e3e3e3",
+                    2, "#dbdbdb",
+                    3, "#d3d3d3",
+                    4, "#cbcbcb",
+                    5, "#c3c3c3",
+                    10, "#bdbdbd"
+                ]
             ],
             "fill-outline-color": "#999999"
         }

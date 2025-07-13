@@ -2,6 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 function generateStructure() {
+    const MAX_ENUM_VALUES = 12;
+    const MAX_COMMENT_VALUES = 60;
+    const COMMENT_VALUES_PER_ROW = 7;
+
     const args = process.argv.slice(2);
     const isMinifiedMode = args.includes('--minified');
 
@@ -49,7 +53,7 @@ function generateStructure() {
                         if (!propertiesMap.has(key)) {
                             propertiesMap.set(key, {
                                 types: new Set(),
-                                values: new Set(),
+                                valueCounts: new Map(),
                                 count: 0,
                             });
                         }
@@ -60,9 +64,8 @@ function generateStructure() {
                         propInfo.types.add(type);
                         propInfo.count++;
 
-                        if (type === 'string' || type === 'number') {
-                            propInfo.values.add(value);
-                        }
+                        const count = propInfo.valueCounts.get(value) || 0;
+                        propInfo.valueCounts.set(value, count + 1);
                     }
                 }
             }
@@ -92,16 +95,37 @@ function generateStructure() {
                 const types = Array.from(propInfo.types);
                 let typeString;
                 let comment = '';
+                let preComment = '';
                 
                 const hasOnlyStrings = types.length === 1 && types[0] === 'string';
                 const hasOnlyNumbers = types.length === 1 && types[0] === 'number';
 
                 if (hasOnlyStrings) {
-                    if (propInfo.values.size > 12) {
+                    const uniqueValuesCount = propInfo.valueCounts.size;
+                    if (uniqueValuesCount > MAX_COMMENT_VALUES) {
                         typeString = 'string';
-                        comment = ` // ${propInfo.values.size} string values`;
-                    } else if (propInfo.values.size > 0) {
-                        typeString = Array.from(propInfo.values).map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(' | ');
+                        comment = ` // ${uniqueValuesCount} string values`;
+                    } else if (uniqueValuesCount > MAX_ENUM_VALUES) {
+                        typeString = 'string';
+                        const sortedValues = Array.from(propInfo.valueCounts.entries()).sort(([, a], [, b]) => b - a);
+                        
+                        let commentBlock = '/**\n';
+                        let row = [];
+                        for (const [value, count] of sortedValues) {
+                            row.push(`${String(value).replace(/\*/g, '\\*')}(${count})`);
+                            if (row.length >= COMMENT_VALUES_PER_ROW) {
+                                commentBlock += ` * ${row.join('\t')}\n`;
+                                row = [];
+                            }
+                        }
+                        if (row.length > 0) {
+                            commentBlock += ` * ${row.join('\t')}\n`;
+                        }
+                        commentBlock += ' */';
+
+                        preComment = '        ' + commentBlock.replace(/\n/g, '\n         ') + '\n';
+                    } else if (uniqueValuesCount > 0) {
+                        typeString = Array.from(propInfo.valueCounts.keys()).map(v => `"${String(v).replace(/"/g, '\\"')}"`).join(' | ');
                     } else {
                         typeString = 'string';
                     }
@@ -115,6 +139,9 @@ function generateStructure() {
                     typeString = 'any';
                 }
 
+                if (preComment) {
+                    output += preComment;
+                }
                 output += `        "${key}"${optional}: ${typeString};${comment}\n`;
             }
 
