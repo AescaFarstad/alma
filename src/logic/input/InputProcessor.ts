@@ -3,11 +3,10 @@
  */
 import { GameState } from '../GameState';
 import { globalInputQueue } from '../Model';
-import type { CmdInput, CmdInstallModule, CmdAssignUnitToModule, CmdHireUnit, CmdQueryBuilding, CmdVerifyBuildings } from './InputCommands';
+import type { CmdInput, CmdInstallModule, CmdAssignUnitToModule, CmdHireUnit, CmdQueryBuilding } from './InputCommands';
 import * as Buildings from '../Buildings';
 import * as UnitActions from '../UnitActions';
 import { setSelectedBuilding } from '../UIStateManager';
-import { verifyBuildings } from '../DataIntegrity';
 
 // Map of command handlers
 const handlersByName = new Map<string, (gameState: GameState, command: CmdInput) => void>();
@@ -15,7 +14,6 @@ handlersByName.set("CmdInstallModule", handleInstallModule);
 handlersByName.set("CmdAssignUnitToModule", handleAssignUnitToModule);
 handlersByName.set("CmdHireUnit", handleHireUnit);
 handlersByName.set("CmdQueryBuilding", handleQueryBuilding);
-handlersByName.set("CmdVerifyBuildings", handleVerifyBuildings);
 
 /**
  * Processes all queued commands.
@@ -131,9 +129,4 @@ function handleQueryBuilding(gameState: GameState, command: CmdInput): void {
     if (building) {
         setSelectedBuilding(gameState, building.id);
     }
-}
-
-function handleVerifyBuildings(gameState: GameState, command: CmdInput): void {
-    const cmd = command as CmdVerifyBuildings;
-    verifyBuildings(gameState, cmd.center);
 } 

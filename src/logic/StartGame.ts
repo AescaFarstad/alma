@@ -69,7 +69,7 @@ function findStartingBuildings(gs: GameState): any[] {
     const features = results.map(r => r.feature);
 
     if (features.length < startGameConfig.numberOfStartingBuildings) {
-        console.warn(`Found only ${features.length} buildings, need ${startGameConfig.numberOfStartingBuildings}. Using all found.`);
+        //console.warn(`Found only ${features.length} buildings, need ${startGameConfig.numberOfStartingBuildings}. Using all found.`);
         return features;
     }
 
@@ -132,7 +132,7 @@ function distributeAndInstallModules(gs: GameState, player: Player, buildingFeat
                 Buildings.applyResourceEffects(gs, player, building, moduleToInstall, 1);
             }
         } else {
-            console.warn(`[StartGame] Could not get or init building for feature id ${feature.id} (orig: ${feature.properties.original_osm_id}, using mapId: ${mapId})`);
+            //console.warn(`[StartGame] Could not get or init building for feature id ${feature.id} (orig: ${feature.properties.original_osm_id}, using mapId: ${mapId})`);
         }
     }
 }

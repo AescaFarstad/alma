@@ -9,7 +9,7 @@
             "command": "bash",
             "args": [
                 "-c",
-                "cd '${workspaceFolder}' && rm -rf public/data/* temp/*"
+                "cd '${workspaceFolder}' && rm -rf public/data/step_* temp/*"
             ],
             "group": "build",
             "presentation": {
@@ -25,68 +25,12 @@
             "type": "shell",
             "command": "node",
             "args": [
-                "${workspaceFolder}/src/mapgen/process_osm_data.cjs"
+                "${workspaceFolder}/src/mapgen/gen_data.cjs"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "showReuseMessage": false,
-                "clear": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Gen Structure",
-            "type": "shell",
-            "command": "node",
-            "args": [
-                "${workspaceFolder}/src/mapgen/generate-structure.cjs"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "showReuseMessage": false,
-                "clear": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Gen Min Structure",
-            "type": "shell",
-            "command": "node",
-            "args": [
-                "${workspaceFolder}/src/mapgen/generate-structure.cjs",
-                "--minified"
-            ],
-            "group": "build",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "shared",
-                "showReuseMessage": false,
-                "clear": true
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Generate Tiles",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "-c",
-                "rm -rf '${workspaceFolder}/temp' && mkdir -p '${workspaceFolder}/temp' && java -cp '${workspaceFolder}/data/tools/planetiler.jar' com.onthegomap.planetiler.custommap.ConfiguredMapMain --schema=${workspaceFolder}/public/city-profile.yml --output=${workspaceFolder}/temp/almaty.mbtiles --maxzoom=15 --force && rm -rf '${workspaceFolder}/public/tiles' && pip3 install --user mbutil && mb-util '${workspaceFolder}/temp/almaty.mbtiles' '${workspaceFolder}/public/tiles' --image_format=pbf"
-            ],
-            "group": "build",
             "presentation": {
                 "echo": true,
                 "reveal": "always",

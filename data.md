@@ -4,43 +4,132 @@ Almaty OpenStreetMap Data Extract
 
 This dataset contains geographic information about Almaty, Kazakhstan, extracted and processed from OpenStreetMap (OSM). The data represents real-world features including buildings, roads, and other urban infrastructure.
 
--   **Original Source**: OpenStreetMap (OSM)
+-   **Original Source**: OpenStreetMap (OSM) - located at /data/other/kazakhstan-latest.osm.pbf
 -   **License**: Open Database License (ODbL) 1.0
--   **Coverage Area**: Central Almaty, Kazakhstan
+-   **Coverage Area**: Central Almaty, Kazakhstan - filtered to /data/almaty_c.pbf
 
 ## Data Pipeline
 
-The application relies on two parallel data processing pipelines that both originate from the same raw OpenStreetMap data but serve different purposes. It's crucial to understand that they are separate and must be kept in sync.
+The game's map data is generated through a multi-step pipeline. The process starts with a large OpenStreetMap data file and progressively refines it into a format the game can use for logic and rendering. All intermediate data artifacts are stored in the /data/ directory for examination.
 
-1.  **Pipeline A: Game State Data (`buildings.geojson`)**
-    *   **Processor**: `src/mapgen/process_osm_data.cjs`
-    *   **Purpose**: To create a `buildings.geojson` file that the game's logic uses to understand the world. This includes finding starting locations and populating the initial set of buildings in the game state.
-    *   **Key Action**: This script uses `osmium` to extract building features and, importantly, **must be configured to include the unique OpenStreetMap ID** for each feature. This ID is the link between the game's logic and the visual map.
+The pipeline consists of the following steps:
 
-2.  **Pipeline B: Visual Map Tiles (Vector Tiles)**
-    *   **Processor**: Planetiler (`planetiler.jar`) with `public/city-profile.yml` as its configuration.
-    *   **Purpose**: To generate the vector tiles that MapLibre renders on the screen. These tiles contain the visual geometry and properties of the buildings you see.
-    *   **Key Action**: This process also reads from the raw OSM data and embeds the feature properties, including the unique OSM ID, directly into the tiles.
+1.  **Region Filtering**: The process begins by extracting the relevant map area for Almaty from a larger country-wide OSM file. This creates a smaller, more manageable file, /data/almaty_c.pbf.
 
-### The ID Synchronization Challenge
+2.  **GeoJSON Conversion**: The filtered OSM data is then converted into GeoJSON format by the src/mapgen/process_osm_data.cjs script. The output is a GeoJSON file containing building and road features. This step is run via the 'Process OSM' VS Code task.
 
-The core problem this application faced was that **Pipeline A was not including the OSM ID**, while **Pipeline B was**. This created a disconnect:
-- The **game logic** (from Pipeline A) did not know the real OSM IDs of the buildings.
-- The **map view** (from Pipeline B) *did* know the real OSM IDs.
+3.  **GeoJSON Filtering**: The raw GeoJSON is further processed by the src/mapgen/filter_geojson.cjs script. This step can be used to remove unneeded features, simplify geometries, or modify properties to suit the game's requirements.
 
-When a building was clicked, the map reported an ID that the game logic didn't recognize, leading to incorrect behavior. The solution is to ensure `process_osm_data.cjs` correctly exports the OSM ID so both pipelines are synchronized.
+4.  **Navigation Mesh Generation**: The src/mapgen/build_navmesh.cjs script takes the filtered GeoJSON and generates a navigation mesh, which is essential for pathfinding and unit movement within the game.
+
+The result of this pipeline is a final GeoJSON file that is loaded by the game and navmesh data. The GeoJSON file serves two purposes: it provides the core data for the game's logic (e.g., building locations, properties) and it is used to dynamically generate vector tiles on the client-side for map rendering using technologies like geojson-vt in a web worker.
+
+---
+
+## Working with Custom Coordinates and Static Tiles
+
+A significant challenge in this project was creating an efficient static tile system for a non-geographic, custom Cartesian coordinate system (from -10,000m to 10,000m). A naive approach using standard web mapping tools, which are designed for the massive scale of planet Earth, results in thousands of tiny, mostly empty tiles.
+
+The solution required a coordinated, three-part setup across the tile generation script, the frontend map component, and the development server.
+
+### 1. The Tile Generation Script (`src/mapgen/generate_tiles.cjs`)
+
+The core problem was that a standard tile pyramid (where the number of tiles is 2^zoom) is inappropriate for our small world. The solution was to define a custom tile grid that creates a sane number of tiles at each zoom level.
+
+**Key Insight**: Instead of `2^zoom` tiles, we defined explicit tile counts for each zoom level. At zoom 9, the entire 20km x 20km world is a single tile. At zoom 10, it's 2x2=4 tiles, and so on.
+
+```javascript
+// src/mapgen/generate_tiles.cjs
+
+const ZOOM_TILE_COUNTS = {
+    9: 1,   // 1x1 = 1 tile total (20km x 20km per tile)
+    10: 2,  // 2x2 = 4 tiles total (10km x 10km per tile)
+    11: 4,  // 4x4 = 16 tiles total (5km x 5km per tile)
+    12: 8,  // 8x8 = 64 tiles total (2.5km x 2.5km per tile)
+    13: 16, // 16x16 = 256 tiles total (1.25km x 1.25km per tile)
+    14: 32, // 32x32 = 1024 tiles total (625m x 625m per tile)
+    15: 64  // 64x64 = 4096 tiles total (312.5m x 312.5m per tile)
+};
+```
+
+The tile generation functions were then modified to use this `ZOOM_TILE_COUNTS` object to calculate tile boundaries, ensuring the generated tiles match our custom grid.
+
+### 2. The Frontend Map Component (`src/components/map/Map.vue`)
+
+The frontend needs to be perfectly synchronized with the backend tile structure. This required two critical configurations.
+
+**Insight A: Synchronize the View and the Tile Grid**
+The OpenLayers `View` (what the user sees) and the `TileGrid` (what tiles are requested) must share the exact same definition of zoom levels. We achieved this by defining a single `resolutions` array and passing it to both constructors.
+
+**Insight B: Map Zoom Index to Semantic Zoom Level**
+When using a custom `resolutions` array, OpenLayers' "zoom" becomes an *index* into that array (0, 1, 2...). Our tile generation script, however, creates directories named after the *semantic* zoom level (9, 10, 11...). The final piece of the puzzle was a `tileUrlFunction` to translate the request. When OpenLayers requests tile with `z=2`, this function builds a URL for `z=11`.
+
+```typescript
+// src/components/map/Map.vue
+
+onMounted(() => {
+  // Define a single source of truth for resolutions
+  const resolutions = [
+    20000 / 512, // zoom 9 (index 0)
+    10000 / 512, // zoom 10 (index 1)
+    5000 / 512,  // zoom 11 (index 2)
+    // ...and so on
+  ];
+
+  const customTileGrid = new TileGrid({
+      extent: [-10000, -10000, 10000, 10000],
+      resolutions: resolutions,
+      tileSize: 512
+  });
+
+  mapInstance.map = new OlMap({
+    view: new View({
+      resolutions: resolutions, // Use the same resolutions
+      zoom: 2, // Initial zoom is index 2 (semantic zoom 11)
+      // ...
+    }),
+  });
+  
+  const buildingsSource = new VectorTileSource({
+      tileGrid: customTileGrid,
+      tileUrlFunction: (tileCoord) => {
+          const z = tileCoord[0] + 9; // Map index to semantic zoom
+          const x = tileCoord[1];
+          const y = tileCoord[2];
+          return `/tiles/buildings/${z}/${x}/${y}.pbf`;
+      },
+  });
+  // ...
+});
+```
+
+### 3. The Development Server (`vite.config.ts`)
+
+After fixing the tile structure, a final roadblock was the `net::ERR_CONTENT_DECODING_FAILED` error. This indicated the server was misrepresenting the tile files.
+
+**Key Insight**: A custom Vite plugin was incorrectly telling the browser that the `.pbf` (Protobuf) files were `gzip` compressed. Since `.pbf` is already a binary compressed format, compressing it again corrupts it.
+
+The fix was to remove the incorrect header from the plugin.
+
+```typescript
+// vite.config.ts
+
+const vectorTilesPlugin = () => {
+  // ...
+  res.setHeader('Content-Type', 'application/vnd.mapbox-vector-tile');
+  // Our tiles are not gzipped, so we should not set this header.
+  // res.setHeader('Content-Encoding', 'gzip'); // This line was the problem
+  // ...
+};
+```
+
+By coordinating these three areas, we successfully created a high-performance, static tile rendering system for a custom Cartesian world.
 
 ---
 
 ## Updating the Data
 
-When you need to change the map data, you must re-run the appropriate data pipeline.
-
-| If you decide to...                                | You need to...                                                                                                                                                                                                                                  |
-| :------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Change what buildings are available to the game** or **add/remove building properties** | 1. **Edit `src/mapgen/process_osm_data.cjs`**: Modify the script's configuration (e.g., `FEATURES_TO_EXTRACT`, `REMOVE_TAGS`). <br/> 2. **Run the script**: Execute `node src/mapgen/process_osm_data.cjs` to regenerate `public/data/buildings.geojson`. |
-| **Change the visual appearance of the map** (e.g., add new feature types like waterways, change colors) | 1. **Edit `public/city-profile.yml`**: Modify the Planetiler schema to include new features or attributes. <br/> 2. **Re-run Planetiler**: Use the VS Code task or command to regenerate the vector tiles in `/public/tiles`. |
-| **Enlarge the map area**                           | You must update **both pipelines**: <br/> 1. **Edit `process_osm_data.cjs`**: Change `AREA_TO_EXTRACT`. <br/> 2. **Re-run the script**. <br/> 3. **Re-run Planetiler** to generate tiles for the new area. |
+To regenerate the game data, you must run the entire data processing pipeline. Any change in the source data or in any of the processing scripts requires a full rebuild to see the effects in the game. The intermediate files in the /data/ folder can be inspected at each step to debug the process.
 
 ---
 
@@ -55,18 +144,7 @@ During development, you want to see data changes immediately. Your browser's cac
 
 ### Enabling Cache (Production)
 
-In a production environment, caching is crucial for performance. You don't need to do anything in the application code. Caching should be configured on the web server that serves the static tile files.
 
--   **Server Configuration**: Configure your web server (e.g., Nginx, Apache) to serve files from the `/tiles` directory with long-lived `Cache-Control` headers. This tells browsers to store the tiles locally for a long time, reducing server load and speeding up map navigation for repeat visitors.
-
-Example Nginx configuration:
-```nginx
-location /tiles/ {
-  root /path/to/your/project/public;
-  expires 1y;
-  add_header Cache-Control "public";
-}
-```
 
 ---
 
@@ -76,31 +154,11 @@ When you need to display a large number of dynamic objects (like vehicles) that 
 
 ### The Challenge with `setData`
 
-Calling `source.setData()` on a GeoJSON source is easy to implement but has performance limitations:
-- **CPU Intensive**: It requires processing a potentially large GeoJSON object on the CPU every time it's called.
-- **Data Transfer**: It involves transferring the entire dataset from the JavaScript main thread to the map's web worker and then to the GPU on each update.
-- **Frame Rate Impact**: For many objects updating every frame, this process can easily overwhelm the main thread and cause your animation to stutter.
+Calling `source.setData()` on a GeoJSON source is easy to implement but has performance limitations for a large number of objects updating every frame, this process can easily overwhelm the main thread and cause your animation to stutter.
 
 ### The Performant Solution: Custom WebGL Layers
 
-For high-performance rendering, the best practice is to bypass the GeoJSON source and render your objects directly with WebGL using a [Custom Layer](https://maplibre.org/maplibre-gl-js-docs/example/custom-layer/). This gives you direct access to the map's rendering context.
-
-**How it Works:**
-
-1.  **You Own the Rendering**: You provide the logic to draw your objects. This involves writing your own **vertex and fragment shaders** in GLSL (OpenGL Shading Language).
-    *   The **vertex shader** calculates the screen position of each car.
-    *   The **fragment shader** determines the color of each pixel for the car's sprite.
-2.  **Direct GPU Data Management**: You create and manage your own WebGL buffers on the GPU to store car data (positions, rotations, colors, etc.).
-3.  **Efficient Updates**: On each frame, instead of sending a large GeoJSON object, you only send the small amount of changed data (the new positions) directly to the GPU buffer. This is significantly faster.
-
-**Steps to Implement:**
-
-1.  **Create a Custom Layer Class**: Define a JavaScript class that implements MapLibre's `CustomLayerInterface`. This class will have methods like `onAdd` (to set up shaders and buffers) and `render` (which is called on every frame).
-2.  **Write GLSL Shaders**: Create shader programs to draw your car sprites (e.g., textured quads).
-3.  **Manage Data in Buffers**: In the `onAdd` method, create a WebGL buffer. In the `render` method, update this buffer with the latest car locations and then issue a draw call (`gl.drawArrays` or `gl.drawElements`).
-4.  **Add to Map**: Instantiate your custom layer and add it to the map using `map.addLayer()`.
-
-While this approach requires knowledge of WebGL, it is the standard technique for high-performance graphics and is the only way to ensure a smooth frame rate when simulating hundreds or thousands of moving objects on a map.
+For high-performance rendering, the best practice is to bypass the GeoJSON source and render your objects directly with WebGL using a Custom Layer. This gives you direct access to the map's rendering context. This approach requires knowledge of WebGL, but it is the standard technique for high-performance graphics and is the only way to ensure a smooth frame rate when simulating hundreds or thousands of moving objects on a map.
 
 ---
 
@@ -116,26 +174,4 @@ A common challenge is deciding how to handle dynamic data. There are three prima
 
 ### Use Case: Coloring Captured Buildings (`setFeatureState`)
 
-This is the most efficient way to change the properties of features that are already part of the map.
-
-1.  **Style Modification**: Update your style layer to react to a "state". In `App.vue`, the `buildings` layer `paint` property can be changed to use a `case` expression that checks for a state property (e.g., `team`).
-
-    ```javascript
-    "fill-color": [
-      "case",
-      ["==", ["feature-state", "team"], "blue"], "#87ceeb", // If state 'team' is 'blue'
-      ["==", ["feature-state", "team"], "red"], "#f08080",   // If state 'team' is 'red'
-      "#cccccc" // Default color
-    ]
-    ```
-
-2.  **Game Logic**: When a building is clicked or captured, use `map.setFeatureState()` to apply a state to it using its unique feature ID.
-
-    ```javascript
-    const featureId = clickedFeature.id;
-    map.setFeatureState(
-      { source: 'almaty-tiles', sourceLayer: 'building', id: featureId },
-      { team: 'blue' }
-    );
-    ```
-This approach is extremely fast as it does not require re-sending or duplicating any geometry data.
+This is the most efficient way to change the properties of features that are already part of the map. When a building is clicked or captured, use `map.setFeatureState()` to apply a state to it using its unique feature ID. This approach is extremely fast as it does not require re-sending or duplicating any geometry data.

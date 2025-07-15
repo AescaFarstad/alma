@@ -30,9 +30,4 @@ export interface CmdHireUnit extends CmdInput {
 export interface CmdQueryBuilding extends CmdInput {
     name: 'CmdQueryBuilding';
     mapId: number;
-}
-
-export interface CmdVerifyBuildings extends CmdInput {
-    name: 'CmdVerifyBuildings';
-    center: { lng: number, lat: number };
 } 

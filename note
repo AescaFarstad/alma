@@ -1,0 +1,11 @@
+july 15
+    refactor data pipeline
+
+
+Plan:
+    consistent data source
+        use point features to update building info
+        convert lines to polygons
+    web worker tile generation
+    WASM benchmark
+    navmesh generation

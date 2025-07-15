@@ -4,6 +4,7 @@ import { loadBuildingData } from './LogicMapDataLoader';
 import { GameState } from './logic/GameState';
 import { processInputs } from './logic/input/InputProcessor';
 import * as Model from './logic/Model';
+import { FPSCounter } from './logic/FPSCounter';
 
 async function initializeGame() {
     const gameState = new GameState();
@@ -15,7 +16,15 @@ async function initializeGame() {
 
     const app = createApp(App);
 
+    const fpsCounter = new FPSCounter();
+    const fpsMetrics = reactive({
+        currentFPS: 0,
+        averageFPS: 0,
+        maxFrameTime: 0
+    });
+
     app.provide('gameState', gameState);
+    app.provide('fpsMetrics', fpsMetrics);
 
     app.mount('#app');
 
@@ -23,6 +32,12 @@ async function initializeGame() {
     let lastTimestamp = 0;
 
     function gameLoop(timestamp: number) {
+        fpsCounter.update(timestamp);
+        const metrics = fpsCounter.getMetrics();
+        fpsMetrics.currentFPS = metrics.currentFPS;
+        fpsMetrics.averageFPS = metrics.averageFPS;
+        fpsMetrics.maxFrameTime = metrics.maxFrameTime;
+
         if (lastTimestamp === 0) {
             lastTimestamp = timestamp;
         }

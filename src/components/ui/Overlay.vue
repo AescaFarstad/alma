@@ -3,8 +3,8 @@
     <div id="controls">
       <button @click="toggleLayer('footways')">Footways</button>
       <button @click="toggleLayer('steps')">Steps</button>
+      <button @click="toggleLayer('roads')">Roads</button>
       <button @click="toggleFill('buildings')">Roofs</button>
-      <button @click="verifyBuildings">Verify Buildings</button>
       <div class="building-search-container">
         <input v-model="buildingIdToFind" placeholder="Building ID" @keyup.enter="findBuilding" />
         <button @click="findBuilding">Find</button>
@@ -15,6 +15,7 @@
       </div>
     </div>
     <div id="info-panel">
+      <div v-if="fpsMetrics">FPS: {{ fpsMetrics.currentFPS }} (Avg: {{ fpsMetrics.averageFPS }}) | Max Frame: {{ fpsMetrics.maxFrameTime }}ms</div>
       <div>Coords: {{ props.mouseCoordinates.lng.toFixed(4) }}, {{ props.mouseCoordinates.lat.toFixed(4) }}</div>
       <div>Bounds: {{ props.mapBounds }}</div>
     </div>
@@ -56,26 +57,15 @@
 import { ref, defineProps, defineEmits, inject, type PropType } from 'vue';
 import type { GameState } from '../../logic/GameState';
 import { globalInputQueue } from '../../logic/Model';
-import type { CmdQueryBuilding, CmdVerifyBuildings } from '../../logic/input/InputCommands';
+import type { CmdQueryBuilding } from '../../logic/input/InputCommands';
+import type { FPSMetrics } from '../../logic/FPSCounter';
 
 // Inject the game state provided in main.ts
 const gameState = inject<GameState>('gameState');
+const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 
 const buildingIdToFind = ref('');
 const coordinateStringToFind = ref('');
-
-const verifyBuildings = () => {
-  if (props.mapCenter && gameState?.uiState.currentPlayerId) {
-    const command: CmdVerifyBuildings = { 
-      name: 'CmdVerifyBuildings', 
-      center: props.mapCenter,
-      playerId: gameState.uiState.currentPlayerId,
-    };
-    globalInputQueue.push(command);
-  } else {
-    console.warn("Map center is not available to verify buildings.");
-  }
-};
 
 const findBuilding = () => {
   if (buildingIdToFind.value && gameState?.uiState.currentPlayerId) {
@@ -129,15 +119,19 @@ const emit = defineEmits(['toggle-layer', 'toggle-fill', 'show-coordinates']);
 
 const showFootways = ref(true);
 const showSteps = ref(true);
+const showRoads = ref(true);
 const showBuildingFill = ref(true);
 
-const toggleLayer = (layerId: 'footways' | 'steps') => {
+const toggleLayer = (layerId: 'footways' | 'steps' | 'roads') => {
   if (layerId === 'footways') {
     showFootways.value = !showFootways.value;
     emit('toggle-layer', { layerId, visible: showFootways.value });
   } else if (layerId === 'steps') {
     showSteps.value = !showSteps.value;
     emit('toggle-layer', { layerId, visible: showSteps.value });
+  } else if (layerId === 'roads') {
+    showRoads.value = !showRoads.value;
+    emit('toggle-layer', { layerId, visible: showRoads.value });
   }
 };
 

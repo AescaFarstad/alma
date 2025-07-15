@@ -14,9 +14,10 @@ const vectorTilesPlugin = () => {
           const filePath = path.join(publicDir, req.url);
 
           if (fs.existsSync(filePath)) {
-            // File exists, set correct headers for gzipped PBF vector tiles
+            // File exists, set correct headers for PBF vector tiles
             res.setHeader('Content-Type', 'application/vnd.mapbox-vector-tile');
-            res.setHeader('Content-Encoding', 'gzip');
+            // Our tiles are not gzipped, so we should not set this header.
+            // res.setHeader('Content-Encoding', 'gzip');
             // Disable caching during development
             res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
             return next();
@@ -37,7 +38,11 @@ const vectorTilesPlugin = () => {
 export default defineConfig({
   plugins: [vue(), vectorTilesPlugin()],
   server: {
-    port: 5174
+    port: 5174,
+    fs: {
+      // Prevent Vite from trying to compress .pbf files
+      deny: ['.pbf']
+    }
   },
   build: {
     target: 'esnext'

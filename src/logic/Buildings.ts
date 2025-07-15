@@ -10,16 +10,12 @@
  * - MultiPolygon: coordinates = [[[[x1,y1], [x2,y2], ...]], ...] (array of polygons)
  * - All coordinate calculations must handle these three different structures
  */
-import { Building, BuildingSlot, BuildingSlotType, GameState, Player } from "./GameState";
+import { Building, BuildingSlot, GameState, Player } from "./GameState";
 import { Stats } from "./core/Stats";
 import { ConnectionType, Parameter } from "./core/Stat";
 import { BuildingModule } from "./lib/BuildingModuleLib";
 import { mapInstance } from "../map_instance";
-import { Point2 } from "./core/math";
 import { C } from "./lib/C";
-import { DEG_PER_METER_LAT, DEG_PER_METER_LNG } from "../map_instance";
-
-let nextBuildingId = 0;
 
 export function setBuildingOwner(gs: GameState, building: Building, team: number) {
     if (building.team === team) {
@@ -246,276 +242,145 @@ export function getOrInitBuilding(gs: GameState, mapId: number): Building | null
         console.warn(`[Buildings] getOrInitBuilding: mapInstance is not available.`);
         return null;
     }
-    const visualFeatures = mapInstance.map.querySourceFeatures('almaty-tiles', {
-        sourceLayer: 'building',
-        filter: ['==', ['id'], mapId]
-    });
-
-    if (!visualFeatures || visualFeatures.length === 0) {
-        console.warn(`[Buildings] getOrInitBuilding: No visual feature found for mapId ${mapId}.`);
-        return null;
-    }
-    const visualFeature = visualFeatures[0];
-
-    // --- Step 2: Verify against the logical data (second source of truth) ---
-    const center = calculatePolygonCenter((visualFeature.geometry as any).coordinates);
-    const searchRadius = 0.00001; // Tiny search box around the center
-    const searchResult = gs.buildingSpatialIndex.search({
-        minX: center.x - searchRadius, minY: center.y - searchRadius,
-        maxX: center.x + searchRadius, maxY: center.y + searchRadius,
-    });
-
-    const logicalFeature = searchResult.find(r => r.feature.id === mapId);
-
-    if (!logicalFeature) {
-        console.error(`[Buildings] Data inconsistency: A visual feature for mapId ${mapId} was found, but it does not exist in the logical buildingSpatialIndex. This building cannot be created.`);
-        return null;
-    }
-    
-    // --- Step 3: Create building only if both sources agree ---
-    // We use the logical feature as the definitive source for properties.
-    const newBuilding = createBuildingFromFeature(mapId, logicalFeature.feature);
-
-    // Add the new, verified building to the game state.
-    gs.buildingsById[newBuilding.id] = newBuilding;
-    gs.buildingsByMapId[newBuilding.mapId] = newBuilding;
-    
-    return newBuilding;
+    // TODO: Re-implement feature querying with OpenLayers
+    return null;
 }
 
-function createBuildingFromFeature(mapId: number, feature: any): Building {
-    const buildingType = feature.properties.building;
-    const levels = parseInt(feature.properties["building:levels"] || '1', 10);
-    const slots = generateSlotsForBuilding(buildingType, levels);
-    const center = calculatePolygonCenter(feature.geometry.coordinates);
-    const boundingRadius = calculateBoundingRadius(center, feature.geometry.coordinates);
-    const floorSize = calculatePolygonArea(feature.geometry.coordinates);
-
-    return {
-        id: `bld_${nextBuildingId++}`,
-        mapId: mapId,
-        originalMapId: feature.properties.original_osm_id,
-        team: 0, // Belongs to Neutral team by default
-        center: center,
-        boundingRadius: boundingRadius,
-        floors: levels,
-        floorSize: floorSize,
-        slots: slots,
-        outputs: [],
-        disabledUntil: 0,
-    };
-}
-
+/*
 function generateSlotsForBuilding(buildingType: string, levels: number): BuildingSlot[] {
     const slots: BuildingSlot[] = [];
+    let slotCount: number;
     
     // Base slots based on floors, but sometimes add extra slots randomly
-    let baseSlots = Math.max(1, levels);
-    const shouldAddExtraSlots = Math.random() < 0.3; // 30% chance
-    if (shouldAddExtraSlots) {
-        baseSlots += Math.floor(Math.random() * 3) + 1; // Add 1-3 extra slots
+    if (buildingType === 'residential') {
+        slotCount = levels; 
+    } else if (buildingType === 'commercial' || buildingType === 'office') {
+        slotCount = Math.floor(levels / 2);
+    } else if (buildingType === 'industrial') {
+        slotCount = Math.floor(levels / 3);
+    } else {
+        slotCount = Math.floor(levels / 5);
     }
     
-    // Cap at maximum slots
-    const totalSlots = Math.min(baseSlots, C.MAX_BUILDING_SLOTS);
-
-    // Determine primary slot type based on building type
-    let primarySlotType: BuildingSlotType;
-    switch (buildingType) {
-        case 'residential':
-        case 'house':
-        case 'apartments':
-        case 'dormitory':
-        case 'yes': // 'yes' is a common generic building tag
-            primarySlotType = BuildingSlotType.housing;
-            break;
-        case 'industrial':
-        case 'commercial':
-        case 'retail':
-        case 'office':
-            primarySlotType = BuildingSlotType.production;
-            break;
-        case 'university':
-        case 'college':
-        case 'school':
-            primarySlotType = BuildingSlotType.science;
-            break;
-        default:
-            primarySlotType = BuildingSlotType.housing; // Default to housing
-            break;
-    }
-    
-    // Generate slots with compound types
-    for (let i = 0; i < totalSlots; i++) {
-        let slotType: number = primarySlotType;
-        
-        // 40% chance to create compound slot types
-        if (Math.random() < 0.4) {
-            slotType = generateCompoundSlotType(primarySlotType);
-        }
-        
-        slots.push({ type: slotType, occupant: '', content: '' });
+    // 20% chance to add an extra slot
+    if (Math.random() < 0.2) {
+        slotCount++;
     }
 
-    // Add a storage slot to larger non-residential buildings
-    if (primarySlotType !== BuildingSlotType.housing && levels > 3) {
-        slots.push({ type: BuildingSlotType.storage, occupant: '', content: '' });
+    const primarySlotType = 
+        buildingType === 'residential' ? BuildingSlotType.Residential :
+        buildingType === 'commercial' ? BuildingSlotType.Commercial :
+        buildingType === 'industrial' ? BuildingSlotType.Industrial :
+        buildingType === 'office' ? BuildingSlotType.Office :
+        BuildingSlotType.Any;
+
+    for (let i = 0; i < slotCount; i++) {
+        const isCompound = Math.random() < 0.1; // 10% chance for a compound slot
+        const slotType = isCompound ? generateCompoundSlotType(primarySlotType) : primarySlotType;
+        slots.push({
+            type: slotType,
+            content: '',
+            occupant: ''
+        });
     }
 
     return slots;
 }
 
 function generateCompoundSlotType(primaryType: BuildingSlotType): number {
-    // Housing doesn't bode well with production, but the rest are possible
-    const availableTypes = [BuildingSlotType.production, BuildingSlotType.science, BuildingSlotType.storage];
+    let secondaryType: BuildingSlotType;
+    const availableTypes = [
+        BuildingSlotType.Residential,
+        BuildingSlotType.Commercial,
+        BuildingSlotType.Industrial,
+        BuildingSlotType.Office
+    ].filter(t => t !== primaryType);
+
+    secondaryType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
     
-    if (primaryType === BuildingSlotType.housing) {
-        // For housing, combine with science or storage, but not production
-        const compatibleTypes = [BuildingSlotType.science, BuildingSlotType.storage];
-        const secondaryType = compatibleTypes[Math.floor(Math.random() * compatibleTypes.length)];
-        return primaryType | secondaryType;
-    } else {
-        // For non-housing, can combine with any other type
-        const otherTypes = availableTypes.filter(type => type !== primaryType);
-        if (otherTypes.length > 0) {
-            const secondaryType = otherTypes[Math.floor(Math.random() * otherTypes.length)];
-            return primaryType | secondaryType;
-        }
-    }
-    
-    return primaryType;
+    return primaryType | secondaryType;
 }
+*/
 
+/**
+ * @param coordinates The coordinates of the polygon, in the format [[[x1, y1], ...]].
+ * @returns The center point.
+ */
+/*
 export function calculatePolygonCenter(coordinates: any[]): Point2 {
-    // Handle LineString, Polygon, and MultiPolygon geometries
-    let ring: any[];
-    
-    // Check for MultiPolygon: coordinates[0][0] should be array of coordinate pairs
-    if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && Array.isArray(coordinates[0][0][0])) {
-        // MultiPolygon: coordinates[0][0] is the outer ring
-        ring = coordinates[0][0];
-    } else if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && typeof coordinates[0][0][0] === 'number') {
-        // Polygon: coordinates[0] is the outer ring, coordinates[0][0] is first coordinate pair
-        ring = coordinates[0];
-    } else if (coordinates && Array.isArray(coordinates[0]) && typeof coordinates[0][0] === 'number') {
-        // LineString: coordinates is directly an array of [x, y] points
-        ring = coordinates;
-    } else {
-        return { x: 0, y: 0 };
-    }
-    
-    if (!ring || ring.length === 0) {
-        return { x: 0, y: 0 };
-    }
-
-    let sumX = 0;
-    let sumY = 0;
+    let totalX = 0;
+    let totalY = 0;
     let pointCount = 0;
-    
-    // Average over all coordinates, ensuring we handle all valid points
-    for (const point of ring) {
-        if (Array.isArray(point) && point.length >= 2 && 
-            typeof point[0] === 'number' && typeof point[1] === 'number') {
-            sumX += point[0];
-            sumY += point[1];
+
+    const processRing = (ring: any[]) => {
+        for (const point of ring) {
+            totalX += point[0];
+            totalY += point[1];
             pointCount++;
         }
-    }
-
-    if (pointCount === 0) {
-        return { x: 0, y: 0 };
-    }
-
-    return {
-        x: sumX / pointCount,
-        y: sumY / pointCount
     };
+
+    if (Array.isArray(coordinates[0][0][0])) { // MultiPolygon
+        for (const polygon of coordinates) {
+            processRing(polygon[0]);
+        }
+    } else if (Array.isArray(coordinates[0][0])) { // Polygon
+        processRing(coordinates[0]);
+    } else { // LineString
+        processRing(coordinates);
+    }
+
+    return { x: totalX / pointCount, y: totalY / pointCount };
 }
 
 function calculateBoundingRadius(center: Point2, coordinates: any[]): number {
-    // Handle LineString, Polygon, and MultiPolygon geometries
-    let ring: any[];
-    
-    // Check for MultiPolygon: coordinates[0][0] should be array of coordinate pairs
-    if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && Array.isArray(coordinates[0][0][0])) {
-        // MultiPolygon: coordinates[0][0] is the outer ring
-        ring = coordinates[0][0];
-    } else if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && typeof coordinates[0][0][0] === 'number') {
-        // Polygon: coordinates[0] is the outer ring, coordinates[0][0] is first coordinate pair
-        ring = coordinates[0];
-    } else if (coordinates && Array.isArray(coordinates[0]) && typeof coordinates[0][0] === 'number') {
-        // LineString: coordinates is directly an array of [x, y] points
-        ring = coordinates;
-    } else {
-        return 30; // Default fallback
-    }
-    
-    if (!ring || ring.length === 0) {
-        return 30; // Default fallback
-    }
+    let maxDistSq = 0;
 
-    let maxDistance = 0;
-    
-    for (const point of ring) {
-        if (Array.isArray(point) && point.length >= 2 && 
-            typeof point[0] === 'number' && typeof point[1] === 'number') {
+    const processRing = (ring: any[]) => {
+        for (const point of ring) {
             const dx = point[0] - center.x;
             const dy = point[1] - center.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            maxDistance = Math.max(maxDistance, distance);
+            const distSq = dx * dx + dy * dy;
+            if (distSq > maxDistSq) {
+                maxDistSq = distSq;
+            }
         }
+    };
+
+    if (Array.isArray(coordinates[0][0][0])) { // MultiPolygon
+        for (const polygon of coordinates) {
+            processRing(polygon[0]);
+        }
+    } else if (Array.isArray(coordinates[0][0])) { // Polygon
+        processRing(coordinates[0]);
+    } else { // LineString
+        processRing(coordinates);
     }
 
-    return maxDistance || 30; // Fallback to 30 if no valid points found
+    return Math.sqrt(maxDistSq);
 }
 
 function calculatePolygonArea(coordinates: any[]): number {
-    // Handle LineString, Polygon, and MultiPolygon geometries
-    let ring: any[];
-    
-    // Check for MultiPolygon: coordinates[0][0] should be array of coordinate pairs
-    if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && Array.isArray(coordinates[0][0][0])) {
-        // MultiPolygon: coordinates[0][0] is the outer ring
-        ring = coordinates[0][0];
-    } else if (coordinates && coordinates[0] && Array.isArray(coordinates[0][0]) && typeof coordinates[0][0][0] === 'number') {
-        // Polygon: coordinates[0] is the outer ring, coordinates[0][0] is first coordinate pair
-        ring = coordinates[0];
-    } else if (coordinates && Array.isArray(coordinates[0]) && typeof coordinates[0][0] === 'number') {
-        // LineString: coordinates is directly an array of [x, y] points
-        ring = coordinates;
-    } else {
-        return 100; // Default fallback
-    }
-    
-    if (!ring || ring.length < 3) {
-        return 100; // Default fallback for polygons with less than 3 vertices
-    }
-
-    // Convert coordinates from degrees to meters for accurate area calculation.
-    const ringInMeters = ring
-        .map(point => {
-            if (Array.isArray(point) && point.length >= 2 && typeof point[0] === 'number' && typeof point[1] === 'number') {
-                return [point[0] / DEG_PER_METER_LNG, point[1] / DEG_PER_METER_LAT];
-            }
-            return null;
-        })
-        .filter((p): p is [number, number] => p !== null);
-
-    if (ringInMeters.length < 3) {
-        return 100; // Not enough valid points after filtering
-    }
-    
-    // Use the shoelace formula to calculate polygon area.
-    // This formula works for both convex and non-convex simple polygons (polygons that don't self-intersect).
     let area = 0;
-    const n = ringInMeters.length;
-    
-    for (let i = 0; i < n; i++) {
-        const current = ringInMeters[i];
-        const next = ringInMeters[(i + 1) % n];
-        area += current[0] * next[1] - next[0] * current[1];
+
+    const processRing = (ring: any[]) => {
+        let j = ring.length - 1;
+        for (let i = 0; i < ring.length; i++) {
+            area += (ring[j][0] + ring[i][0]) * (ring[j][1] - ring[i][1]);
+            j = i;
+        }
+    };
+
+    if (Array.isArray(coordinates[0][0][0])) { // MultiPolygon
+        for (const polygon of coordinates) {
+            processRing(polygon[0]);
+        }
+    } else if (Array.isArray(coordinates[0][0])) { // Polygon
+        processRing(coordinates[0]);
+    } else { // LineString - Area is 0
+        return 0;
     }
-    
-    area = Math.abs(area) / 2;
-    return area || 100; // Fallback to 100 if calculation fails
+
+    return Math.abs(area / 2);
 }
+*/

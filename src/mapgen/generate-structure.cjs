@@ -1,35 +1,45 @@
 const fs = require('fs');
 const path = require('path');
+const { argv } = require('process');
 
-function generateStructure() {
+function parseArgs() {
+    const args = argv.slice(2);
+    const inputArg = args.find(arg => arg.startsWith('--input='));
+    const outputArg = args.find(arg => arg.startsWith('--output='));
+
+    if (!inputArg || !outputArg) {
+        console.error('Usage: node generate-structure.cjs --input=<directory> --output=<file>');
+        process.exit(1);
+    }
+
+    return {
+        inputDir: inputArg.split('=')[1],
+        outputFile: outputArg.split('=')[1],
+    };
+}
+
+function generateStructure({ inputDir, outputFile }) {
     const MAX_ENUM_VALUES = 12;
     const MAX_COMMENT_VALUES = 60;
     const COMMENT_VALUES_PER_ROW = 7;
 
-    const args = process.argv.slice(2);
-    const isMinifiedMode = args.includes('--minified');
-
-    const fileSuffix = isMinifiedMode ? '.min.geojson' : '_unfiltered.geojson';
-    const outputFileName = isMinifiedMode ? 'structure_min.ts' : 'structure.ts';
+    const fileSuffix = '.geojson';
     
-    const dataDir = path.resolve(__dirname, '../../public/data');
-    const outputFilePath = path.resolve(dataDir, outputFileName);
-
-    let output = '';
+    let output = `// Generated from ${path.basename(inputDir)} at ${new Date().toISOString()}\n\n`;
 
     try {
-        const files = fs.readdirSync(dataDir);
+        const files = fs.readdirSync(inputDir);
         const geojsonFiles = files.filter(file => file.endsWith(fileSuffix));
 
         if (geojsonFiles.length === 0) {
-            console.log(`No '*${fileSuffix}' files found.`);
+            console.log(`No '*${fileSuffix}' files found in ${inputDir}.`);
             return;
         }
 
         const allStructNames = [];
 
         for (const fileName of geojsonFiles) {
-            const filePath = path.join(dataDir, fileName);
+            const filePath = path.join(inputDir, fileName);
             const content = fs.readFileSync(filePath, 'utf-8');
             const geojson = JSON.parse(content);
             const features = geojson.features;
@@ -42,8 +52,17 @@ function generateStructure() {
             const geometryTypes = new Set();
             const propertiesMap = new Map();
             const totalFeatures = features.length;
+            let hasIdField = false;
+            let doesNotHaveIdField = false;
 
             for (const feature of features) {
+                if (feature.id !== undefined) {
+                    hasIdField = true;
+                }
+                else {
+                    doesNotHaveIdField = true;
+                }
+
                 if (feature.geometry && feature.geometry.type) {
                     geometryTypes.add(feature.geometry.type);
                 }
@@ -79,6 +98,14 @@ function generateStructure() {
 
             output += `export type ${structName} = {\n`;
             output += '    type: "Feature";\n';
+            
+            if (hasIdField && !doesNotHaveIdField) {
+                output += '    id: string;\n';
+            }
+            else if (hasIdField && doesNotHaveIdField) {
+                output += '    id?: string;\n';
+            }
+            
             output += '    geometry: {\n';
             const geomTypesString = Array.from(geometryTypes).map(t => `"${t}"`).join(' | ');
             output += `        type: ${geomTypesString || 'string'};\n`;
@@ -163,11 +190,12 @@ function generateStructure() {
     }
 
     try {
-        fs.writeFileSync(outputFilePath, output);
-        console.log(`Successfully generated structure file at: ${outputFilePath}`);
+        fs.writeFileSync(outputFile, output);
+        console.log(`Successfully generated structure file at: ${outputFile}`);
     } catch (error) {
         console.error(`Error writing to file: ${error.message}`);
     }
 }
 
-generateStructure();
+const args = parseArgs();
+generateStructure(args);
