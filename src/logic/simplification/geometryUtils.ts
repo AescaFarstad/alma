@@ -1,59 +1,90 @@
-import { Point2 } from "../core/math";
-import { Path } from "js-angusj-clipper";
+import { Point2 } from '../core/math';
+import type { Feature, Polygon, LineString, GeoJsonProperties } from 'geojson';
+import type { Path } from 'js-angusj-clipper';
 
-export function getPointsFromBuilding(building: any): Point2[] | null {
-    if (!building || !building.geometry) {
-        return null;
-    }
+export interface Building {
+    id: string;
+    stats: any;
+    geometry: any;
+  }
 
-    let coords: any;
-    let type: string | undefined;
-
-    if (building.geometry.type && building.geometry.coordinates) {
-        coords = building.geometry.coordinates;
-        type = building.geometry.type;
-    } else if (Array.isArray(building.geometry)) {
-        coords = building.geometry;
-        if (coords.length > 0 && Array.isArray(coords[0]) && coords[0].length > 0 && Array.isArray(coords[0][0])) {
-            type = 'Polygon';
-        } else if (coords.length > 0 && Array.isArray(coords[0])) {
-            type = 'LineString';
-        }
-    }
-
-    if (!coords) {
-        console.warn('[GeometryUtils] Could not determine coordinates from building geometry:', building.geometry);
-        return null;
-    }
-
-    let ring: any[] | undefined;
-
-    if (type === 'Polygon') {
-        ring = coords[0];
-    } else if (type === 'MultiPolygon') {
-        const firstPolygon = coords[0];
-        if (Array.isArray(firstPolygon)) {
-            ring = firstPolygon[0];
-        }
-    } else if (type === 'LineString') {
-        ring = coords;
-    }
-
-    if (ring && Array.isArray(ring)) {
-        const points = ring.map((p: number[]) => ({ x: p[0], y: p[1] }));
-        if (points.length > 1) {
-            const first = points[0];
-            const last = points[points.length - 1];
-            if (first.x === last.x && first.y === last.y) {
-                return points.slice(0, -1);
-            }
-        }
-        return points;
-    }
-
-    console.warn('[GeometryUtils] Could not extract polygon from building geometry:', building.geometry);
-    return null;
+export interface BuildingFeature extends Feature<Polygon | LineString> {
+    properties: GeoJsonProperties & {
+        building?: string;
+        [key: string]: any;
+    };
+    id?: string;
 }
+
+export const getPointsFromBuilding = (building: Building): Point2[] | null => {
+    const geom = building.geometry;
+    if (!geom) return null;
+
+    // The geometry is expected to be a GeoJSON Polygon's coordinates array: number[][][]
+    // We take the first ring.
+    if (Array.isArray(geom) && Array.isArray(geom[0]) && Array.isArray(geom[0][0])) {
+        return geom[0].map((p: any[]) => ({ x: p[0], y: p[1] }));
+    }
+    
+    return null;
+};
+
+export const getPointsFromBuildingFeature = (building: BuildingFeature): Point2[] | null => {
+    const geom = building.geometry;
+    if (!geom) return null;
+
+    if (geom.type === 'Polygon') {
+        return geom.coordinates[0].map(p => ({ x: p[0], y: p[1] }));
+    } else if (geom.type === 'LineString') {
+        // Only treat closed LineStrings as polygons
+        const coords = geom.coordinates;
+        if (coords.length > 2 &&
+            coords[0][0] === coords[coords.length - 1][0] &&
+            coords[0][1] === coords[coords.length - 1][1]) {
+            return coords.map(p => ({ x: p[0], y: p[1] }));
+        }
+    }
+    return null;
+};
+
+export const createPolygonFeature = (points: Point2[], properties: GeoJsonProperties, id?: string): BuildingFeature => {
+    const coordinates = points.map(p => [p.x, p.y]);
+    if (coordinates.length > 0 && (coordinates[0][0] !== coordinates[coordinates.length - 1][0] || coordinates[0][1] !== coordinates[coordinates.length - 1][1])) {
+        coordinates.push(coordinates[0]);
+    }
+
+    return {
+        type: 'Feature',
+        id: id,
+        geometry: {
+            type: 'Polygon',
+            coordinates: [coordinates]
+        },
+        properties: properties || {},
+    };
+};
+
+export const roundPoint = (p: Point2, M: number = 100): Point2 => {
+    return {
+        x: Math.round(p.x * M) / M,
+        y: Math.round(p.y * M) / M
+    }
+}
+
+export const roundCoords = (coords: number[], M: number = 100): number[] => {
+    return coords.map(c => Math.round(c * M) / M);
+}
+
+export const formatCoords = (points: Point2[]): string => {
+    return points.map(p => `${p.x};${p.y}`).join(';');
+}
+
+export const formatCoordsRounded = (points: Point2[], precision = 2): string => {
+    const factor = Math.pow(10, precision);
+    return points
+        .map(p => `${Math.round(p.x * factor) / factor};${Math.round(p.y * factor) / factor}`)
+        .join(';');
+};
 
 export const toClipperPath = (points: Point2[], scale: number = 1): Path => {
     const path: Path = [];

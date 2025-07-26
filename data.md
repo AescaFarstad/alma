@@ -10,19 +10,27 @@ This dataset contains geographic information about Almaty, Kazakhstan, extracted
 
 ## Data Pipeline
 
-The game's map data is generated through a multi-step pipeline. The process starts with a large OpenStreetMap data file and progressively refines it into a format the game can use for logic and rendering. All intermediate data artifacts are stored in the /data/ directory for examination.
+The game's map data is generated through a multi-step pipeline orchestrated by `src/mapgen/gen_data.ts`. The process starts with a large OpenStreetMap data file and progressively refines it into formats the game can use for logic and rendering. All intermediate data artifacts are stored in the `/data/` directory for examination.
 
-The pipeline consists of the following steps:
+The pipeline consists of the following steps, executed in sequence:
 
-1.  **Region Filtering**: The process begins by extracting the relevant map area for Almaty from a larger country-wide OSM file. This creates a smaller, more manageable file, /data/almaty_c.pbf.
+1.  **Process OSM (`process_osm_data.ts`)**: This initial step extracts a specific geographic area (e.g., central Almaty) from a large `.pbf` file (like `kazakhstan-latest.osm.pbf`). It filters for desired map features (buildings, roads, etc.) based on OSM tags and converts them into separate GeoJSON files.
 
-2.  **GeoJSON Conversion**: The filtered OSM data is then converted into GeoJSON format by the src/mapgen/process_osm_data.cjs script. The output is a GeoJSON file containing building and road features. This step is run via the 'Process OSM' VS Code task.
+2.  **Filter GeoJSON (`filter_geojson.ts`)**: The raw GeoJSON files are processed to remove unwanted features and ensure the data conforms to the required structure for the game.
 
-3.  **GeoJSON Filtering**: The raw GeoJSON is further processed by the src/mapgen/filter_geojson.cjs script. This step can be used to remove unneeded features, simplify geometries, or modify properties to suit the game's requirements.
+3.  **Deduplicate GeoJSON (`deduplicate_geojson.ts`)**: This step removes duplicate features from the GeoJSON files to clean up the data and reduce redundancy.
 
-4.  **Navigation Mesh Generation**: The src/mapgen/build_navmesh.cjs script takes the filtered GeoJSON and generates a navigation mesh, which is essential for pathfinding and unit movement within the game.
+4.  **Simplify GeoJSON (`simplify.ts`)**: This is a critical step that heavily processes the building data. It performs several operations:
+    *   **Manual Corrections**: It programmatically applies corrections, such as converting closed `LineString` geometries into valid `Polygon`s and uniting a predefined set of adjacent buildings into a single, logical structure.
+    *   **S6 Simplification**: It generates a `buildings_simplified.geojson` file. The geometries in this file are simplified using a series of `unround` and `flatten` operations. This output is a standard GeoJSON file containing only the simplified coordinates and building IDs, with all other properties stripped.
+    *   **Blob Unification**: It unites all corrected building geometries into larger "blobs". The result is saved to `blobs.txt`. Each line in this file represents one blob and contains the blob's index, a list of the original building IDs it contains, and the flat array of the blob's coordinates. This is used for a later processing step.
+    *   **S7 Simplification**: It produces a `buildings_s7.txt` file. This file contains building data simplified with a more complex algorithm involving dilation, erosion, and cornerizing. The output is a text file where each line contains the building ID, a JSON string of its properties, and the flattened array of its simplified coordinates.
 
-The result of this pipeline is a final GeoJSON file that is loaded by the game and navmesh data. The GeoJSON file serves two purposes: it provides the core data for the game's logic (e.g., building locations, properties) and it is used to dynamically generate vector tiles on the client-side for map rendering using technologies like geojson-vt in a web worker.
+5.  **Build NavMesh (`build_navmesh.ts`)**: This script takes the simplified GeoJSON from the previous step and generates a navigation mesh, which is essential for pathfinding and unit movement within the game.
+
+6.  **Copy Data**: The final step copies the required data assets (`buildings_simplified.geojson` and `buildings_s7.txt`) into the `/public/data` directory, making them available to the game client.
+
+The result of this pipeline is a set of optimized files ready to be loaded by the game. The GeoJSON file provides the core data for game logic and dynamic vector tile generation, while the text files are used for specific, custom data-loading purposes.
 
 ---
 

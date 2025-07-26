@@ -56,40 +56,15 @@ import { unround } from '../../logic/simplification/unrounding';
 import { flatten } from '../../logic/simplification/flattening';
 import { simplifyWithDilationErosion } from '../../logic/simplification/dilationErosion';
 import { uniteGeometries, type BuildingWithPolygon } from '../../logic/simplification/unite';
-import { getPointsFromBuilding } from '../../logic/simplification/geometryUtils';
+import { Building, getPointsFromBuilding } from '../../logic/simplification/geometryUtils';
 import { cornerize } from '../../logic/simplification/cornerize';
 
-interface Building {
-  id: string;
-  stats: any;
-  geometry: any;
-}
-
-const getVertexRingFromBuilding = (building: Building): number[][] | null => {
-    const geom = building.geometry;
-    if (!geom) return null;
-
-    // It's a polygon if it's a triply-nested array
-    if (Array.isArray(geom) && Array.isArray(geom[0]) && Array.isArray(geom[0][0])) {
-        return geom[0];
-    }
-    // It's a linestring if it's a doubly-nested array
-    if (Array.isArray(geom) && Array.isArray(geom[0]) && typeof geom[0][0] === 'number') {
-        const coords = geom as number[][];
-        if (coords.length > 2 && 
-            Math.sqrt(Math.pow(coords[0][0] - coords[coords.length - 1][0], 2) + Math.pow(coords[0][1] - coords[coords.length - 1][1], 2)) < 1e-9) {
-            return coords;
-        }
-    }
-    return null;
-}
-
 const getBuildingArea = (building: Building) => {
-    const ring = getVertexRingFromBuilding(building);
+    const ring = getPointsFromBuilding(building);
     let area = 0;
     if (!ring || ring.length < 3) return 0;
     for (let i = 0; i < ring.length - 1; i++) {
-        area += ring[i][0] * ring[i+1][1] - ring[i+1][0] * ring[i][1];
+        area += ring[i].x * ring[i+1].y - ring[i+1].x * ring[i].y;
     }
     return Math.abs(area / 2);
 }
@@ -241,16 +216,11 @@ const inflate = async (building: Building) => {
     if (!gameState || !sceneState) return;
     
     const buildingsToUnite = getBuildingsToUnite(building, 0.1);
-    console.log(`Inflate: ${buildingsToUnite.length}`);
     if (buildingsToUnite.length === 0) return;
 
     for(let b of buildingsToUnite) {
-      // console.log(`Poly of b start: ${b.polygon.length}`);
       b.polygon = unround(b.polygon, 10, 0.45);
-      // console.log(`Poly of b step2: ${b.polygon.length}`);
       b.polygon = flatten(b.polygon, 3);
-      // console.log(`Poly of b step3: ${b.polygon.length}`);
-      // sceneState.addSimplifiedBuilding(`${b.id}-inflated`, b.polygon);
     }
 
     const unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
@@ -282,7 +252,7 @@ const inflateAndCornerize = async (building: Building) => {
 
 const uniteBuilding = async (building: Building) => {
   if (!gameState || !sceneState) return;
-  const buildingsToUnite = getBuildingsToUnite(building, 50);
+  const buildingsToUnite = getBuildingsToUnite(building, 0.1);
   if (buildingsToUnite.length === 0) return;
 
   const unitedGroups = await uniteGeometries(buildingsToUnite, 3.6);
@@ -295,37 +265,26 @@ const uniteBuilding = async (building: Building) => {
 
 const uniteAndSimplifyBuilding = async (building: Building) => {
   if (!gameState || !sceneState) return;
-  let startAt = Date.now()
-  let stepTime = Date.now()
 
   let mainPolygon = getPointsFromBuilding(building);
   if (!mainPolygon) return;
 
-  const buildingsToUnite = getBuildingsToUnite(building, 5000, mainPolygon);
+  const buildingsToUnite = getBuildingsToUnite(building, 0.1, mainPolygon);
   if (buildingsToUnite.length === 0) return;
   let allPoints = buildingsToUnite.flatMap(g => g.polygon);
-  console.log(`gather: ${Date.now() - stepTime}`)
-  stepTime = Date.now()
 
   buildingsToUnite.forEach((b) => {
     b.polygon = unround(b.polygon, 10, 0.45);
     b.polygon = flatten(b.polygon, 3);
   });
-  console.log(`preprocess: ${Date.now() - stepTime}`)
-  stepTime = Date.now()
-
 
   let unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
   unitedGroups.forEach((group) => {
     group.geom = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
-    // sceneState.addSimplifiedBuilding(`${building.id}-united-${index}`, simplified);
   });
-  console.log(`unite: ${Date.now() - stepTime}`)
-  stepTime = Date.now()
   
   for (let i = 0; i < unitedGroups.length; i++) {
     const group = unitedGroups[i];
-    // console.log(`United group for simplification ${i}: ${group.buildings.join(', ')}`);
     let simplified = group.geom;
     simplified = unround(simplified, 10, 0.45);
     simplified = flatten(simplified, 3);
@@ -336,8 +295,6 @@ const uniteAndSimplifyBuilding = async (building: Building) => {
     simplified = unround(simplified, 5, 0.55);
     sceneState.addSimplifiedBuilding(`${building.id}-united-simplified-${i}`, simplified);
   }
-  console.log(`postprocess: ${Date.now() - stepTime}`)
-  console.log(`total: ${Date.now() - startAt}`)
 };
 
 const uniteAndSimplifySelectedBuildings = async () => {

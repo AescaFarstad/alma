@@ -23,9 +23,12 @@
         {
             "label": "Process OSM",
             "type": "shell",
-            "command": "node",
+            "command": "npm",
             "args": [
-                "${workspaceFolder}/src/mapgen/gen_data.cjs"
+                "run",
+                "ts-node",
+                "--",
+                "${workspaceFolder}/src/mapgen/gen_data.ts"
             ],
             "group": {
                 "kind": "build",

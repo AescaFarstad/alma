@@ -2,6 +2,9 @@ import { loadGeoJsonData } from '../GeoJsonLoader';
 import GeoJSON from 'ol/format/GeoJSON';
 import Feature from 'ol/Feature';
 
+// Feature flag to control which building data format to use for OpenLayers map
+const USE_S6_BUILDINGS = true; // Set to false to use old buildings.geojson
+
 const geoJsonData: Record<string, any> = {
     buildings: null,
     roads: null,
@@ -27,7 +30,7 @@ let loadingPromise: Promise<void> | null = null;
 
 async function loadAndProcessData() {    
     const [buildings, roads] = await Promise.all([
-        loadGeoJsonData('buildings'),
+        USE_S6_BUILDINGS ? loadS6Buildings() : loadGeoJsonData('buildings'),
         loadGeoJsonData('roads')
     ]);
 
@@ -45,7 +48,25 @@ async function loadAndProcessData() {
             rawFeaturesById.roads[feature.id] = feature;
         }
     }
-    // console.log(`[GeoJsonStore] Loaded ${Object.keys(rawFeaturesById.buildings).length} buildings and ${Object.keys(rawFeaturesById.roads).length} roads.`);
+    
+    const buildingSource = USE_S6_BUILDINGS ? 'S6 simplified' : 'original';
+    // console.log(`[GeoJsonStore] Loaded ${Object.keys(rawFeaturesById.buildings).length} buildings (${buildingSource}) and ${Object.keys(rawFeaturesById.roads).length} roads.`);
+}
+
+/**
+ * Load S6 simplified buildings from buildings_simplified.geojson
+ */
+async function loadS6Buildings(): Promise<any> {
+    const response = await fetch('/data/buildings_simplified.geojson');
+    const geojsonData = await response.json();
+
+    for (const feature of geojsonData.features) {
+        if (feature.id && !feature.properties.id) {
+            feature.properties.id = String(feature.id);
+        }
+    }
+
+    return geojsonData;
 }
 
 /**

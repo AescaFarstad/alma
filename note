@@ -39,3 +39,7 @@ Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite i
 
 
 8 fps -> 60 fps simply by removing memory allocations and reusing text nodes
+
+
+properly convert filter_geojson.cjs to filter_geojson.ts to be called in tsnode.
+convert the rest
