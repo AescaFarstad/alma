@@ -66,9 +66,32 @@ function processFeature(feature, log) {
 
     // 2. Feature-Specific Processing
     if (props.building) {
-        return processBuilding(feature, log);
+        const processedBuilding = processBuilding(feature, log);
+        if (!processedBuilding) {
+            return null;
+        }
+
+        if (processedBuilding.geometry.type === 'MultiPolygon') {
+            const newFeatures = [];
+            const originalId = processedBuilding.id || '';
+            processedBuilding.geometry.coordinates.forEach((polygonCoords, index) => {
+                const newFeature = {
+                    ...processedBuilding,
+                    id: `M${originalId}${index}`,
+                    properties: { ...processedBuilding.properties },
+                    geometry: {
+                        type: 'Polygon',
+                        coordinates: polygonCoords,
+                    },
+                };
+                newFeatures.push(newFeature);
+            });
+            return newFeatures;
+        }
+        return [processedBuilding];
     } else if (props.highway) {
-        return processHighway(feature, log);
+        const processedHighway = processHighway(feature, log);
+        return processedHighway ? [processedHighway] : null;
     }
     
     return null; 
@@ -284,6 +307,9 @@ function createLog() {
             building_yes_to_industrial_by_props: {},
             building_category_condensed: {},
             highway_category_condensed: {},
+            winding_order_reversed_exterior: 0,
+            winding_order_reversed_hole: 0,
+            winding_order_reversed_linestring: 0,
         },
         totals: {
             read: 0,
@@ -382,9 +408,59 @@ function printLog(log, fileName) {
         }
     }
 
+    if (log.modified.winding_order_reversed_exterior > 0) {
+        console.log(`  winding_order_reversed_exterior: ${log.modified.winding_order_reversed_exterior}`);
+    }
+    if (log.modified.winding_order_reversed_hole > 0) {
+        console.log(`  winding_order_reversed_hole: ${log.modified.winding_order_reversed_hole}`);
+    }
+    if (log.modified.winding_order_reversed_linestring > 0) {
+        console.log(`  winding_order_reversed_linestring: ${log.modified.winding_order_reversed_linestring}`);
+    }
+
     console.log("Totals:");
     for (const key in log.totals) console.log(`  ${key}: ${log.totals[key]}`);
     console.log("--- End Log ---");
+}
+
+function getSignedArea(ring) {
+    let area = 0;
+    for (let i = 0; i < ring.length - 1; i++) {
+        area += ring[i][0] * ring[i+1][1] - ring[i+1][0] * ring[i][1];
+    }
+    return area / 2;
+}
+
+function ensureWindingOrder(geometry, log) {
+    if (geometry.type === 'Polygon') {
+        const rings = geometry.coordinates;
+        for (let i = 0; i < rings.length; i++) {
+            const ring = rings[i];
+            const area = getSignedArea(ring);
+
+            if (i === 0) { // Exterior ring should be CCW
+                if (area < 0) { // It's CW, needs reversal
+                    ring.reverse();
+                    log.modified.winding_order_reversed_exterior = (log.modified.winding_order_reversed_exterior || 0) + 1;
+                }
+            } else { // Hole rings should be CW
+                if (area > 0) { // It's CCW, needs reversal
+                    ring.reverse();
+                    log.modified.winding_order_reversed_hole = (log.modified.winding_order_reversed_hole || 0) + 1;
+                }
+            }
+        }
+    } else if (geometry.type === 'LineString') {
+        const ring = geometry.coordinates;
+        // A closed LineString has at least 4 points (e.g., A, B, C, A) and its first and last points are identical.
+        if (ring.length >= 4 && ring[0][0] === ring[ring.length - 1][0] && ring[0][1] === ring[ring.length - 1][1]) {
+            const area = getSignedArea(ring);
+            if (area < 0) { // It's CW, reverse to make it CCW.
+                ring.reverse();
+                log.modified.winding_order_reversed_linestring = (log.modified.winding_order_reversed_linestring || 0) + 1;
+            }
+        }
+    }
 }
 
 function main() {
@@ -392,10 +468,6 @@ function main() {
 
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
-    }
-    const publicDataDir = path.join(process.cwd(), 'public', 'data');
-    if (!fs.existsSync(publicDataDir)) {
-        fs.mkdirSync(publicDataDir, { recursive: true });
     }
 
     const files = fs.readdirSync(inputDir).filter(f => f.endsWith('.geojson'));
@@ -410,28 +482,35 @@ function main() {
 
         const processedFeatures = [];
         for (const feature of geojson.features) {
-            let processed = processFeature(feature, log);
+            const processedArray = processFeature(feature, log);
 
-            if (processed) {
-                // 3.1. Coordinate System Transformation
-                processed.geometry.coordinates = transformCoords(processed.geometry.coordinates);
+            if (processedArray) {
+                for (let processed of processedArray) {
+                    // 3.1. Coordinate System Transformation
+                    processed.geometry.coordinates = transformCoords(processed.geometry.coordinates);
 
-                // Add inscribedCenter for buildings after transformation
-                if (processed.properties.building) {
-                    processed.inscribedCenter = getInscribedCenter(processed.geometry);
+                    // Enforce GeoJSON winding order rules
+                    if (processed.properties.building && (processed.geometry.type === 'Polygon' || processed.geometry.type === 'LineString')) {
+                        ensureWindingOrder(processed.geometry, log);
+                    }
+
+                    // Add inscribedCenter for buildings after transformation
+                    if (processed.properties.building) {
+                        processed.inscribedCenter = getInscribedCenter(processed.geometry);
+                    }
+
+                    // Final check for empty properties
+                    if(Object.keys(processed.properties).length === 0) {
+                        log.removed.empty_properties++;
+                        processed = null;
+                    }
+
+                    if (processed) {
+                        if (processed.properties.building) log.totals.buildings++;
+                        if (processed.properties.highway) log.totals.highways++;
+                        processedFeatures.push(processed);
+                    }
                 }
-
-                // Final check for empty properties
-                if(Object.keys(processed.properties).length === 0) {
-                    log.removed.empty_properties++;
-                    processed = null;
-                }
-            }
-
-            if (processed) {
-                if (processed.properties.building) log.totals.buildings++;
-                if (processed.properties.highway) log.totals.highways++;
-                processedFeatures.push(processed);
             }
         }
 
@@ -464,13 +543,6 @@ function main() {
         console.error(`Failed to run generate-structure.cjs: ${error.message}`);
         process.exit(1);
     }
-
-    console.log(`\nCopying processed files from ${outputDir} to ${publicDataDir}...`);
-    const processedFiles = fs.readdirSync(outputDir).filter(f => f.endsWith('.geojson'));
-    for (const file of processedFiles) {
-        fs.copyFileSync(path.join(outputDir, file), path.join(publicDataDir, file));
-    }
-    console.log('Done.');
 }
 
 main(); 

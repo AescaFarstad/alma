@@ -1,15 +1,18 @@
 import { createApp, reactive } from 'vue'
 import App from './App.vue'
-import { loadBuildingData } from './LogicMapDataLoader';
 import { GameState } from './logic/GameState';
 import { processInputs } from './logic/input/InputProcessor';
 import * as Model from './logic/Model';
 import { FPSCounter } from './logic/FPSCounter';
+import { ensureDataLoaded } from './logic/GeoJsonStore';
+import { sceneState } from './logic/drawing/SceneState';
+import { loadBuildingData } from './LogicMapDataLoader';
 
 async function initializeGame() {
     const gameState = new GameState();
     gameState.uiState = reactive(gameState.uiState);
-
+    
+    await ensureDataLoaded();
     await loadBuildingData(gameState);
 
     // initNewGame(gameState); // This will now be called from Map.vue after the map is initialized.
@@ -24,6 +27,7 @@ async function initializeGame() {
     });
 
     app.provide('gameState', gameState);
+    app.provide('sceneState', sceneState);
     app.provide('fpsMetrics', fpsMetrics);
 
     app.mount('#app');

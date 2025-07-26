@@ -1,14 +1,19 @@
 import { GameState } from './logic/GameState';
-import { loadGeoJsonData } from './GeoJsonLoader';
+import { getRawGeoJson } from './logic/GeoJsonStore';
 
 export async function loadBuildingData(gameState: GameState): Promise<any> {
-    const geojsonData = await loadGeoJsonData('buildings');
+    const geojsonData = getRawGeoJson('buildings');
     
+    // The data is already loaded, so we can just use it.
     console.log(`[LogicMapDataLoader] Loaded ${geojsonData.features.length} building features.`);
 
     for (const feature of geojsonData.features) {
-        if (feature.id) {
-            feature.properties.id = String(feature.id);
+        const id = String(feature.id);
+        feature.properties.id = id;
+        gameState.buildingsById[id] = {
+            id: id,
+            stats: feature.properties,
+            geometry: feature.geometry.coordinates,
         }
     }
     
@@ -55,7 +60,7 @@ export async function loadBuildingData(gameState: GameState): Promise<any> {
             return [];
         }
 
-        return [{ minX, minY, maxX, maxY, feature }];
+        return [{ minX, minY, maxX, maxY, id: String(feature.id), feature }];
     });
 
     gameState.buildingSpatialIndex.load(buildingBBoxes);

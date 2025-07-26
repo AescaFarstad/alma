@@ -1,100 +1,36 @@
 <template>
   <div id="ui-overlay">
+    <SelectedBuildings />
     <div id="controls">
-      <button @click="toggleLayer('footways')">Footways</button>
-      <button @click="toggleLayer('steps')">Steps</button>
+      <button @click="toggleLayer('buildings')">Buildings</button>
       <button @click="toggleLayer('roads')">Roads</button>
-      <button @click="toggleFill('buildings')">Roofs</button>
-      <div class="building-search-container">
-        <input v-model="buildingIdToFind" placeholder="Building ID" @keyup.enter="findBuilding" />
-        <button @click="findBuilding">Find</button>
-      </div>
-      <div class="coord-search-container">
-        <input v-model="coordinateStringToFind" placeholder='{"x":...,"y":...}' @keyup.enter="findCoordinates" />
-        <button @click="findCoordinates">Find</button>
-      </div>
+      <button @click="toggleLayer('footpaths')">Footpaths</button>
+    </div>
+    <div id="fps-display" v-if="fpsMetrics">
+      {{ fpsMetrics.currentFPS }}|{{ fpsMetrics.averageFPS }}|{{ fpsMetrics.maxFrameTime }}
     </div>
     <div id="info-panel">
-      <div v-if="fpsMetrics">FPS: {{ fpsMetrics.currentFPS }} (Avg: {{ fpsMetrics.averageFPS }}) | Max Frame: {{ fpsMetrics.maxFrameTime }}ms</div>
-      <div>Coords: {{ props.mouseCoordinates.lng.toFixed(4) }}, {{ props.mouseCoordinates.lat.toFixed(4) }}</div>
-      <div>Bounds: {{ props.mapBounds }}</div>
+      <div>{{ props.mouseCoordinates.lng.toFixed(1) }}, {{ props.mouseCoordinates.lat.toFixed(1) }}</div>
+      <div>{{ formatBounds(props.mapBounds) }}</div>
+      <div v-if="props.zoomLevel !== null">Zoom: {{ props.zoomLevel.toFixed(2) }}</div>
+    </div>
+    <div id="measurement-panel" v-if="props.measurementDistance">
+      {{ props.measurementDistance.toFixed(1) }}m
     </div>
     <div id="feature-info-panel" v-if="props.selectedFeatureInfo">
       <h3>Feature Information</h3>
       <pre>{{ props.selectedFeatureInfo }}</pre>
     </div>
-    <div id="building-info-panel" v-if="gameState?.uiState.selectedBuilding">
-        <h3>Selected Building</h3>
-        <div><strong>ID:</strong> {{ gameState.uiState.selectedBuilding.id }}</div>
-        <div><strong>Map ID:</strong> {{ gameState.uiState.selectedBuilding.mapId }}</div>
-        <div><strong>Original Map ID:</strong> {{ gameState.uiState.selectedBuilding.originalMapId }}</div>
-        <div><strong>Team:</strong> {{ gameState.uiState.selectedBuilding.team }}</div>
-        <div><strong>Floors:</strong> {{ gameState.uiState.selectedBuilding.floors }}</div>
-        <div><strong>Floor Size:</strong> {{ gameState.uiState.selectedBuilding.floorSize }}</div>
-        <div><strong>Center:</strong> ({{ gameState.uiState.selectedBuilding.center.x.toFixed(4) }}, {{ gameState.uiState.selectedBuilding.center.y.toFixed(4) }})</div>
-        <div><strong>Disabled Until:</strong> {{ gameState.uiState.selectedBuilding.disabledUntil }}</div>
-        
-        <h4>Slots ({{ gameState.uiState.selectedBuilding.slots.length }})</h4>
-        <div v-for="(slot, index) in gameState.uiState.selectedBuilding.slots" :key="index" class="slot-info">
-            <div><strong>Slot {{ index }}:</strong> Type {{ slot.type }}</div>
-            <div v-if="slot.content" class="slot-content">
-                <em>Module:</em> {{ slot.contentName || slot.content }}
-            </div>
-            <div v-if="slot.occupant" class="slot-occupant">
-                <em>Occupant:</em> {{ slot.occupant }}
-            </div>
-        </div>
-        
-        <h4 v-if="gameState.uiState.selectedBuilding.outputs.length > 0">Outputs</h4>
-        <div v-for="output in gameState.uiState.selectedBuilding.outputs" :key="output.resource" class="output-info">
-            <div><strong>{{ output.resource }}:</strong> {{ output.income.toFixed(2) }} {{ output.isStorage ? '(storage)' : '(income)' }}</div>
-        </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineProps, defineEmits, inject, type PropType } from 'vue';
-import type { GameState } from '../../logic/GameState';
-import { globalInputQueue } from '../../logic/Model';
-import type { CmdQueryBuilding } from '../../logic/input/InputCommands';
+import { defineProps, defineEmits, inject, type PropType } from 'vue';
 import type { FPSMetrics } from '../../logic/FPSCounter';
+import SelectedBuildings from './SelectedBuildings.vue';
 
 // Inject the game state provided in main.ts
-const gameState = inject<GameState>('gameState');
 const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
-
-const buildingIdToFind = ref('');
-const coordinateStringToFind = ref('');
-
-const findBuilding = () => {
-  if (buildingIdToFind.value && gameState?.uiState.currentPlayerId) {
-    const building = gameState.buildingsById[buildingIdToFind.value];
-    if (building) {
-      const command: CmdQueryBuilding = { 
-        name: 'CmdQueryBuilding', 
-        mapId: building.mapId,
-        playerId: gameState.uiState.currentPlayerId,
-      };
-      globalInputQueue.push(command);
-    }
-    buildingIdToFind.value = '';
-  }
-};
-
-const findCoordinates = () => {
-  if (coordinateStringToFind.value) {
-    try {
-      const coords = JSON.parse(coordinateStringToFind.value);
-      if (coords && typeof coords.x === 'number' && typeof coords.y === 'number') {
-        emit('show-coordinates', coords);
-      }
-    } catch (e) {
-      console.error("Invalid coordinate format:", e);
-    }
-    coordinateStringToFind.value = '';
-  }
-};
 
 const props = defineProps({
   mouseCoordinates: {
@@ -112,34 +48,32 @@ const props = defineProps({
   selectedFeatureInfo: {
     type: Object,
     default: null
+  },
+  measurementDistance: {
+    type: Number as PropType<number | null>,
+    default: null
+  },
+  zoomLevel: {
+    type: Number as PropType<number | null>,
+    default: null
   }
 });
 
-const emit = defineEmits(['toggle-layer', 'toggle-fill', 'show-coordinates']);
+const emit = defineEmits(['map-event']);
 
-const showFootways = ref(true);
-const showSteps = ref(true);
-const showRoads = ref(true);
-const showBuildingFill = ref(true);
-
-const toggleLayer = (layerId: 'footways' | 'steps' | 'roads') => {
-  if (layerId === 'footways') {
-    showFootways.value = !showFootways.value;
-    emit('toggle-layer', { layerId, visible: showFootways.value });
-  } else if (layerId === 'steps') {
-    showSteps.value = !showSteps.value;
-    emit('toggle-layer', { layerId, visible: showSteps.value });
-  } else if (layerId === 'roads') {
-    showRoads.value = !showRoads.value;
-    emit('toggle-layer', { layerId, visible: showRoads.value });
-  }
+const toggleLayer = (layerId: 'buildings' | 'roads' | 'footpaths') => {
+  emit('map-event', { type: 'toggle-layer', payload: { layerId } });
 };
 
-const toggleFill = (layerId: 'buildings') => {
-  if (layerId === 'buildings') {
-    showBuildingFill.value = !showBuildingFill.value;
-    emit('toggle-fill', { layerId, visible: showBuildingFill.value });
-  }
+const formatBounds = (bounds: string) => {
+  if (!bounds) return '';
+  
+  // Parse bounds string to extract coordinates
+  const match = bounds.match(/\[(-?\d+\.?\d*), (-?\d+\.?\d*)\] - \[(-?\d+\.?\d*), (-?\d+\.?\d*)\]/);
+  if (!match) return bounds;
+  
+  const [, lng1, lat1, lng2, lat2] = match;
+  return `[${parseFloat(lng1).toFixed(0)},${parseFloat(lat1).toFixed(0)}]-[${parseFloat(lng2).toFixed(0)},${parseFloat(lat2).toFixed(0)}]`;
 };
 </script>
 
@@ -153,6 +87,7 @@ const toggleFill = (layerId: 'buildings') => {
   pointer-events: none; /* Let map events pass through */
   color: #f0f0f0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
 }
 
 #ui-overlay > * {
@@ -161,114 +96,78 @@ const toggleFill = (layerId: 'buildings') => {
 
 #controls {
   position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 4px;
+  left: 4px;
   background: rgba(33, 33, 33, 0.9);
-  padding: 8px;
-  border-radius: 6px;
+  padding: 4px;
+  border-radius: 4px;
   z-index: 1;
   display: flex;
-  gap: 8px;
+  gap: 4px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   align-items: center;
-}
-
-#controls .building-search-container {
-  display: flex;
-  margin-left: 16px;
-}
-
-#controls .building-search-container input {
-    background-color: #2d2d2d;
-    color: #f5f5f5;
-    border: 1px solid #4f4f4f;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-right: 4px;
-    width: 120px;
-}
-
-#controls .building-search-container input::placeholder {
-    color: #a0a0a0;
-}
-
-#controls .building-search-container button {
-    background-color: #4f4f4f;
-    color: #f5f5f5;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 14px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 500;
-}
-
-#controls .building-search-container button:hover {
-    background-color: #616161;
-}
-
-#controls .coord-search-container {
-  display: flex;
-  margin-left: 16px;
-}
-
-#controls .coord-search-container input {
-    background-color: #2d2d2d;
-    color: #f5f5f5;
-    border: 1px solid #4f4f4f;
-    border-radius: 4px;
-    padding: 8px 12px;
-    margin-right: 4px;
-    width: 200px;
-}
-
-#controls .coord-search-container input::placeholder {
-    color: #a0a0a0;
-}
-
-#controls .coord-search-container button {
-    background-color: #4f4f4f;
-    color: #f5f5f5;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 14px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 500;
-}
-
-#controls .coord-search-container button:hover {
-    background-color: #616161;
 }
 
 #controls button {
     background-color: #4f4f4f;
     color: #f5f5f5;
     border: none;
-    border-radius: 4px;
-    padding: 8px 14px;
+    border-radius: 3px;
+    padding: 4px 8px;
     cursor: pointer;
     transition: background-color 0.3s ease;
     font-weight: 500;
+    font-size: 11px;
 }
 
 #controls button:hover {
     background-color: #616161;
 }
 
-#info-panel {
+#fps-display {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
+  top: 4px;
+  right: 4px;
   background: rgba(33, 33, 33, 0.9);
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
   z-index: 1;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  font-size: 0.9em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  font-family: monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+#info-panel {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  background: rgba(33, 33, 33, 0.9);
+  padding: 4px 6px;
+  border-radius: 4px;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+#measurement-panel {
+  position: absolute;
+  bottom: 4px;
+  left: 150px;
+  background: rgba(33, 33, 33, 0.9);
+  padding: 4px 6px;
+  border-radius: 4px;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  font-family: monospace;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 #feature-info-panel {
@@ -285,56 +184,4 @@ const toggleFill = (layerId: 'buildings') => {
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-
-#building-info-panel {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(33, 33, 33, 0.92);
-    padding: 15px;
-    border-radius: 8px;
-    z-index: 1;
-    max-width: 320px;
-    max-height: calc(100vh - 20px);
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-}
-
-h3, h4 {
-    color: #ffffff;
-    border-bottom: 1px solid #4f4f4f;
-    padding-bottom: 8px;
-    margin-top: 0;
-    margin-bottom: 12px;
-}
-
-.slot-info {
-    margin: 8px 0;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-    border-left: 4px solid #4dabf7;
-}
-
-.slot-content, .slot-occupant {
-    margin-left: 10px;
-    font-style: italic;
-}
-
-.slot-content {
-    color: #82c9ff;
-}
-
-.slot-occupant {
-    color: #ffb48a;
-}
-
-.output-info {
-    margin: 4px 0;
-    padding: 6px 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-    font-size: 0.9em;
-}
-</style> 
+</style>

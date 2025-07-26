@@ -4,8 +4,10 @@ const fs = require('fs');
 
 const STEPS_TO_RUN = {
     processOsm: false,
-    filterGeojson: false,
-    generateTiles: true,
+    filterGeojson: true,
+    deduplication: true,
+    copyData: true,
+    generateTiles: false,
     // buildNavmesh: true,  // Placeholder for next step
 };
 
@@ -14,7 +16,11 @@ const AREA_TO_EXTRACT = 'city_center'; // 'city_center', 'city_main', or 'city_f
 const BASE_DATA_DIR = path.resolve(__dirname, '../../data');
 const STEP_1_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_1_processed_osm');
 const STEP_2_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_2_filtered_geojson');
-const STEP_3_OUTPUT_DIR = path.resolve(__dirname, '../../public/tiles');
+const STEP_3_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_3_deduplicated_geojson');
+const FINAL_DATA_DIR = path.resolve(__dirname, '../../public/data');
+const TILES_OUTPUT_DIR = path.resolve(__dirname, '../../public/tiles');
+
+const GEOJSON_COPY_SOURCE_DIR = STEP_3_OUTPUT_DIR;
 
 const FEATURES_TO_EXTRACT = {
     // Built environment
@@ -98,13 +104,34 @@ function stepFilterGeojson() {
     execSync(`node "${scriptPath}" --input="${STEP_1_OUTPUT_DIR}" --output="${STEP_2_OUTPUT_DIR}" --generated-types-file="${generatedTypesFile}"`, { stdio: 'inherit' });
 }
 
-// --- Step 3: Generate Tiles ---
-function stepGenerateTiles() {
-    const scriptPath = path.resolve(__dirname, 'generate_tiles.cjs');
+// --- Step 3: Deduplicate GeoJSON ---
+function stepDeduplicateGeojson() {
+    const scriptPath = path.resolve(__dirname, 'deduplicate_geojson.cjs');
     execSync(`node "${scriptPath}" --input="${STEP_2_OUTPUT_DIR}" --output="${STEP_3_OUTPUT_DIR}"`, { stdio: 'inherit' });
 }
 
-// --- Step 4: Build NavMesh (Placeholder) ---
+// --- Step 4: Copy Data to Public Folder ---
+function stepCopyData() {
+    if (!fs.existsSync(FINAL_DATA_DIR)) {
+        fs.mkdirSync(FINAL_DATA_DIR, { recursive: true });
+    }
+
+    console.log(`Copying files from ${GEOJSON_COPY_SOURCE_DIR} to ${FINAL_DATA_DIR}...`);
+    const filesToCopy = fs.readdirSync(GEOJSON_COPY_SOURCE_DIR).filter(f => f.endsWith('.geojson'));
+
+    for (const file of filesToCopy) {
+        fs.copyFileSync(path.join(GEOJSON_COPY_SOURCE_DIR, file), path.join(FINAL_DATA_DIR, file));
+        console.log(`  - Copied ${file}`);
+    }
+}
+
+// --- Step 5: Generate Tiles ---
+function stepGenerateTiles() {
+    const scriptPath = path.resolve(__dirname, 'generate_tiles.cjs');
+    execSync(`node "${scriptPath}" --input="${GEOJSON_COPY_SOURCE_DIR}" --output="${TILES_OUTPUT_DIR}"`, { stdio: 'inherit' });
+}
+
+// --- Step 6: Build NavMesh (Placeholder) ---
 // function stepBuildNavmesh() {
 //     const scriptPath = path.resolve(__dirname, 'build_navmesh.cjs');
 //     execSync(`node "${scriptPath}" --input="..." --output="..."`, { stdio: 'inherit' });
@@ -121,6 +148,8 @@ async function main() {
 
     await runStep('processOsm', stepProcessOsm);
     await runStep('filterGeojson', stepFilterGeojson);
+    await runStep('deduplication', stepDeduplicateGeojson);
+    await runStep('copyData', stepCopyData);
     await runStep('generateTiles', stepGenerateTiles);
     // runStep('buildNavmesh', stepBuildNavmesh);
 

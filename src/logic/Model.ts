@@ -2,7 +2,6 @@ import { GameState } from "./GameState";
 import type { CmdInput } from './input/InputCommands';
 import { Stats } from "./core/Stats";
 import { processInputs } from "./input/InputProcessor";
-import { updateEconomy } from "./Economy";
 import { sync as syncUIState } from "./UIStateManager";
 
 /**
@@ -19,7 +18,6 @@ export const globalInputQueue: CmdInput[] = [];
 export function update(gs: GameState, deltaTime: number): void {
     gs.gameTime += deltaTime;
     processInputs(gs);
-    updateEconomy(gs, deltaTime);
     Stats.processEventDispatcherQueue(gs.connections, gs);
 
     gs.invoker.update(deltaTime, gs);

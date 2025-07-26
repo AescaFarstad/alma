@@ -1,11 +1,41 @@
 july 15
     refactor data pipeline
+    Moved to OpenLayers
+    using tiled map that can switch between dynamic and static tiles. Dynamic are faster for some reson.
 
+july 16
+    Tried Cline + kimi k2
+    Came up with the zombies -> porcessing chains (chemistry) idea
+    Combined layers for performance
+    PixieJS, building selection, optimising performance
+
+july 17
+    SceneState + DrawPrimitives architechture
+
+july 19
+    Geometry simplification
+july 23
+    uniting, deduplication, cornerize
+july 26
+    tsnode, simplification in pre-processing
 
 Plan:
-    consistent data source
-        use point features to update building info
-        convert lines to polygons
-    web worker tile generation
     WASM benchmark
     navmesh generation
+
+Navigation
+    geometry pre-processing
+    triangularization
+    city-block clusterization
+
+
+manual edits to data processing - a106560244 = roof or sub polygon hole
+w51155804 Ma1023116080 simply overlap
+some have "inscribedCenter":null
+
+w234872170 sole linestring
+
+Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite into one
+
+
+8 fps -> 60 fps simply by removing memory allocations and reusing text nodes
