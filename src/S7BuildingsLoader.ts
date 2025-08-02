@@ -60,7 +60,7 @@ export async function loadS7Buildings(): Promise<S7Building[]> {
         
         if (coordsArray.trim()) {
             try {
-                const coordStrings = coordsArray.split(';');
+                const coordStrings = coordsArray.split(',');
                 for (const coordStr of coordStrings) {
                     const coord = parseFloat(coordStr.trim());
                     if (isNaN(coord)) {

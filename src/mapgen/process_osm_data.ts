@@ -33,11 +33,16 @@ interface ProcessOSMConfig {
     tempDir: string;
 }
 
+
 // Area definitions
 const AREA_DEFINITIONS: Record<string, AreaDefinition> = {
     city_center: {
         bounds: [76.88, 43.22, 76.98, 43.27],
         description: 'Downtown Almaty (~25 km²)'
+    },
+    city_crop: {
+        bounds: [76.91, 43.21, 76.99, 43.28],
+        description: 'Downtown Almaty squareish (~35 km²)'
     },
     city_main: {
         bounds: [76.85, 43.20, 77.00, 43.30],

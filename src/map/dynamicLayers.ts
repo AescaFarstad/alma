@@ -7,14 +7,14 @@ import VectorTileSource from 'ol/source/VectorTile';
 import VectorTile from 'ol/VectorTile';
 import { getRawGeoJson } from '../logic/GeoJsonStore';
 import { getBuildingStyle, getRoadStyle } from './styles';
-import { mapInstance } from '../map_instance';
+import type { Map as OlMap } from 'ol';
 
 /**
  * Creates separate dynamic layers for buildings and roads.
  * Each layer has its own VectorSource and VectorTileSource.
  * This is the "dynamic_separate" mode.
  */
-export function createDynamicLayers(projection: Projection) {
+export function createDynamicLayers(map: OlMap, projection: Projection) {
     const buildings = getRawGeoJson('buildings');
     const roads = getRawGeoJson('roads');
 
@@ -80,6 +80,6 @@ export function createDynamicLayers(projection: Projection) {
         properties: { name: 'roads' },
     });
 
-    mapInstance.map!.addLayer(buildingsLayer);
-    mapInstance.map!.addLayer(roadsLayer);
+    map.addLayer(buildingsLayer);
+    map.addLayer(roadsLayer);
 }

@@ -8,12 +8,17 @@ import { getPointsFromBuildingFeature, createPolygonFeature, formatCoordsRounded
 import { simplifyWithDilationErosion } from '../logic/simplification/dilationErosion';
 import { cornerize } from '../logic/simplification/cornerize';
 
-import type { FeatureCollection, Polygon } from 'geojson';
+import type { FeatureCollection } from 'geojson';
 import type { Point2 } from '../logic/core/math';
 
 const SIMPLIFICATION_INFLATION = 3.6;
 const MERGE_INFLATION = 2;
 const MIN_AREA = 10;
+const SAFE_TO_SKIP_AREA = 20;
+
+const RUN_S6 = true;
+const RUN_BLOBS = true;
+const RUN_S7 = true;
 
 // Helper function to calculate polygon area
 function calculatePolygonArea(points: Point2[]): number {
@@ -125,10 +130,7 @@ async function main() {
     console.log(`Removed ${smallBuildingsCount} buildings with area < ${MIN_AREA}. Remaining: ${correctedBuildings.length}`);
 
 
-    // 4. Simplify with S6 logic
-    console.log('Simplifying buildings (S6)...');
-    
-    // Calculate total vertices before S6 simplification
+    // Calculate total vertices before simplification
     let totalVerticesBeforeS6 = 0;
     for (const building of correctedBuildings) {
         const points = getPointsFromBuildingFeature(building);
@@ -136,114 +138,142 @@ async function main() {
             totalVerticesBeforeS6 += points.length;
         }
     }
+
+    // 4. Simplify with S6 logic
+    if (RUN_S6) {
+        console.log('Simplifying buildings (S6)...');
     
-    const simplifiedFeaturesS6: BuildingFeature[] = correctedBuildings.map(building => {
-        const points = getPointsFromBuildingFeature(building);
-        if (!points) return null;
+        let s6SkippedCount = 0;
+        const simplifiedFeaturesS6: BuildingFeature[] = correctedBuildings.map(building => {
+            const points = getPointsFromBuildingFeature(building);
+            if (!points) return null;
 
-        let res = unround(points, 5, 0.25);
-        res = flatten(res, 1.75);
-        res = unround(res, 5, 0.3);
-        res = flatten(res, 2);
-        
-        const simplifiedPoints = res.map(p => ({ x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 }));
+            let res = unround(points, 5, 0.25);
+            res = flatten(res, 1.75);
+            res = unround(res, 5, 0.3);
+            res = flatten(res, 2);
+            
+            const simplifiedPoints = res.map(p => ({ x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 }));
 
-        return createPolygonFeature(simplifiedPoints, {}, building.id);
-    }).filter((f): f is BuildingFeature => !!f);
+            if (simplifiedPoints.length < 3 && calculatePolygonArea(simplifiedPoints) < SAFE_TO_SKIP_AREA) {
+                s6SkippedCount++;
+                return null;
+            }
 
-    // Calculate total vertices after S6 simplification
-    let totalVerticesAfterS6 = 0;
-    for (const building of simplifiedFeaturesS6) {
-        const points = getPointsFromBuildingFeature(building);
-        if (points) {
-            totalVerticesAfterS6 += points.length;
+            return createPolygonFeature(simplifiedPoints, {}, building.id);
+        }).filter((f): f is BuildingFeature => !!f);
+
+        // Calculate total vertices after S6 simplification
+        let totalVerticesAfterS6 = 0;
+        for (const building of simplifiedFeaturesS6) {
+            const points = getPointsFromBuildingFeature(building);
+            if (points) {
+                totalVerticesAfterS6 += points.length;
+            }
         }
-    }
-    console.log(`S6 vertices: before: ${totalVerticesBeforeS6} after: ${totalVerticesAfterS6} gone: ${totalVerticesBeforeS6 - totalVerticesAfterS6}`);
+        console.log(`S6 vertices: before: ${totalVerticesBeforeS6} after: ${totalVerticesAfterS6} gone: ${totalVerticesBeforeS6 - totalVerticesAfterS6}`);
+        console.log(`S6: Skipped ${s6SkippedCount} buildings with < 3 vertices and area < ${SAFE_TO_SKIP_AREA}.`);
 
-    const simplifiedS6Collection: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: simplifiedFeaturesS6
-    };
-    fs.writeFileSync(path.join(outputDir, 'buildings_simplified.geojson'), JSON.stringify(simplifiedS6Collection));
-    console.log('S6 simplification saved to buildings_simplified.geojson');
+        const simplifiedS6Collection: FeatureCollection = {
+            type: 'FeatureCollection',
+            features: simplifiedFeaturesS6
+        };
+        fs.writeFileSync(path.join(outputDir, 'buildings_simplified.geojson'), JSON.stringify(simplifiedS6Collection));
+        console.log('S6 simplification saved to buildings_simplified.geojson');
+    }
 
 
     // 5. Unite all buildings into blobs
-    console.log('Uniting all buildings into blobs...');
-    const buildingsForUnite: BuildingWithPolygon[] = correctedBuildings.map(b => {
-        let points = getPointsFromBuildingFeature(b);
-        if (!points) {
-            throw new Error(`Cannot extract points from building ${b.id} for blob generation`);
-        }
-        
-        points = unround(points, 10, 0.45);
-        points = flatten(points, 3);
+    if (RUN_BLOBS) {
+        console.log('Uniting all buildings into blobs...');
+        const buildingsForUnite: BuildingWithPolygon[] = correctedBuildings.map(b => {
+            let points = getPointsFromBuildingFeature(b);
+            if (!points) {
+                throw new Error(`Cannot extract points from building ${b.id} for blob generation`);
+            }
+            
+            points = unround(points, 10, 0.45);
+            points = flatten(points, 3);
 
-        return {
-            id: b.id!,
-            polygon: points
-        };
-    });
-    
-    let allPoints = buildingsForUnite.flatMap(g => g.polygon);
-    
-    let unitedBlobs: UnitedGroup[] = [];
-    const startedAt = Date.now();
-    unitedBlobs = await uniteGeometries(buildingsForUnite, MERGE_INFLATION);
-    console.log(`uniteGeometries finished. Found ${unitedBlobs.length} blobs in ${Date.now() - startedAt}ms`);
+            return {
+                id: b.id!,
+                polygon: points
+            };
+        });
+        
+        let allPoints = buildingsForUnite.flatMap(g => g.polygon);
+        
+        let unitedBlobs: UnitedGroup[] = [];
+        const startedAt = Date.now();
+        unitedBlobs = await uniteGeometries(buildingsForUnite, MERGE_INFLATION);
+        console.log(`uniteGeometries finished. Found ${unitedBlobs.length} blobs in ${Date.now() - startedAt}ms`);
 
-    let blobOutput = '';
-    let totalBlobVertices = 0;
-    unitedBlobs.forEach((group, index) => {
-        let simplified = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
-        simplified = unround(simplified, 10, 0.45);
-        simplified = flatten(simplified, 3);
-        simplified = unround(simplified, 10, 0.5);
-        simplified = flatten(simplified, 5);
-        simplified = unround(simplified, 5, 0.55);
+        let blobOutput = '';
+        let totalBlobVertices = 0;
+        let blobsSkippedCount = 0;
+        unitedBlobs.forEach((group, index) => {
+            let simplified = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
+            simplified = unround(simplified, 10, 0.45);
+            simplified = flatten(simplified, 3);
+            simplified = unround(simplified, 10, 0.5);
+            simplified = flatten(simplified, 5);
+            simplified = unround(simplified, 5, 0.55);
+            
+            if (simplified.length < 3 && calculatePolygonArea(simplified) < SAFE_TO_SKIP_AREA) {
+                blobsSkippedCount++;
+                return;
+            }
+            totalBlobVertices += simplified.length;
+            
+            const blobBuildings = group.buildings.join(',');
+            const coordsStr = formatCoordsRounded(simplified, 2);
+            blobOutput += `${index};[${blobBuildings}];[${coordsStr}]\n`;
+        });
         
-        totalBlobVertices += simplified.length;
+        console.log(`Blobs: Skipped ${blobsSkippedCount} blobs with < 3 vertices and area < ${SAFE_TO_SKIP_AREA}.`);
+        console.log(`Blob vertices: ${totalBlobVertices}`);
         
-        const blobBuildings = group.buildings.join(',');
-        const coordsStr = formatCoordsRounded(simplified, 2);
-        blobOutput += `${index};[${blobBuildings}];[${coordsStr}]\n`;
-    });
-    
-    console.log(`Blob vertices: ${totalBlobVertices}`);
-    
-    fs.writeFileSync(path.join(outputDir, 'blobs.txt'), blobOutput);
-    console.log('Blobs saved to blobs.txt');
+        fs.writeFileSync(path.join(outputDir, 'blobs.txt'), blobOutput);
+        console.log('Blobs saved to blobs.txt');
+    }
 
     // 6. Simplify with S7 logic
-    console.log('Simplifying buildings (S7)...');
-    
-    let s7Output = '';
-    let totalVerticesAfterS7 = 0;
-    const s7StartedAt = Date.now();
-    for (const building of correctedBuildings) {
-        const points = getPointsFromBuildingFeature(building);
-        if (!points) continue;
+    if (RUN_S7) {
+        console.log('Simplifying buildings (S7)...');
         
-        let simplified = await simplifyWithDilationErosion(points, SIMPLIFICATION_INFLATION);
-        simplified = unround(simplified, 10, 0.45);
-        simplified = flatten(simplified, 3);
-        simplified = unround(simplified, 10, 0.5);
-        simplified = cornerize(simplified, points, SIMPLIFICATION_INFLATION + 0.1, 1);
-        simplified = flatten(simplified, 5);
-        simplified = unround(simplified, 5, 0.55);
+        let s7Output = '';
+        let totalVerticesAfterS7 = 0;
+        let s7SkippedCount = 0;
+        const s7StartedAt = Date.now();
+        for (const building of correctedBuildings) {
+            const points = getPointsFromBuildingFeature(building);
+            if (!points) continue;
+            
+            let simplified = await simplifyWithDilationErosion(points, SIMPLIFICATION_INFLATION);
+            simplified = unround(simplified, 10, 0.45);
+            simplified = flatten(simplified, 3);
+            simplified = unround(simplified, 10, 0.5);
+            simplified = cornerize(simplified, points, SIMPLIFICATION_INFLATION + 0.1, 1);
+            simplified = flatten(simplified, 5);
+            simplified = unround(simplified, 5, 0.55);
 
-        totalVerticesAfterS7 += simplified.length;
+            if (simplified.length < 3 && calculatePolygonArea(simplified) < SAFE_TO_SKIP_AREA) {
+                s7SkippedCount++;
+                continue;
+            }
+            totalVerticesAfterS7 += simplified.length;
 
-        const propertiesJson = JSON.stringify(building.properties || {});
-        const coordsStr = formatCoordsRounded(simplified, 2);
-        s7Output += `${building.id};${propertiesJson}[${coordsStr}]\n`;
+            const propertiesJson = JSON.stringify(building.properties || {});
+            const coordsStr = formatCoordsRounded(simplified, 2);
+            s7Output += `${building.id};${propertiesJson}[${coordsStr}]\n`;
+        }
+        
+        console.log(`S7: Skipped ${s7SkippedCount} buildings with < 3 vertices and area < ${SAFE_TO_SKIP_AREA}.`);
+        console.log(`S7 vertices: before: ${totalVerticesBeforeS6} after: ${totalVerticesAfterS7} gone: ${totalVerticesBeforeS6 - totalVerticesAfterS7} (${Date.now() - s7StartedAt}ms)`);
+        
+        fs.writeFileSync(path.join(outputDir, 'buildings_s7.txt'), s7Output);
+        console.log('S7 simplification saved to buildings_s7.txt');
     }
-    
-    console.log(`S7 vertices: before: ${totalVerticesBeforeS6} after: ${totalVerticesAfterS7} gone: ${totalVerticesBeforeS6 - totalVerticesAfterS7} (${Date.now() - s7StartedAt}ms)`);
-    
-    fs.writeFileSync(path.join(outputDir, 'buildings_s7.txt'), s7Output);
-    console.log('S7 simplification saved to buildings_s7.txt');
 
     console.log('Simplification step completed.');
 }

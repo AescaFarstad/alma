@@ -1,9 +1,11 @@
 import { GameState } from './logic/GameState';
 import { getRawGeoJson } from './logic/GeoJsonStore';
 import { loadS7Buildings, type S7Building } from './S7BuildingsLoader';
+import { loadBlobs, type Blob } from './BlobsLoader';
+import { loadNavmeshData } from './logic/navmesh/NavmeshLoader';
 
 // Feature flag to control which building data format to use
-const USE_S7_BUILDINGS = true; // Set to false to use old GeoJSON format
+const USE_S7_BUILDINGS = false; // Set to false to use old GeoJSON format
 
 export async function loadBuildingData(gameState: GameState): Promise<any> {
     if (USE_S7_BUILDINGS) {
@@ -166,4 +168,51 @@ async function loadBuildingDataOld(gameState: GameState): Promise<any> {
     gameState.buildingSpatialIndex.load(buildingBBoxes);
 
     return geojsonData;
+} 
+
+export async function loadAndProcessNavmesh(gameState: GameState): Promise<void> {
+    await loadNavmeshData(gameState.navmesh);
+}
+
+export async function loadBlobData(gameState: GameState): Promise<void> {
+    const blobs = await loadBlobs();
+    
+    for (const blob of blobs) {
+        const coordinatePairs: number[][] = [];
+        for (let i = 0; i < blob.coordinates.length; i += 2) {
+            coordinatePairs.push([blob.coordinates[i], blob.coordinates[i + 1]]);
+        }
+
+        gameState.blobsById[blob.id] = {
+            id: blob.id,
+            buildingIds: blob.buildingIds,
+            geometry: [coordinatePairs],
+        };
+    }
+    
+    const blobBBoxes = blobs.flatMap((blob: Blob) => {
+        if (!blob.coordinates || blob.coordinates.length < 6) {
+            return [];
+        }
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        for (let i = 0; i < blob.coordinates.length; i += 2) {
+            const x = blob.coordinates[i];
+            const y = blob.coordinates[i + 1];
+            
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+        }
+
+        if (minX === Infinity) {
+            return [];
+        }
+
+        return [{ minX, minY, maxX, maxY, id: blob.id, feature: blob }];
+    });
+
+    gameState.blobSpatialIndex.load(blobBBoxes);
 } 

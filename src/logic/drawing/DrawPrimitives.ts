@@ -5,6 +5,7 @@ import { Map as OlMap } from 'ol';
 export class DrawPrimitives {
     private static textCache: PIXI.Text[] = [];
 
+
     public static draw(
         graphics: PIXI.Graphics,
         textContainer: PIXI.Container,
@@ -23,7 +24,9 @@ export class DrawPrimitives {
                 graphics.poly(poly);
             }
             graphics.fill(style.fillStyle);
-            graphics.stroke(style.strokeStyle);
+            if (style.strokeStyle) {
+                graphics.stroke(style.strokeStyle);
+            }
         }
 
         for (const [style, data] of primitives.circleCommands.entries()) {

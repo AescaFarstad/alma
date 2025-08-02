@@ -4,9 +4,9 @@ import VectorTileLayer from 'ol/layer/VectorTile';
 import VectorTileSource from 'ol/source/VectorTile';
 import MVT from 'ol/format/MVT';
 import { getBuildingStyle, getRoadStyle } from './styles';
-import { mapInstance } from '../map_instance';
+import type { Map as OlMap } from 'ol';
 
-export function createStaticLayers(projection: Projection, tileGrid: TileGrid) {
+export function createStaticLayers(map: OlMap, projection: Projection, tileGrid: TileGrid) {
     const buildingsLayer = new VectorTileLayer({
         source: new VectorTileSource({
             format: new MVT({ layers: ['buildings'] }),
@@ -19,7 +19,7 @@ export function createStaticLayers(projection: Projection, tileGrid: TileGrid) {
         }),
         style: getBuildingStyle
     });
-    mapInstance.map?.addLayer(buildingsLayer);
+    map.addLayer(buildingsLayer);
 
     const roadsLayer = new VectorTileLayer({
         source: new VectorTileSource({
@@ -33,5 +33,5 @@ export function createStaticLayers(projection: Projection, tileGrid: TileGrid) {
         }),
         style: getRoadStyle,
     });
-    mapInstance.map?.addLayer(roadsLayer);
+    map.addLayer(roadsLayer);
 } 

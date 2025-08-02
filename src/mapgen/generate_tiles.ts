@@ -2,9 +2,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import geojsonvt from 'geojson-vt';
 import { fromGeojsonVt } from 'vt-pbf';
-import RBush from 'rbush';
-import lineclip from 'lineclip';
-import polygonClipping from 'polygon-clipping';
 import minimist from 'minimist';
 
 const MAX_ZOOM = 15;
@@ -52,26 +49,11 @@ interface GeoJSONData {
     features: GeoJSONFeature[];
 }
 
-interface SpatialIndexItem extends BoundingBox {
-    id: number;
-    original: GeoJSONFeature;
-}
-
-interface TileFeature {
-    geometry: any;
-    type: number;
-    tags: Record<string, any>;
-}
-
-interface TileData {
-    features: TileFeature[];
-}
-
 interface TileCoordinate {
     x: number;
     y: number;
 }
-
+/*
 function getFeatureBbox(feature: GeoJSONFeature): BoundingBox | null {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     if (!feature.geometry || !feature.geometry.coordinates) return null;
@@ -93,7 +75,7 @@ function getFeatureBbox(feature: GeoJSONFeature): BoundingBox | null {
 
     return { minX, minY, maxX, maxY };
 }
-
+*/
 function getOverallBbox(geojsonData: GeoJSONData): BoundingBox | null {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     if (!geojsonData || !geojsonData.features) return null;

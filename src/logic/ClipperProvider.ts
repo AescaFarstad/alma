@@ -15,7 +15,7 @@ class ClipperProvider {
             ).then(clipper => {
                 this.clipper = clipper;
                 return clipper;
-            }).catch(error => {
+            }).catch(_ => {
                 // Fallback to ASM.js only if WASM fails
                 return loadNativeClipperLibInstanceAsync(
                     NativeClipperLibRequestedFormat.AsmJsOnly

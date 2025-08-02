@@ -59,10 +59,6 @@ interface LogCounts {
     [key: string]: number;
 }
 
-interface LogCategories {
-    [key: string]: LogCounts;
-}
-
 interface ProcessingLog {
     removed: {
         invalid_geometry: LogCounts;

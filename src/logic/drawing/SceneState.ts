@@ -2,23 +2,8 @@ import { reactive } from "vue";
 import { Point2 } from "../core/math";
 import { MouseCoordinates } from "../../types";
 
-export const DEBUG_COLORS = [
-    'red', 
-    'green', 
-    'blue', 
-    'yellow', 
-    'magenta', 
-    'cyan', 
-    'orange', 
-    // 'purple', 
-    'brown', 
-    'black', 
-    'white', 
-    'gray',
-    'emerald',
-    'indigo',
-    'pink'
-];
+export const DEBUG_COLORS = ['red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'orange',
+'purple', 'brown', 'black', 'white', 'gray','emerald','indigo','pink'];
 
 export type DebugColor = typeof DEBUG_COLORS[number];
 
@@ -37,24 +22,14 @@ export const ACEMERALD = 'emerald';
 export const ACINDIGO = 'indigo';
 export const ACPINK = 'pink';
 
-export type DebugLine = { start: Point2, end: Point2 };
-export type DebugCircle = { center: Point2 };
-export type DebugX = { center: Point2 };
-export type DebugArrow = { start: Point2, end: Point2 };
-
-function makeDebugColorRecord<T>(valueFactory: () => T): Record<DebugColor, T> {
-    const record: Record<string, T> = {};
-    for (const color of DEBUG_COLORS) {
-        record[color] = valueFactory();
-    }
-    return record as Record<DebugColor, T>;
-}
-
 
 export class SceneState {
     public selectedBuildingIds: Set<string> = new Set();
+    public selectedPointMarkIds: Set<number> = new Set();
     public simplifiedGeometries: Map<string, Point2[]> = new Map();
     public measurementLine: { start: MouseCoordinates, end: MouseCoordinates } | null = null;
+    public corridors: Map<string, Corridor> = new Map();
+    public paths: Map<string, Path> = new Map();
     public isDirty = true;
 
     public debugPolygons: Point2[][] = [];
@@ -63,6 +38,9 @@ export class SceneState {
     public debugCircles: Record<DebugColor, DebugCircle[]> = makeDebugColorRecord(() => []);
     public debugXs: Record<DebugColor, DebugX[]> = makeDebugColorRecord(() => []);
     public debugArrows: Record<DebugColor, DebugArrow[]> = makeDebugColorRecord(() => []);
+    public debugAreas: Record<DebugColor, Point2[][]> = makeDebugColorRecord(() => []);
+    public debugTexts: Record<DebugColor, DebugText[]> = makeDebugColorRecord(() => []);
+    public debugNavmeshTriangles: Record<DebugColor, DebugNavmeshTriangle[]> = makeDebugColorRecord(() => []);
 
     public setMeasurementLine(start: MouseCoordinates, end: MouseCoordinates) {
         this.measurementLine = { start, end };
@@ -94,12 +72,37 @@ export class SceneState {
         return this.selectedBuildingIds.has(mapId);
     }
 
+    public selectPointMark(id: number) {
+        if (!this.selectedPointMarkIds.has(id)) {
+            this.selectedPointMarkIds.add(id);
+            this.isDirty = true;
+        }
+    }
+
+    public deselectPointMark(id: number) {
+        if (this.selectedPointMarkIds.delete(id)) {
+            this.isDirty = true;
+        }
+    }
+
+    public isPointMarkSelected(id: number): boolean {
+        return this.selectedPointMarkIds.has(id);
+    }
+
+    public clearSelectedPointMarks() {
+        if (this.selectedPointMarkIds.size > 0) {
+            this.selectedPointMarkIds.clear();
+            this.isDirty = true;
+        }
+    }
+
     public clearSelectedBuildings() {
         if (this.selectedBuildingIds.size > 0) {
             this.selectedBuildingIds.clear();
             this.simplifiedGeometries.clear();
             this.isDirty = true;
         }
+        this.clearSelectedPointMarks();
     }
 
     public setSelectedBuildings(mapIds: string[]) {
@@ -148,6 +151,66 @@ export class SceneState {
         }
     }
 
+    public addCorridor(id: string, triangleIndices: number[], startPoint: Point2, endPoint: Point2) {
+        this.corridors.set(id, { id, triangleIndices, startPoint, endPoint });
+        this.isDirty = true;
+    }
+
+    public removeCorridor(id: string) {
+        if (this.corridors.delete(id)) {
+            this.isDirty = true;
+        }
+    }
+
+    public clearCorridors() {
+        if (this.corridors.size > 0) {
+            this.corridors.clear();
+            this.isDirty = true;
+        }
+    }
+
+    public getCorridor(id: string): Corridor | undefined {
+        return this.corridors.get(id);
+    }
+
+    public getAllCorridors(): Corridor[] {
+        return Array.from(this.corridors.values());
+    }
+
+    public addPath(id: string, corners: Point2[], startPoint: Point2, endPoint: Point2) {
+        // Calculate total path length from corners
+        let totalLength = 0;
+        for (let i = 0; i < corners.length - 1; i++) {
+            const dx = corners[i + 1].x - corners[i].x;
+            const dy = corners[i + 1].y - corners[i].y;
+            totalLength += Math.sqrt(dx * dx + dy * dy);
+        }
+        
+        this.paths.set(id, { id, corners, startPoint, endPoint, totalLength });
+        this.isDirty = true;
+    }
+
+    public removePath(id: string) {
+        if (this.paths.delete(id)) {
+            this.isDirty = true;
+        }
+    }
+
+    public clearPaths() {
+        if (this.paths.size > 0) {
+            this.paths.clear();
+            this.isDirty = true;
+        }
+    }
+
+    public getPath(id: string): Path | undefined {
+        return this.paths.get(id);
+    }
+
+    public getAllPaths(): Path[] {
+        return Array.from(this.paths.values());
+    }
+
     public addDebugPolygon(polygon: Point2[]) {
         this.debugPolygons.push(polygon);
         this.isDirty = true;
@@ -178,6 +241,21 @@ export class SceneState {
         this.isDirty = true;
     }
 
+    public addDebugArea(polygon: Point2[], color: DebugColor) {
+        this.debugAreas[color].push(polygon);
+        this.isDirty = true;
+    }
+
+    public addDebugText(position: Point2, text: string, color: DebugColor) {
+        this.debugTexts[color].push({ position, text });
+        this.isDirty = true;
+    }
+
+    public addDebugNavmeshTriangle(index: number, color: DebugColor, text?: string) {
+        this.debugNavmeshTriangles[color].push({ index, text });
+        this.isDirty = true;
+    }
+
     public clearDebugVisuals() {
         console.log("clear debug")
         const needsClear = this.debugPolygons.length > 0 ||
@@ -185,7 +263,10 @@ export class SceneState {
             Object.values(this.debugLines).some(arr => arr.length > 0) ||
             Object.values(this.debugCircles).some(arr => arr.length > 0) ||
             Object.values(this.debugXs).some(arr => arr.length > 0) ||
-            Object.values(this.debugArrows).some(arr => arr.length > 0);
+            Object.values(this.debugArrows).some(arr => arr.length > 0) ||
+            Object.values(this.debugAreas).some(arr => arr.length > 0) ||
+            Object.values(this.debugTexts).some(arr => arr.length > 0) ||
+            Object.values(this.debugNavmeshTriangles).some(arr => arr.length > 0);
 
         if (needsClear) {
             this.debugPolygons = [];
@@ -194,6 +275,9 @@ export class SceneState {
             this.debugCircles = makeDebugColorRecord(() => []);
             this.debugXs = makeDebugColorRecord(() => []);
             this.debugArrows = makeDebugColorRecord(() => []);
+            this.debugAreas = makeDebugColorRecord(() => []);
+            this.debugTexts = makeDebugColorRecord(() => []);
+            this.debugNavmeshTriangles = makeDebugColorRecord(() => []);
             this.isDirty = true;
         }
     }
@@ -206,3 +290,35 @@ export class SceneState {
  * passed through proper dependency injection channels where needed.
  */
 export const sceneState = reactive(new SceneState()); 
+
+
+
+export type DebugLine = { start: Point2, end: Point2 };
+export type DebugCircle = { center: Point2 };
+export type DebugX = { center: Point2 };
+export type DebugArrow = { start: Point2, end: Point2 };
+export type DebugText = { position: Point2, text: string };
+export type DebugNavmeshTriangle = { index: number, text?: string };
+
+export type Corridor = {
+    id: string;
+    triangleIndices: number[];
+    startPoint: Point2;
+    endPoint: Point2;
+};
+
+export type Path = {
+    id: string;
+    corners: Point2[];
+    startPoint: Point2;
+    endPoint: Point2;
+    totalLength: number;
+};
+
+function makeDebugColorRecord<T>(valueFactory: () => T): Record<DebugColor, T> {
+    const record: Record<string, T> = {};
+    for (const color of DEBUG_COLORS) {
+        record[color] = valueFactory();
+    }
+    return record as Record<DebugColor, T>;
+}

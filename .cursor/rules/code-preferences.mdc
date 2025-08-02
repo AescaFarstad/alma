@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-To check for errors run 'npx tsc --noEmit --project tsconfig.json'. For comprehensive refactors, check errors with 'npm run build'
+To check for errors run 'npx tsc --noEmit --project tsconfig.json'. Do not run it unless the refactor may break things outside of the edited files. For comprehensive refactors, check errors with 'npm run build'
 Current working directory is '/mnt/WoB/WOB/web%20rep/alma'
 Do not run 'npm run dev'. Assume it's already running.
 If you're experiencing problems editing or creating a file, read the file again to check if the edit, which says it's failed, has actually succeeded. It often happens that what was reported as editing failure, was, in fact, a success.

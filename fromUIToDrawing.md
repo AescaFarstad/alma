@@ -68,6 +68,21 @@ This document outlines the data flow and architecture for rendering objects on t
 
 This cycle ensures that rendering is decoupled from UI events and happens automatically whenever the scene state is modified. 
 
+## Dynamic Scene Rendering
+
+For highly dynamic objects that change every frame (e.g., player avatars, projectiles, temporary effects), a separate, parallel rendering pipeline is used to optimize performance.
+
+### `DynamicScene.ts`
+- **Purpose**: A state manager for transient, per-frame visual data. Unlike `SceneState`, it does not use an `isDirty` flag, as its contents are expected to be cleared and rebuilt on every single game tick.
+- **Role**: It holds the state of all dynamic objects, such as their positions, types, and lifetimes.
+
+### Updated Rendering Flow
+1.  **Game Loop**: On every `Model.update()`, game logic calculates the new positions and states of dynamic objects and updates `DynamicScene`.
+2.  **`Pixie.ts` Tick**: The `tick()` loop in `Pixie.ts` *always* rebuilds the primitives for the dynamic scene by calling a new method, `DrawScene.buildDynamicPrimitives()`.
+3.  **Drawing**: `Pixie.ts` uses a separate `PIXI.Graphics` object to draw the dynamic primitives. This layer is cleared and redrawn every frame, independently of the main scene, which only updates when `sceneState.isDirty` is `true`.
+
+This dual-pipeline approach ensures that static geometry is not wastefully redrawn, while dynamic elements can be updated with high frequency without impacting the performance of the main scene rendering.
+
 ## Consideration
 
 1. **Coordinates**:

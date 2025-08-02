@@ -1,4 +1,4 @@
-import { Point2, Line, subtract, distance, lineLineIntersection } from "../core/math";
+import { Point2, Line, subtract, distance, lineLineIntersection, distancePointToSegment } from "../core/math";
 // import { ACBLACK, ACCYAN, ACEMERALD, ACMAGENTA, ACORANGE, ACWHITE, ACYELLOW, SceneState, sceneState } from "../drawing/SceneState";
 
 /**
@@ -50,6 +50,21 @@ export function cornerize(
             const R = lineLineIntersection(lineAB, lineDC);
 
             if (R && distance(R, pB) < shortSegmentThreshold + minProximity) {
+                let tooCloseToSegment = false;
+                for (let j = 0; j < n; j++) {
+                    if (j === b_idx || j === c_idx) {
+                        continue;
+                    }
+                    const segStart = list[j];
+                    const segEnd = list[(j + 1) % n];
+                    if (distancePointToSegment(R, segStart, segEnd) < shortSegmentThreshold / 2) {
+                        tooCloseToSegment = true;
+                        break;
+                    }
+                }
+                if (tooCloseToSegment) {
+                    continue;
+                }
                 // Check if the potential new corner R is close to any vertex
                 // of the original shape.
                 let closestOriginalPoint: Point2 | null = null;
@@ -64,6 +79,17 @@ export function cornerize(
                 }
 
                 if (closestOriginalPoint) {
+                    // let isDuplicate = false;
+                    // for (let j = 0; j < n; j++) {
+                    //     if (j === b_idx || j === c_idx) continue;
+                    //     if (distance(R, list[j]) < 1e-4) {
+                    //         isDuplicate = true;
+                    //         break;
+                    //     }
+                    // }
+                    // if (isDuplicate) {
+                    //     continue;
+                    // }
                     // console.log(`INC at ${i}`)
                     // A B C D => A R D
                     list.splice(b_idx, 1);

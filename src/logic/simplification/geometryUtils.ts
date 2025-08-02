@@ -82,8 +82,8 @@ export const formatCoords = (points: Point2[]): string => {
 export const formatCoordsRounded = (points: Point2[], precision = 2): string => {
     const factor = Math.pow(10, precision);
     return points
-        .map(p => `${Math.round(p.x * factor) / factor};${Math.round(p.y * factor) / factor}`)
-        .join(';');
+        .map(p => `${Math.round(p.x * factor) / factor},${Math.round(p.y * factor) / factor}`)
+        .join(',');
 };
 
 export const toClipperPath = (points: Point2[], scale: number = 1): Path => {

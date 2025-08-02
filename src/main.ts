@@ -1,4 +1,4 @@
-import { createApp, reactive } from 'vue'
+import { createApp, reactive, ref } from 'vue'
 import App from './App.vue'
 import { GameState } from './logic/GameState';
 import { processInputs } from './logic/input/InputProcessor';
@@ -6,16 +6,18 @@ import * as Model from './logic/Model';
 import { FPSCounter } from './logic/FPSCounter';
 import { ensureDataLoaded } from './logic/GeoJsonStore';
 import { sceneState } from './logic/drawing/SceneState';
-import { loadBuildingData } from './LogicMapDataLoader';
+import { dynamicScene } from './logic/drawing/DynamicScene';
+import { loadBuildingData, loadBlobData, loadAndProcessNavmesh } from './LogicMapDataLoader';
 
 async function initializeGame() {
     const gameState = new GameState();
     gameState.uiState = reactive(gameState.uiState);
+    const agentCount = ref(0);
     
     await ensureDataLoaded();
     await loadBuildingData(gameState);
-
-    // initNewGame(gameState); // This will now be called from Map.vue after the map is initialized.
+    await loadBlobData(gameState);
+    await loadAndProcessNavmesh(gameState);
 
     const app = createApp(App);
 
@@ -28,7 +30,9 @@ async function initializeGame() {
 
     app.provide('gameState', gameState);
     app.provide('sceneState', sceneState);
+    app.provide('dynamicScene', dynamicScene);
     app.provide('fpsMetrics', fpsMetrics);
+    app.provide('agentCount', agentCount);
 
     app.mount('#app');
 
@@ -51,6 +55,7 @@ async function initializeGame() {
         processInputs(gameState);
 
         Model.update(gameState, deltaTime);
+        agentCount.value = gameState.agents.length;
 
         requestAnimationFrame(gameLoop);
     }

@@ -6,7 +6,6 @@ import VectorTileLayer from 'ol/layer/VectorTile';
 import VectorTileSource from 'ol/source/VectorTile';
 import VectorTile from 'ol/VectorTile';
 import { getBuildingStyle, getRoadStyle } from './styles';
-import { mapInstance } from '../map_instance';
 import Style from 'ol/style/Style';
 import { getRawGeoJson } from '../logic/GeoJsonStore';
 
@@ -92,5 +91,5 @@ export function createDynamicCombinedLayers(projection: Projection, layerVisibil
         properties: { name: 'combined' },
     });
 
-    mapInstance.map!.addLayer(combinedLayer);
+    return combinedLayer;
 }

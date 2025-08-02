@@ -7,6 +7,15 @@ export interface CmdInput {
     playerId: string;
 }
 
+export interface CmdTimeScale extends CmdInput {
+    name: "CmdTimeScale";
+    scale: number;
+}
+
+export interface CmdTickOnce extends CmdInput {
+    name: "CmdTickOnce";
+}
+
 export interface CmdInstallModule extends CmdInput {
     name: 'CmdInstallModule';
     buildingId: string;

@@ -16,8 +16,14 @@ july 19
     Geometry simplification
 july 23
     uniting, deduplication, cornerize
-july 26
-    tsnode, simplification in pre-processing
+july 26-27
+    tsnode, simplification in pre-processing S6, S7, blobs
+    fixed annoyign bug with clipper where it had different API under node.js and browser
+    triangularization, corridor, A*, funnel
+july 28
+    raycasting, avatar movement, floating point errors
+august 2
+    point in triangle bugfix, two corners lookahead, corner crossing, slowing down before corner, intelligence, pooling
 
 Plan:
     WASM benchmark

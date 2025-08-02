@@ -2,13 +2,13 @@
   <div id="selected-buildings-panel">
     <div class="panel-controls">
       <input v-model="buildingIdToAdd" @keyup.enter="addBuilding" placeholder="Add building by ID" />
-      <button @click="addBuilding" title="Add Building">➕</button>
-      <button @click="copyIds" title="Copy IDs">📋</button>
-      <button @click="pasteIds" title="Paste IDs">📄</button>
-      <button @click="clearSelection" title="Clear Selection">🗑️</button>
-      <button @click="clearSimplified" title="Clear Simplified">💥</button>
-      <button @click="clearDebug" title="Clear Debug">🐞</button>
-      <button @click="uniteAndSimplifySelectedBuildings" title="Unite and Simplify Selected">US Sel</button>
+      <button @click="handleButtonClick($event, addBuilding)" title="Add Building">➕</button>
+      <button @click="handleButtonClick($event, copyIds)" title="Copy IDs">📋</button>
+      <button @click="handleButtonClick($event, pasteIds)" title="Paste IDs">📄</button>
+      <button @click="handleButtonClick($event, clearSelection)" title="Clear Selection">🗑️</button>
+      <button @click="handleButtonClick($event, clearSimplified)" title="Clear Simplified">💥</button>
+      <button @click="handleButtonClick($event, clearDebug)" title="Clear Debug">🐞</button>
+      <button @click="handleButtonClick($event, uniteAndSimplifySelectedBuildings)" title="Unite and Simplify Selected">US Sel</button>
     </div>
     <ul class="building-list">
       <li v-for="building in buildings" :key="building.id" 
@@ -19,21 +19,22 @@
           <span class="building-id">{{ building.id }}</span><span class="building-name">{{ building.stats.name ?? ""}}</span>
         </span>
         <div class="building-controls">
-          <button @click="flyTo(building)">@</button>
-          <button @click="copyBuildingProperties(building)">C</button>
+          <button @click="handleButtonClick($event, () => flyTo(building))">@</button>
+          <button @click="handleButtonClick($event, () => copyBuildingProperties(building))">C</button>
           <!-- <button @click="simplifyBuilding(building)">S</button> -->
-          <button @click="simplifyWithConvexHull(building)">Hull</button>
+          <button @click="handleButtonClick($event, () => simplifyWithConvexHull(building))">Hull</button>
           <!-- <button @click="simplifyWithConvexHullAndSimplify(building)">S3</button> -->
-          <button @click="simplifyWithUR(building)">UR</button>
-          <button @click="simplifyWithFT(building)">FT</button>
-          <button @click="simplifyWithS6(building)">S6</button>
-          <button @click="simplifyWithS7(building)">S7</button>
-          <button @click="inflate(building)">i</button>
-          <button @click="inflateAndCornerize(building)">iC</button>
-          <button @click="uniteBuilding(building)">U</button>
-          <button @click="uniteAndSimplifyBuilding(building)">US</button>
-          <button @click="findNearby(building)">?</button>
-          <button @click="removeBuilding(building.id)">X</button>
+          <button @click="handleButtonClick($event, () => simplifyWithUR(building))">UR</button>
+          <button @click="handleButtonClick($event, () => simplifyWithFT(building))">FT</button>
+          <button @click="handleButtonClick($event, () => simplifyWithS6(building))">S6</button>
+          <button @click="handleButtonClick($event, () => simplifyWithS7(building))">S7</button>
+          <button @click="handleButtonClick($event, () => inflate(building))">i</button>
+          <button @click="handleButtonClick($event, () => inflateAndCornerize(building))">iC</button>
+          <button @click="handleButtonClick($event, () => uniteBuilding(building))">U</button>
+          <button @click="handleButtonClick($event, () => uniteAndSimplifyBuilding(building))">US</button>
+          <button @click="handleButtonClick($event, () => findNearby(building))">?</button>
+          <button @click="handleButtonClick($event, () => drawBlobs(building))">b</button>
+          <button @click="handleButtonClick($event, () => removeBuilding(building.id))">X</button>
         </div>
       </li>
     </ul>
@@ -58,6 +59,11 @@ import { simplifyWithDilationErosion } from '../../logic/simplification/dilation
 import { uniteGeometries, type BuildingWithPolygon } from '../../logic/simplification/unite';
 import { Building, getPointsFromBuilding } from '../../logic/simplification/geometryUtils';
 import { cornerize } from '../../logic/simplification/cornerize';
+
+const handleButtonClick = (event: MouseEvent, action: () => void) => {
+  (event.currentTarget as HTMLElement)?.blur();
+  action();
+};
 
 const getBuildingArea = (building: Building) => {
     const ring = getPointsFromBuilding(building);
@@ -340,6 +346,63 @@ const uniteAndSimplifySelectedBuildings = async () => {
   }
 };
 
+const drawBlobs = (building: Building) => {
+  if (!gameState || !sceneState) {
+    console.log('gameState or sceneState is missing');
+    return;
+  }
+
+  const buildingPolygon = getPointsFromBuilding(building);
+  if (!buildingPolygon) {
+    console.log('Could not get building polygon');
+    return;
+  }
+
+  const { minX, minY, maxX, maxY } = buildingPolygon.reduce(
+    (acc, p) => ({
+      minX: Math.min(acc.minX, p.x),
+      minY: Math.min(acc.minY, p.y),
+      maxX: Math.max(acc.maxX, p.x),
+      maxY: Math.max(acc.maxY, p.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+  );
+
+  const range = 50; // 50 meters
+
+  const searchArea = {
+    minX: minX - range,
+    minY: minY - range,
+    maxX: maxX + range,
+    maxY: maxY + range,
+  };
+
+  const nearbyBlobItems = gameState.blobSpatialIndex.search(searchArea);
+
+  const nearbyBlobs = nearbyBlobItems.map((item: any) => gameState.blobsById[item.id]);
+
+  if (nearbyBlobs.length === 0) {
+    console.log('No nearby blobs found.');
+  }
+
+  for (const blob of nearbyBlobs) {
+    if (blob && blob.geometry && blob.geometry.length > 0 && blob.geometry[0].length > 0) {
+      const blobPolygon: Point2[] = blob.geometry[0].map((p: number[]) => ({ x: p[0], y: p[1] }));
+      sceneState.addDebugPolygon(blobPolygon);
+      for (const point of blobPolygon) {
+        sceneState.addDebugPoint(point, "blue");
+      }
+
+      blobPolygon.forEach((point, index) => {
+        sceneState.addDebugText(point, index.toString(), "white");
+      });
+
+    } else {
+      console.log('Skipping invalid blob:', JSON.stringify(blob));
+    }
+  }
+};
+
 const findNearby = (building: Building) => {
   if (!gameState || !sceneState) return;
   const nearbyBuildings = getBuildingsToUnite(building, 1);
@@ -418,15 +481,12 @@ const updateTooltipPosition = (event: MouseEvent) => {
 
 <style scoped>
 #selected-buildings-panel {
-  position: absolute;
-  top: 40px;
-  left: 4px;
   background: rgba(33, 33, 33, 0.9);
   border-radius: 4px;
   z-index: 1;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
-  max-height: calc(100vh - 50px);
+  max-height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
   color: #f0f0f0;

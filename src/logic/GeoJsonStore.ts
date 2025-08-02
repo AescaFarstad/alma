@@ -49,7 +49,7 @@ async function loadAndProcessData() {
         }
     }
     
-    const buildingSource = USE_S6_BUILDINGS ? 'S6 simplified' : 'original';
+    // const buildingSource = USE_S6_BUILDINGS ? 'S6 simplified' : 'original';
     // console.log(`[GeoJsonStore] Loaded ${Object.keys(rawFeaturesById.buildings).length} buildings (${buildingSource}) and ${Object.keys(rawFeaturesById.roads).length} roads.`);
 }
 

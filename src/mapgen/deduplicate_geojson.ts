@@ -54,7 +54,7 @@ import RBush from 'rbush';
 import bbox from '@turf/bbox';
 import booleanPointInPolygon from '@turf/boolean-point-in-polygon';
 import { point, polygon } from '@turf/helpers';
-import { Feature, GeoJSON, Geometry, Position, Point, Polygon } from 'geojson';
+import { Feature, GeoJSON, Geometry, Position, Polygon } from 'geojson';
 
 interface BoundingBox {
     minX: number;

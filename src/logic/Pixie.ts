@@ -5,26 +5,39 @@ import { PrimitiveState } from './drawing/PrimitiveState';
 import { DrawScene } from './drawing/DrawScene';
 import { DrawPrimitives } from './drawing/DrawPrimitives';
 import { SceneState } from './drawing/SceneState';
+import { DynamicScene } from './drawing/DynamicScene';
+import { DrawDynamicScene } from './drawing/DrawDynamicScene';
+import { AgentVisualPool } from './drawing/AgentVisualPool';
 
 export class PixiLayer {
     private app: PIXI.Application;
     private olMap: OlMap;
     private gameState: GameState;
-    private graphics!: PIXI.Graphics;
+    private staticGraphics!: PIXI.Graphics;
+    private dynamicGraphics!: PIXI.Graphics;
     private textContainer!: PIXI.Container;
+    private dynamicTextContainer!: PIXI.Container;
+    private agentGraphicsContainer!: PIXI.Container;
+    private agentTextContainer!: PIXI.Container;
     private resizeObserver!: ResizeObserver;
     private boundSync: () => void;
-    private primitives: PrimitiveState;
+    private staticPrimitives: PrimitiveState;
+    private dynamicPrimitives: PrimitiveState;
     private sceneState: SceneState;
+    private dynamicScene: DynamicScene;
+    private agentPool: AgentVisualPool;
     private stopped = false;
 
-    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState) {
+    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState, dynamicScene: DynamicScene) {
         this.olMap = olMap;
         this.gameState = gameState;
         this.sceneState = sceneState;
+        this.dynamicScene = dynamicScene;
         this.app = new PIXI.Application();
         this.boundSync = this.sync.bind(this);
-        this.primitives = new PrimitiveState();
+        this.staticPrimitives = new PrimitiveState();
+        this.dynamicPrimitives = new PrimitiveState();
+        this.agentPool = new AgentVisualPool();
     }
 
     public async init() {
@@ -48,11 +61,23 @@ export class PixiLayer {
         
         mapElement.appendChild(this.app.canvas as unknown as Node);
 
-        this.graphics = new PIXI.Graphics();
-        this.app.stage.addChild(this.graphics);
+        this.staticGraphics = new PIXI.Graphics();
+        this.app.stage.addChild(this.staticGraphics);
+
+        this.dynamicGraphics = new PIXI.Graphics();
+        this.app.stage.addChild(this.dynamicGraphics);
         
         this.textContainer = new PIXI.Container();
         this.app.stage.addChild(this.textContainer);
+
+        this.dynamicTextContainer = new PIXI.Container();
+        this.app.stage.addChild(this.dynamicTextContainer);
+
+        this.agentGraphicsContainer = new PIXI.Container();
+        this.app.stage.addChild(this.agentGraphicsContainer);
+
+        this.agentTextContainer = new PIXI.Container();
+        this.app.stage.addChild(this.agentTextContainer);
 
         const view = this.olMap.getView();
         view.on('change:center', this.boundSync);
@@ -67,8 +92,20 @@ export class PixiLayer {
     }
 
     private buildScene() {
-        DrawScene.buildPrimitives(this.primitives, this.sceneState, this.gameState);
+        DrawScene.buildPrimitives(this.staticPrimitives, this.sceneState, this.gameState);
         this.sceneState.isDirty = false;
+    }
+
+    private buildDynamicScene() {
+        DrawDynamicScene.buildDynamicPrimitives(this.dynamicPrimitives, this.dynamicScene, this.gameState, this.olMap);
+        
+        // Update agent visuals directly on PIXI containers
+        this.agentPool.syncWithAgents(
+            this.gameState.agents, 
+            this.agentGraphicsContainer, 
+            this.agentTextContainer, 
+            this.olMap
+        );
     }
 
     private resize() {
@@ -104,15 +141,23 @@ export class PixiLayer {
             return;
         }
         requestAnimationFrame(this.tick.bind(this));
+        // console.log("[Pixie] tick");
 
         if (this.sceneState.isDirty) {
             this.buildScene();
+            DrawPrimitives.draw(
+                this.staticGraphics,
+                this.textContainer,
+                this.staticPrimitives,
+                this.olMap
+            );
         }
 
+        this.buildDynamicScene();
         DrawPrimitives.draw(
-            this.graphics,
-            this.textContainer,
-            this.primitives,
+            this.dynamicGraphics,
+            this.dynamicTextContainer, // reusing for now
+            this.dynamicPrimitives,
             this.olMap
         );
     }

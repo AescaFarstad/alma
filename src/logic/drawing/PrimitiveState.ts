@@ -2,7 +2,7 @@ import * as PIXI from 'pixi.js';
 
 export interface PolyStyle {
     fillStyle: PIXI.FillStyle;
-    strokeStyle: PIXI.StrokeStyle;
+    strokeStyle?: PIXI.StrokeStyle;
 }
 
 export interface CircleStyle {
