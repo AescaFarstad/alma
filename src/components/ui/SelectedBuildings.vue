@@ -59,6 +59,7 @@ import { simplifyWithDilationErosion } from '../../logic/simplification/dilation
 import { uniteGeometries, type BuildingWithPolygon } from '../../logic/simplification/unite';
 import { Building, getPointsFromBuilding } from '../../logic/simplification/geometryUtils';
 import { cornerize } from '../../logic/simplification/cornerize';
+import { pullAway } from '../../logic/simplification/pullAway';
 
 const handleButtonClick = (event: MouseEvent, action: () => void) => {
   (event.currentTarget as HTMLElement)?.blur();
@@ -275,7 +276,7 @@ const uniteAndSimplifyBuilding = async (building: Building) => {
   let mainPolygon = getPointsFromBuilding(building);
   if (!mainPolygon) return;
 
-  const buildingsToUnite = getBuildingsToUnite(building, 0.1, mainPolygon);
+  const buildingsToUnite = getBuildingsToUnite(building, 50.1, mainPolygon);
   if (buildingsToUnite.length === 0) return;
   let allPoints = buildingsToUnite.flatMap(g => g.polygon);
 
@@ -292,12 +293,14 @@ const uniteAndSimplifyBuilding = async (building: Building) => {
   for (let i = 0; i < unitedGroups.length; i++) {
     const group = unitedGroups[i];
     let simplified = group.geom;
+    simplified = pullAway(simplified, 1, 5);
+    simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
     simplified = unround(simplified, 10, 0.45);
     simplified = flatten(simplified, 3);
     simplified = unround(simplified, 10, 0.5);
     simplified = flatten(simplified, 5);
     simplified = unround(simplified, 5, 0.55);
-    simplified = flatten(simplified, 5);
+    simplified = flatten(simplified, 7);
     simplified = unround(simplified, 5, 0.55);
     sceneState.addSimplifiedBuilding(`${building.id}-united-simplified-${i}`, simplified);
   }
@@ -332,13 +335,14 @@ const uniteAndSimplifySelectedBuildings = async () => {
   for (let i = 0; i < unitedGroups.length; i++) {
     const group = unitedGroups[i];
     let simplified = group.geom;
+    simplified = pullAway(simplified, 1, 5);
     simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
     simplified = unround(simplified, 10, 0.45);
     simplified = flatten(simplified, 3);
     simplified = unround(simplified, 10, 0.5);
     simplified = flatten(simplified, 5);
     simplified = unround(simplified, 5, 0.55);
-    simplified = flatten(simplified, 5);
+    simplified = flatten(simplified, 7);
     simplified = unround(simplified, 5, 0.55);
 
     const newId = `united-selected-simplified-${i}-${group.buildings.join('_')}`;

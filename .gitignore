@@ -13,6 +13,9 @@ data
 temp
 public/data
 public/tiles
+public/wasm_module.js
+public/wasm_module.wasm
+public/tiles
 dist-ssr
 *.local
 
@@ -24,3 +27,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw? 
+external/

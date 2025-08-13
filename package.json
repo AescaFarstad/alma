@@ -9,7 +9,8 @@
     "build": "vue-tsc --project tsconfig.build.json && vite build",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
-    "ts-node": "TS_NODE_PROJECT=tsconfig.node.json node --import=tsx"
+    "ts-node": "TS_NODE_PROJECT=tsconfig.node.json node --import=tsx",
+    "build:wasm": "source /mnt/WoB/WOB/web_rep/emsdk/emsdk_env.sh && make -C src/wasm"
   },
   "author": "",
   "license": "ISC",
@@ -44,6 +45,7 @@
     "npm-run-all2": "6.1.2",
     "pbf": "4.0.1",
     "poly2tri": "^1.5.0",
+    "sharp": "^0.34.3",
     "ts-node": "10.9.2",
     "tsx": "^4.20.3",
     "typescript": "5.4.5",

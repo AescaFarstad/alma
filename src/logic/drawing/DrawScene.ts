@@ -14,7 +14,7 @@ const selectedBuildingPolyStyle: PolyStyle = {
 
 const simplifiedBuildingPolyStyle: PolyStyle = {
     fillStyle: { color: 0x00FF00, alpha: 0.4 },
-    strokeStyle: { width: 2, color: 0x00FF00, alpha: 0.8 },
+    strokeStyle: { width: 0.2, color: 0x00FF00, alpha: 0.8 },
 };
 
 const simplifiedVertexCircleStyle: CircleStyle = {
@@ -134,7 +134,7 @@ export class DrawScene {
                 const y = -point.y;
                 flattenedRing[i * 2] = x;
                 flattenedRing[i * 2 + 1] = y;
-                primitives.addCircle(x, y, 1, simplifiedVertexCircleStyle);
+                primitives.addCircle(x, y, 0.1, simplifiedVertexCircleStyle);
                 primitives.addText(i.toString(), x, y, vertexTextStyle);
             }
             primitives.addPolygon(flattenedRing, simplifiedBuildingPolyStyle);

@@ -1,5 +1,15 @@
 import { Point2 } from "./core/math";
 
+export const STUCK_PASSIVE_X1 = 14;
+export const STUCK_DST_X2 = 18;
+export const STUCK_CORRIDOR_X3 = 40;
+export const STUCK_DECAY = 0.8;
+export const STUCK_DANGER_1 = 35;
+export const STUCK_DANGER_2 = 45;
+export const STUCK_DANGER_3 = 75;
+export const PATH_LOG_RATE = 3;
+
+
 export enum AgentState {
     Standing,
     Traveling,
@@ -35,6 +45,7 @@ export class Agent {
     debug_velocityDiff: Point2 = { x: 0, y: 0 };
     debug_desiredVelocity: Point2 = { x: 0, y: 0 };
     look: Point2 = { x: 1, y: 0 };
+    isAlive:boolean = true;
     
     // Parameters
     lookSpeed: number = 0.1;
@@ -43,9 +54,28 @@ export class Agent {
     resistance: number = 0.1;
     maxFrustration: number = 10;
     debug: boolean = false;
+    stuckRating = 0;
+    sightRating = 0;
+    predicamentRating = 0;
+    lastDistanceToNextCorner: number = Number.POSITIVE_INFINITY;
+    minCorridorLength: number = Number.POSITIVE_INFINITY;
+    lastEndTarget: Point2  = { x: 0, y: 0 };
+    lastNextCornerPoly: number = -1;
     
     debugLog!: string[];
+    pathLog: Point2[] = [];
+    pathLogMaxLen = 200;
+    pathLogIdx = 0;
+    // pathLogCounter = 0;
+
+    display:string = "character_black_blue"
+
+    // Logging/Debug identifiers and state
+    id: number = -1;
+    wallContact: boolean = false;
 }
+
+let NEXT_AGENT_ID = 1;
 
 export function createAgent(
     x: number, y: number,
@@ -72,6 +102,8 @@ export function createAgent(
         agent.maxSpeed = agent.accel / -Math.log(1 - agent.resistance);
     }
 
+    agent.id = NEXT_AGENT_ID++;
+
     return agent;
 }
 
@@ -79,7 +111,7 @@ export function createAgent(
 //     const timestamp = Date.now();
 //     const logEntry = `[${timestamp}] ${message}`;
 //     agent.debugLog.push(logEntry);
-    
+//     
 //     // Keep only the last 300 entries
 //     if (agent.debugLog.length > 300) {
 //         agent.debugLog = agent.debugLog.slice(-300);

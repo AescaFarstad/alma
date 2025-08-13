@@ -12,7 +12,7 @@ const STEPS_TO_RUN = {
     processOsm: false,
     filterGeojson: false,
     deduplication: false,
-    simplify: false,
+    simplify: true,
     buildNavmesh: true,
     generateTiles: false,
     copyData: true,

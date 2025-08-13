@@ -1,8 +1,8 @@
-import { Agent, AgentState } from "./Agent";
+import { Agent, AgentState, STUCK_DANGER_2 } from "./Agent";
 import { GameState } from "./GameState";
-import { add, dot, length, length_sq, normalize, scale, subtract, isPointInTriangle, add_, set, scale_, set_, distance_sq, subtract_, normalize_, lerp } from "./core/math";
+import { add, dot, length, length_sq, add_, set, scale_, set_, distance_sq, subtract_, normalize_, lerp, cvt } from "./core/math";
 // import { getTriangleFromPoint } from "./navmesh/pathfinding";
-import { raycast } from "./Raycasting";
+import { raycastPoint } from "./Raycasting";
 
 
 let desiredVelocity = { x: 0, y: 0 };
@@ -64,13 +64,15 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
         else {
             const minSpeed = agent.numValidCorners == 1 ? agent.arrivalDesiredSpeed * agent.maxSpeed : slowBeforeCornerSpeed
             desiredMagnitude = lerp(minSpeed, agent.maxSpeed, dstToCorner / slowBeforeCornerDst);
-            // console.log("slow dst", slowBeforeCornerDst, "desiredMagnitude", desiredMagnitude, "res", frameRateAdjustedResistance, "targetMin", minSpeed);
+            
         }
     }
     else {
         desiredMagnitude = 0;
     }
     desiredMagnitude /= frameRateAdjustedResistance;
+    const stuckFactor = agent.stuckRating / STUCK_DANGER_2;
+    desiredMagnitude *= cvt(stuckFactor * stuckFactor, 0, 1, 1, 0.5);
     scale_(desiredVelocity, desiredMagnitude);
     set_(agent.debug_desiredVelocity, desiredVelocity);
     
@@ -137,11 +139,15 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
             set_(endPointForRecast, endPoint);
             add_(endPointForRecast, tempScaled);
             
-            const raycastResult = raycast(navmesh, agent.coordinate, endPointForRecast, agent.currentPoly);
+            const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentPoly, undefined);
 
-            if (raycastResult.hit) {
-                set_(wallVector, raycastResult.hit.p2);
-                subtract_(wallVector, raycastResult.hit.p1);
+            if (raycastResult.hitP1 && raycastResult.hitP2) {
+                if (!agent.wallContact) {
+                    agent.wallContact = true;
+                    
+                }
+                set_(wallVector, raycastResult.hitP2);
+                subtract_(wallVector, raycastResult.hitP1);
                 
                 set(wallNormal, -wallVector.y, wallVector.x);
                 normalize_(wallNormal);
@@ -157,6 +163,9 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
                 scale_(moveVector, deltaTime);                
                 add_(agent.coordinate, moveVector);
             } else {
+                if (agent.wallContact) {
+                    agent.wallContact = false;
+                }
                 set_(agent.coordinate, endPoint);
             }
         }
@@ -169,7 +178,7 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
         agent.lastValidPoly = newPoly;
     } else {
         agent.currentPoly = -1;
-        // logAgentEvent(agent, `Agent fell off navmesh at (${agent.coordinate.x.toFixed(2)}, ${agent.coordinate.y.toFixed(2)})`);
+        
     }
 
     // // Occasional random impulse for testing path correction

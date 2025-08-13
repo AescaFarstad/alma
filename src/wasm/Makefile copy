@@ -1,0 +1,96 @@
+# Makefile
+
+# Emscripten compiler
+EMCC = emcc
+CXX = em++
+
+# Build type (can be set via command line: make BUILD_TYPE=debug)
+BUILD_TYPE ?= release
+
+# Base flags for both builds
+BASE_CXXFLAGS = -std=c++17 -MMD -MP
+BASE_EMCC_FLAGS = -s WASM=1 -s ENVIRONMENT=web -s FILESYSTEM=0 -s MALLOC=dlmalloc \
+	-s INITIAL_MEMORY=268435456 -s MAXIMUM_MEMORY=2147483648 -s ALLOW_MEMORY_GROWTH=1 \
+	-s SINGLE_FILE=0 \
+	-s "EXPORTED_FUNCTIONS=['_init', '_add_agent', '_update', '_update_navigation', '_update_movement', '_update_statistics', '_update_collisions', '_update_agent_navigation_by_id', '_update_agent_movement', '_update_agent_statistic_by_id', '_load_blob_data', '_clear_blob_data', '_get_blob_count', '_get_active_agent_count', '_wasm_alloc', '_wasm_free', '_set_rng_seed', '_set_rng_seed_js']" \
+	-s "EXPORTED_RUNTIME_METHODS=['ccall', 'cwrap', 'HEAPU8', 'HEAP32', 'HEAPF32']" \
+	-s MODULARIZE=1 -s EXPORT_ES6=0 -s EXPORT_NAME='createWasmModule'
+
+# Build-specific flags
+ifeq ($(BUILD_TYPE),debug)
+	CXXFLAGS = $(BASE_CXXFLAGS) -O1 -gsource-map -DDEBUG=1
+	EMCC_FLAGS = $(BASE_EMCC_FLAGS) -O1 -gsource-map \
+		-s ASSERTIONS=1 -s SAFE_HEAP=1 \
+		-s NO_DISABLE_EXCEPTION_CATCHING \
+		--source-map-base http://localhost:5173/
+	TARGET_SUFFIX = _debug
+else
+	CXXFLAGS = $(BASE_CXXFLAGS) -O2 -gsource-map
+	EMCC_FLAGS = $(BASE_EMCC_FLAGS) -O2 -gsource-map
+	TARGET_SUFFIX =
+endif
+
+SRCS = main.cpp \
+       math_utils.cpp \
+       nav_tri_index.cpp \
+       raycasting.cpp \
+       path_utils.cpp \
+       path_corridor.cpp \
+       path_corners.cpp \
+       agent_move_phys.cpp \
+       agent_navigation.cpp \
+       agent_grid.cpp \
+       agent_collision.cpp \
+       agent_statistic.cpp \
+       agent_init.cpp \
+       blob_spatial_index.cpp
+
+OBJDIR = ../../temp$(TARGET_SUFFIX)
+# Build all object files into OBJDIR to keep paths consistent
+OBJS = $(SRCS:%.cpp=$(OBJDIR)/%.o)
+DEPS = $(OBJS:.o=.d)
+
+TARGET = ../../public/wasm_module$(TARGET_SUFFIX).js
+WASM_MODULE = ../../public/wasm_module$(TARGET_SUFFIX).wasm
+
+.PHONY: all clean rebuild debug release build_target
+
+all: release
+
+# Explicit targets for each build type
+release:
+	@$(MAKE) BUILD_TYPE=release build_target
+
+debug:
+	@$(MAKE) BUILD_TYPE=debug build_target
+
+build_target: $(TARGET)
+
+# Link target from object files in OBJDIR
+# Re-link when Makefile changes or flags potentially change
+$(TARGET): $(OBJS) Makefile
+	@echo "Linking $(BUILD_TYPE) build..."
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ $(EMCC_FLAGS)
+	@echo "Build complete: $(TARGET)"
+	@if [ "$(BUILD_TYPE)" = "debug" ]; then \
+		echo "Debug build with symbols created. Use this in browser:"; \
+		echo "- Function names will be readable in Performance tab"; \
+		echo "- Source maps available for debugging"; \
+		echo "- DWARF symbols included for profiling"; \
+	fi
+
+# Compile each .cpp into OBJDIR/%.o and emit dependency files alongside
+$(OBJDIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compiling $< ($(BUILD_TYPE))..."
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+-include $(DEPS)
+
+clean:
+	@echo "Cleaning up..."
+	rm -rf ../../temp ../../temp_debug
+	rm -f ../../public/wasm_module*.js ../../public/wasm_module*.wasm ../../public/wasm_module*.wasm.map
+
+# Convenience: force full rebuild
+rebuild: clean all 

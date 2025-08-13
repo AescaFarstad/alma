@@ -1,5 +1,5 @@
 import type { Point2 } from '../core/math';
-import { triangleArea, distance } from '../core/math';
+import { triangleArea, distance, distancePointToSegment, cvt } from '../core/math';
 
 export function flatten(points: Point2[], area_threshold: number): Point2[] {
     let currentPoints = [...points];
@@ -25,8 +25,18 @@ export function flatten(points: Point2[], area_threshold: number): Point2[] {
                 continue;
             }
 
+            // Calculate distance from B to line segment AC
+            const M = distancePointToSegment(B, A, C);
+            
+            // Calculate length of AC
+            const AC_length = distance(A, C);
+            
+            // Modify area_threshold based on how far the edge would move
+            const threshold_multiplier = cvt(M, 0.1, 0.05 * AC_length, 3, 1);
+            const adjusted_threshold = area_threshold * threshold_multiplier;
+
             const area = triangleArea(A, B, C);
-            if (area < area_threshold) {
+            if (area < adjusted_threshold) {
                 // console.log(`[UI] Flattening removed point ${i} with area ${area.toFixed(2)}`);
                 currentPoints.splice((i + 1) % len, 1);
                 totalRemovedPoints++;

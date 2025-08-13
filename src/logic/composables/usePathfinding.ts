@@ -1,6 +1,7 @@
 import type { GameState } from '../GameState';
 import type { SceneState } from '../drawing/SceneState';
-import { findCorridor, findCorners, getTriangleFromPoint } from '../navmesh/pathfinding';
+import { findCorners } from '../navmesh/pathCorners';
+import { findCorridor, getTriangleFromPoint } from '../navmesh/pathCorridor';
 
 export function usePathfinding(
   gameState: GameState | undefined,

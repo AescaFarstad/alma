@@ -1,4 +1,13 @@
-import { NavTriIndex } from './NavTriIndex';
+import type { NavTriIndex } from './NavTriIndex';
+import { Point2 } from '../core/math';
+
+export interface NavmeshData {
+    points: Point2[];
+    triangles: number[][];
+    neighbors: number[][];
+    centroids: Point2[];
+    bbox: { minX: number; minY: number; maxX: number; maxY: number; };
+}
 
 export class Navmesh {
     // Layout: [x1, y1, x2, y2, x3, y3, ...]
@@ -23,7 +32,7 @@ export class Navmesh {
    // Layout: [c1x, c1y, c2x, c2y, ...]
     public centroids: Float32Array;
 
-    public bbox: number[];
+    public bbox: Float32Array;
     public triIndex!: NavTriIndex;
 
     constructor() {
@@ -31,6 +40,6 @@ export class Navmesh {
         this.triangles = new Int32Array(0);
         this.neighbors = new Int32Array(0);
         this.centroids = new Float32Array(0);
-        this.bbox = [];
+        this.bbox = new Float32Array(0);
     }
 } 

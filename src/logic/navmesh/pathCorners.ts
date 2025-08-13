@@ -1,6 +1,5 @@
 import { Navmesh } from "./Navmesh";
-import { Point2, isPointInTriangle, cross, add, subtract, scale, length_sq, normalize, set_, set, normalize_, add_, subtract_, scale_ } from "../core/math";
-import { aStar } from "../core/aStar";
+import { Point2, cross, add, subtract, scale, length_sq, normalize, set_, set, normalize_, add_, subtract_, scale_ } from "../core/math";
 import { GameState } from "../GameState";
 // import { arePointsSuspiciouslyClose } from "../debug/AgentDebugUtils";
 // import { ACINDIGO, sceneState } from "../drawing/SceneState";
@@ -26,75 +25,6 @@ const reusableSearchBox = {
     maxY: 0
 };
 const tempV = {x: 0, y: 0};
-
-export function getTriangleFromPoint(navmesh: Navmesh, point: Point2): number {
-    const possibleTris = navmesh.triIndex.query(point.x, point.y);
-    
-    for (let i = 0; i < possibleTris.length; i++) {
-        const triIdx = possibleTris[i];
-        const triVertexStartIndex = triIdx * 3;
-        const p1Index = navmesh.triangles[triVertexStartIndex];
-        const p2Index = navmesh.triangles[triVertexStartIndex + 1];
-        const p3Index = navmesh.triangles[triVertexStartIndex + 2];
-
-        const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-        const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
-        const p3 = { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] };
-
-        if (isPointInTriangle(point, p1, p2, p3)) {
-            return triIdx;
-        }
-    }
-
-    return -1;
-}
-
-export function findCorridor(navmesh: Navmesh, startPoint: Point2, endPoint: Point2, startTriHint?: number, endTriHint?: number): number[] | null {
-    // console.log("findCorridor");
-    const startTri = startTriHint !== undefined ? startTriHint : getTriangleFromPoint(navmesh, startPoint);
-    const endTri = endTriHint !== undefined ? endTriHint : getTriangleFromPoint(navmesh, endPoint);
-
-    if (startTri === -1 || endTri === -1) {
-        return null;
-    }
-
-    const getNeighbors = (current: number) => {
-        const neighbors: number[] = [];
-        for (let i = 0; i < 3; i++) {
-            const neighbor = navmesh.neighbors[current * 3 + i];
-            if (neighbor !== -1) {
-                neighbors.push(neighbor);
-            }
-        }
-        return neighbors;
-    };
-
-    const getCost = (a: number, b: number) => {
-        const c1x = navmesh.centroids[a * 2];
-        const c1y = navmesh.centroids[a * 2 + 1];
-        const c2x = navmesh.centroids[b * 2];
-        const c2y = navmesh.centroids[b * 2 + 1];
-        return Math.sqrt(Math.pow(c1x - c2x, 2) + Math.pow(c1y - c2y, 2));
-    };
-
-    const getHeuristic = (node: number) => {
-        const c1x = navmesh.centroids[node * 2];
-        const c1y = navmesh.centroids[node * 2 + 1];
-        const c2x = navmesh.centroids[endTri * 2];
-        const c2y = navmesh.centroids[endTri * 2 + 1];
-        return Math.sqrt(Math.pow(c1x - c2x, 2) + Math.pow(c1y - c2y, 2));
-    };
-
-    const path = aStar<number>(
-        startTri,
-        endTri,
-        getNeighbors,
-        getCost,
-        getHeuristic
-    );
-
-    return path;
-} 
 
 export function findCorners(navmesh: Navmesh, corridor: number[], startPoint: Point2, endPoint: Point2): Corner[] {
     const portals = getPortals(navmesh, corridor, startPoint, endPoint);

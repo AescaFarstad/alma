@@ -9,16 +9,20 @@
       <button @click="handleButtonClick($event, () => toggleLayer('buildings'))">Buildings</button>
       <button @click="handleButtonClick($event, () => toggleLayer('roads'))">Roads</button>
       <button @click="handleButtonClick($event, () => toggleLayer('footpaths'))">Footpaths</button>
+      <button @click="handleButtonClick($event, () => toggleAgents())">{{ agentsEnabled ? 'Hide' : 'Show' }} Agents</button>
+      <button @click="handleButtonClick($event, () => toggleAgentRenderMode())">{{ agentRenderMode === 'visual' ? 'Visual' : 'Sprite' }} Mode</button>
+      <button @click="handleButtonClick($event, () => toggleWasmRender())">{{ wasmRenderEnabled ? 'Hide' : 'Show' }} WASM</button>
       <button @click="handleButtonClick($event, () => drawNavmesh())">Draw Navmesh</button>
       <button @click="handleButtonClick($event, () => findCorridors())">Find Corridors</button>
       <button @click="handleButtonClick($event, () => buildPath())">Build Path</button>
       <button @click="handleButtonClick($event, () => drawNavGrid(1))">Draw Grid 1</button>
       <button @click="handleButtonClick($event, () => drawNavGrid(2))">Draw Grid 2</button>
       <button @click="handleButtonClick($event, () => copyAgentState())">Copy Agent State</button>
+      <button @click="handleButtonClick($event, () => runPitBenchmark())">Test PiT</button>
       <TimeControls />
     </div>
     <div id="fps-display" v-if="fpsMetrics">
-      {{ fpsMetrics.currentFPS }}|{{ fpsMetrics.averageFPS }}|{{ fpsMetrics.maxFrameTime }}
+      {{ fpsMetrics.currentFPS }}|{{ fpsMetrics.averageFPS }}|{{ fpsMetrics.longAverageFPS }}|{{ fpsMetrics.maxFrameTime }}|{{ gameState?.gameTime.toFixed(1) }}
     </div>
     <div id="agent-counter" v-if="props.agentCount !== null">
       Agents: {{ props.agentCount }}
@@ -40,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, inject, type PropType } from 'vue';
+import { defineProps, defineEmits, inject, type PropType, ref } from 'vue';
 import type { FPSMetrics } from '../../logic/FPSCounter';
 import SelectedBuildings from './SelectedBuildings.vue';
 import DebugTools from './DebugTools.vue';
@@ -48,15 +52,27 @@ import AddAgentDebug from './AddAgentDebug.vue';
 import AvatarState from './AvatarState.vue';
 import type { Avatar, GameState } from '../../logic/GameState';
 import TimeControls from './TimeControls.vue';
+import type { AgentRenderingMode } from '../../logic/drawing/AgentRenderer';
+import { runPointInTriangleBenchmark } from '../../logic/debug/PointInTriangleBenchmark';
 
 // Inject the game state provided in main.ts
 const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 const gameState = inject<GameState>('gameState');
 
+const agentRenderMode = ref<AgentRenderingMode>('sprite');
+const agentsEnabled = ref(true);
+const wasmRenderEnabled = ref(false);
+
 const copyAgentState = () => {
   if (gameState && gameState.agents.length > 0) {
     const agentState = JSON.stringify(gameState.agents, null, 2);
     navigator.clipboard.writeText(agentState);
+  }
+};
+
+const runPitBenchmark = () => {
+  if (gameState) {
+    runPointInTriangleBenchmark(gameState);
   }
 };
 
@@ -106,6 +122,21 @@ const toggleLayer = (layerId: 'buildings' | 'roads' | 'footpaths') => {
   emit('map-event', { type: 'toggle-layer', payload: { layerId } });
 };
 
+const toggleAgentRenderMode = () => {
+  agentRenderMode.value = agentRenderMode.value === 'visual' ? 'sprite' : 'visual';
+  emit('map-event', { type: 'set-agent-render-mode', payload: { mode: agentRenderMode.value } });
+};
+
+const toggleAgents = () => {
+  agentsEnabled.value = !agentsEnabled.value;
+  emit('map-event', { type: 'toggle-agents', payload: { enabled: agentsEnabled.value } });
+};
+
+const toggleWasmRender = () => {
+  wasmRenderEnabled.value = !wasmRenderEnabled.value;
+  emit('map-event', { type: 'toggle-wasm-render', payload: { enabled: wasmRenderEnabled.value } });
+};
+
 const drawNavmesh = () => {
   emit('map-event', { type: 'draw-navmesh', payload: {} });
 };
@@ -129,7 +160,6 @@ const clearDebugVisuals = () => {
 const formatBounds = (bounds: string) => {
   if (!bounds) return '';
   
-  // Parse bounds string to extract coordinates
   const match = bounds.match(/\[(-?\d+\.?\d*), (-?\d+\.?\d*)\] - \[(-?\d+\.?\d*), (-?\d+\.?\d*)\]/);
   if (!match) return bounds;
   

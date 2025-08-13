@@ -17,6 +17,6 @@ export class Lib {
         // In a larger app, we would initialize other libraries here.
 
         this.isLoaded = true;
-        console.log("Lib loaded.");
+        
     }
 } 

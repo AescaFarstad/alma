@@ -10,6 +10,7 @@ import { cornerize } from '../logic/simplification/cornerize';
 
 import type { FeatureCollection } from 'geojson';
 import type { Point2 } from '../logic/core/math';
+import { pullAway } from '../logic/simplification/pullAway';
 
 const SIMPLIFICATION_INFLATION = 3.6;
 const MERGE_INFLATION = 2;
@@ -212,11 +213,14 @@ async function main() {
         let totalBlobVertices = 0;
         let blobsSkippedCount = 0;
         unitedBlobs.forEach((group, index) => {
-            let simplified = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
+            let simplified = pullAway(group.geom, 1, 5);
+            simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
             simplified = unround(simplified, 10, 0.45);
             simplified = flatten(simplified, 3);
             simplified = unround(simplified, 10, 0.5);
             simplified = flatten(simplified, 5);
+            simplified = unround(simplified, 5, 0.55);
+            simplified = flatten(simplified, 7);
             simplified = unround(simplified, 5, 0.55);
             
             if (simplified.length < 3 && calculatePolygonArea(simplified) < SAFE_TO_SKIP_AREA) {

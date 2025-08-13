@@ -23,7 +23,7 @@ export function useNavmeshDebug(
       maxY: extent[3],
     };
 
-    sceneState.clearDebugVisuals();
+    // sceneState.clearDebugVisuals();
     const drawnEdges = new Set<string>();
 
     for (let i = 0; i < triangles.length; i += 3) {

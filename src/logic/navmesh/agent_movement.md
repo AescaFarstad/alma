@@ -160,7 +160,7 @@ A few key decisions and clarifications based on early planning:
         -   *Goal:* Optimize path calculation and improve movement behavior.
         -   *Observable Behavior:* Agents navigate more smoothly and stay further from walls when turning corners.
 
-    6.  **Implement Path Correction & 'Escaping' State:**
+    6.  **Implement Path Correction & 'Escaping' State:** (DONE)
         -   For testing, introduce a mechanism in `updateAgents` to occasionally apply a random impulse force to agents, pushing them off their paths.
         -   Implement `pathFrustration` logic to detect when an agent has strayed. Use raycasting for local path patching.
         -   If an agent is outside the navmesh, set its state to `escaping` (e.g., turn red) and have it navigate back to its `lastValidPosition`. Log that event.
@@ -168,14 +168,14 @@ A few key decisions and clarifications based on early planning:
         -   *Observable Behavior:* An agent that gets pushed will correct its course. An agent pushed outside the navmesh turns red and tries to return.
         -   (DONE)
 
-    7.  **Implement Spawners:**
+    7.  **Implement Spawners:** (DONE)
         -   Logic: `AgentSpawner.ts`
         -   The system should add new agents to the `GameState` at a regular interval from predefined hardcoded locations.
         -   *Goal:* Populate the world.
         -   *Observable Behavior:* Agents continuously appear on the map at specific points.
         -   (DONE)
 
-    8.  **Implement Agent-Agent Collision (Brute-Force):**
+    8.  **Implement Agent-Agent Collision (Brute-Force):** (DONE)
         -   Logic: `AgentCollision.ts`, `Model.ts`
         -   Create `AgentCollision.ts`. Implement logic to iterate through all agent pairs, check for overlap, and apply a push-away force.
         -   Call this from `Model.ts`.
@@ -183,12 +183,19 @@ A few key decisions and clarifications based on early planning:
         -   *Observable Behavior:* Agents no longer pass through each other. Performance will degrade with many agents.
 
     9.  **Implement Agent Spatial Grid:**
-        -   Logic: `AgentGrid.ts`
-        -   Implement a spatial grid in `AgentGrid.ts`.
-        -   In `Model.ts`, re-index all agents into the grid each frame using the Halton sequence offset.
-        -   Modify `AgentCollision.ts` to only check for collisions against agents in the same grid cell.
-        -   *Goal:* Optimize agent-agent collision checks.
-        -   *Observable Behavior:* Collision behavior is identical, but the simulation runs smoothly with thousands of agents.
+        -   Logic: `AgentGrid.ts`, `Model.ts`, `AgentCollision.ts`
+        -   **Grid Design:** Grid uses minimal memory allocation. It stores agent index in a typed array.
+        -   **Halton Offset:** Apply 2D Halton sequence offset each frame to prevent persistent grid border issues.
+        -   **Implementation Details:**
+            -   `AgentGrid.ts`: Focused grid implementation with cell indexing, coordinate conversion, and Halton offset generation.
+            -   Replace brute-force O(n²) collision in `AgentCollision.ts` with grid-based O(n) same-cell lookup.
+            -   `Model.ts`: Trigger re-indexing all agents each frame.
+            -   Only check collisions within same grid cell (no neighboring cell checks).
+            -   Use pooled data structures to minimize per-frame allocations.
+        -   **Memory Strategy:** Reuse existing agent arrays, minimal temporary allocations.
+        -   **Future:** This grid approach is temporary - will be replaced with quadtree for large-scale optimization.
+        -   *Goal:* Optimize agent collision from O(n²) to O(n × agents_per_cell).
+        -   *Observable Behavior:* Identical collision physics, dramatically improved performance with thousands of agents.
 
 
 ## Implementation progress:
@@ -197,5 +204,6 @@ A few key decisions and clarifications based on early planning:
 3. **Implement Wall Sliding Physics:** (DONE)
 4. **Implement Pathfinding & Basic Corridor Following:** (DONE)
 5. **Implement Single-Corner Pathing with Offset:** (DONE)
-5. **Implement Path Correction & 'Escaping' State:** (DONE)
-5. **Implement Spawners:** (DONE)
+6. **Implement Path Correction & 'Escaping' State:** (DONE)
+7. **Implement Spawners:** (DONE)
+8. **Implement Agent-Agent Collision (Brute-Force):** (DONE)

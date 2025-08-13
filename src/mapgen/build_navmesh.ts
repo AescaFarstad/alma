@@ -18,7 +18,7 @@ function main() {
     
     // To speed up testing, you can process a smaller area.
     // Set this to `null` to process all data.
-    const DEBUG_BBOX: readonly [number, number, number, number] | null = [-1000, -1000, 1000, 1000];
+    const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
 
     if (!inputDir || !outputDir) {
         console.error('Usage: ts-node build_navmesh.ts --input <input_dir> --output <output_dir>');

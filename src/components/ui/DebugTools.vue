@@ -18,7 +18,7 @@
 <script setup lang="ts">
 import { ref, inject } from 'vue';
 import { mapInstance } from '../../map_instance';
-import { getTriangleFromPoint } from '../../logic/navmesh/pathfinding';
+import { getTriangleFromPoint } from '../../logic/navmesh/pathCorridor';
 import type { GameState } from '../../logic/GameState';
 import { SceneState, ACGREEN, ACINDIGO } from '../../logic/drawing/SceneState';
 

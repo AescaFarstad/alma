@@ -1,19 +1,77 @@
 import type { Navmesh } from "./Navmesh";
 import { Point2, triangleAABBIntersectionWithBounds, isPointInTriangle } from "../core/math";
+import { seededRandom } from "../core/mathUtils";
+import { getWasmModule } from "../../WasmModule";
 
 export class NavTriIndex {
-    private cellOffsets: Uint32Array;
-    private cellTriangles: Int32Array;
-    private cellSize = 100; // Size of each cell in meters
-    private gridWidth: number; // Number of cells along X axis
-    private gridHeight: number; // Number of cells along Y axis
-    private minX: number;
-    private minY: number;
-    private maxX: number;
-    private maxY: number;
+    private cellOffsets: Uint32Array = new Uint32Array(0);
+    private cellTriangles: Int32Array = new Int32Array(0);
+    private cellSize: number = 128; // Default grid cell size
+    private gridWidth: number = 0;
+    private gridHeight: number = 0;
+    private minX: number = 0;
+    private minY: number = 0;
+    private maxX: number = 0;
+    private maxY: number = 0;
 
     constructor(navmesh: Navmesh) {
-        if (!navmesh.bbox || navmesh.bbox.length !== 4) {
+        const wasm = getWasmModule();
+        let navTriIndexDataPtr = 0;
+
+        if (wasm) {
+            try {
+                const getter = (wasm.cwrap && (wasm.cwrap("get_nav_tri_index_data_ptr", "number", [] as any))) as undefined | (() => number);
+                if (getter) {
+                    navTriIndexDataPtr = getter();
+                } else if ((wasm as any)._g_navTriIndexData) {
+                    navTriIndexDataPtr = (wasm as any)._g_navTriIndexData as number;
+                }
+            } catch {}
+        }
+
+        const hasValidWasmIndex = !!(
+            wasm &&
+            navTriIndexDataPtr > 0 &&
+            (wasm as any).HEAP32 &&
+            (wasm as any).HEAPF32 &&
+            (wasm as any).HEAPU8
+        );
+
+        if (!hasValidWasmIndex) {
+            // this.buildIndex(navmesh);
+            console.error("!hasValidWasmIndex")
+            return;
+        }
+
+        try {
+            const HEAP32 = (wasm as any).HEAP32 as Int32Array;
+            const HEAPF32 = (wasm as any).HEAPF32 as Float32Array;
+            const HEAPU8 = (wasm as any).HEAPU8 as Uint8Array;
+            
+            const cellOffsetsPtr = HEAP32[navTriIndexDataPtr / 4 + 0];
+            const cellTrianglesPtr = HEAP32[navTriIndexDataPtr / 4 + 1];
+            this.gridWidth = HEAP32[navTriIndexDataPtr / 4 + 2];
+            this.gridHeight = HEAP32[navTriIndexDataPtr / 4 + 3];
+            this.cellSize = HEAPF32[navTriIndexDataPtr / 4 + 4];
+            this.minX = HEAPF32[navTriIndexDataPtr / 4 + 5];
+            this.minY = HEAPF32[navTriIndexDataPtr / 4 + 6];
+            this.maxX = HEAPF32[navTriIndexDataPtr / 4 + 7];
+            this.maxY = HEAPF32[navTriIndexDataPtr / 4 + 8];
+            const cellOffsetsCount = HEAP32[navTriIndexDataPtr / 4 + 9];
+            const cellTrianglesCount = HEAP32[navTriIndexDataPtr / 4 + 10];
+
+            this.cellOffsets = new Uint32Array(HEAPU8.buffer, cellOffsetsPtr, cellOffsetsCount);
+            this.cellTriangles = new Int32Array(HEAPU8.buffer, cellTrianglesPtr, cellTrianglesCount);
+
+            
+        } catch (e) {
+            console.error("Error initializing NavTriIndex from WASM, falling back to JS", e);
+            this.buildIndex(navmesh);
+        }
+    }
+
+    private buildIndex(navmesh: Navmesh): void {
+        if (!navmesh.bbox) {
             throw new Error("Invalid navmesh bbox");
         }
         
@@ -21,20 +79,25 @@ export class NavTriIndex {
 
         const width = this.maxX - this.minX;
         const height = this.maxY - this.minY;
-        this.gridWidth = Math.ceil(width / this.cellSize);
-        this.gridHeight = Math.ceil(height / this.cellSize);
 
-        this.cellOffsets = new Uint32Array(0);
-        this.cellTriangles = new Int32Array(0);
+        // Ensure non-zero cell size
+        if (!Number.isFinite(this.cellSize) || this.cellSize <= 0) {
+            this.cellSize = 256;
+        }
+
+        // Guard against degenerate bbox
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            this.gridWidth = 1;
+            this.gridHeight = 1;
+        } else {
+            this.gridWidth = Math.max(1, Math.ceil(width / this.cellSize));
+            this.gridHeight = Math.max(1, Math.ceil(height / this.cellSize));
+        }
         
-        this.buildIndex(navmesh);
-    }
-    private buildIndex(navmesh: Navmesh): void {
         const { points, triangles } = navmesh;
         const numTriangles = triangles.length / 3;
 
         const gridCellCount = this.gridWidth * this.gridHeight;
-        // Each cell stores triangle indices (logical indices), not triangle start indices
         const tempGrid: number[][] = Array.from({ length: gridCellCount }, () => []);
 
         for (let i = 0; i < numTriangles; i++) {
@@ -84,18 +147,6 @@ export class NavTriIndex {
             }
         }
         
-        // // Log triangle count per cell
-        // console.log("NavTriIndex: Triangle distribution per cell:");
-        // for (let cy = 0; cy < this.gridHeight; cy++) {
-        //     for (let cx = 0; cx < this.gridWidth; cx++) {
-        //         const cellIndex = cx + cy * this.gridWidth;
-        //         const triangleCount = tempGrid[cellIndex].length;
-        //         if (triangleCount > 0) {
-        //             console.log(`Cell ${cx}, ${cy}: ${triangleCount}`);
-        //         }
-        //     }
-        // }
-        
         this.cellOffsets = new Uint32Array(gridCellCount + 1);
         let totalTriangles = 0;
         for (let i = 0; i < gridCellCount; i++) {
@@ -121,7 +172,6 @@ export class NavTriIndex {
         const start = this.cellOffsets[cellIndex];
         const end = this.cellOffsets[cellIndex + 1];
         
-        // Returns triangle indices. To access triangle data: triangles[triangle_idx * 3 + vertex_offset]
         return this.cellTriangles.slice(start, end);
     }
 
@@ -143,12 +193,15 @@ export class NavTriIndex {
             const p1Index = triangles[triVertexStartIndex];
             const p2Index = triangles[triVertexStartIndex + 1];
             const p3Index = triangles[triVertexStartIndex + 2];
-            const triPoints: Point2[] = [
-                { x: points[p1Index * 2], y: points[p1Index * 2 + 1] },
-                { x: points[p2Index * 2], y: points[p2Index * 2 + 1] },
-                { x: points[p3Index * 2], y: points[p3Index * 2 + 1] },
-            ];
-            return isPointInTriangle(point, triPoints[0], triPoints[1], triPoints[2]);
+            
+            const p1x = points[p1Index * 2];
+            const p1y = points[p1Index * 2 + 1];
+            const p2x = points[p2Index * 2];
+            const p2y = points[p2Index * 2 + 1];
+            const p3x = points[p3Index * 2];
+            const p3y = points[p3Index * 2 + 1];
+            
+            return isPointInTriangle(point.x, point.y, p1x, p1y, p2x, p2y, p3x, p3y);
         };
 
         if (lastTriangle !== -1 && checkTriangle(lastTriangle)) {
@@ -156,8 +209,9 @@ export class NavTriIndex {
         }
 
         if (lastTriangle !== -1) {
-            const triNeighbors = neighbors.slice(lastTriangle * 3, lastTriangle * 3 + 3);
-            for (const neighborIdx of triNeighbors) {
+            const base = lastTriangle * 3;
+            for (let i = 0; i < 3; i++) {
+                const neighborIdx = neighbors[base + i];
                 if (neighborIdx !== -1 && checkTriangle(neighborIdx)) {
                     return neighborIdx;
                 }
@@ -207,20 +261,83 @@ export class NavTriIndex {
         };
     }
 
-    public getRandomTriangle(navmesh: Navmesh): number {
+    public getRandomTriangle(navmesh: Navmesh, seed?: number): number {
+        let currentSeed = seed ?? 12345;
         const maxAttempts = 10;
+        
         for (let i = 0; i < maxAttempts; i++) {
-            const randomX = this.minX + Math.random() * (this.maxX - this.minX);
-            const randomY = this.minY + Math.random() * (this.maxY - this.minY);
-            const point: Point2 = { x: randomX, y: randomY };
+            const { value: randomX, newSeed: newSeedX } = seededRandom(currentSeed);
+            currentSeed = newSeedX;
+            const { value: randomY, newSeed: newSeedY } = seededRandom(currentSeed);
+            currentSeed = newSeedY;
+            
+            const x = this.minX + randomX * (this.maxX - this.minX);
+            const y = this.minY + randomY * (this.maxY - this.minY);
+            const point: Point2 = { x, y };
             const triIndex = this.isPointInNavmesh(point, navmesh, -1);
             if (triIndex !== -1) {
                 return triIndex;
             }
         }
 
-        // Fallback: pick a random triangle by index
         const numTriangles = navmesh.triangles.length / 3;
-        return Math.floor(Math.random() * numTriangles);
+        const { value } = seededRandom(currentSeed);
+        return Math.floor(value * numTriangles);
+    }
+
+    public getRandomTriangleInArea(navmesh: Navmesh, centerX: number, centerY: number, numCellExtents: number, seed?: number): number {
+        let currentSeed = seed ?? 12345;
+        const maxAttempts = 20;
+        
+        const halfExtent = numCellExtents * this.cellSize;
+        const minX = centerX - halfExtent;
+        const maxX = centerX + halfExtent;
+        const minY = centerY - halfExtent;
+        const maxY = centerY + halfExtent;
+        
+        const clampedMinX = Math.max(minX, this.minX);
+        const clampedMaxX = Math.min(maxX, this.maxX);
+        const clampedMinY = Math.max(minY, this.minY);
+        const clampedMaxY = Math.min(maxY, this.maxY);
+        
+        for (let i = 0; i < maxAttempts; i++) {
+            const { value: randomX, newSeed: newSeedX } = seededRandom(currentSeed);
+            currentSeed = newSeedX;
+            const { value: randomY, newSeed: newSeedY } = seededRandom(currentSeed);
+            currentSeed = newSeedY;
+            
+            const x = clampedMinX + randomX * (clampedMaxX - clampedMinX);
+            const y = clampedMinY + randomY * (clampedMaxY - clampedMinY);
+            const point: Point2 = { x, y };
+            const triIndex = this.isPointInNavmesh(point, navmesh, -1);
+            if (triIndex !== -1) {
+                return triIndex;
+            }
+        }
+
+        const startCellX = Math.max(0, Math.floor((clampedMinX - this.minX) / this.cellSize));
+        const endCellX = Math.min(this.gridWidth - 1, Math.floor((clampedMaxX - this.minX) / this.cellSize));
+        const startCellY = Math.max(0, Math.floor((clampedMinY - this.minY) / this.cellSize));
+        const endCellY = Math.min(this.gridHeight - 1, Math.floor((clampedMaxY - this.minY) / this.cellSize));
+        
+        const candidateTriangles: number[] = [];
+        for (let cx = startCellX; cx <= endCellX; cx++) {
+            for (let cy = startCellY; cy <= endCellY; cy++) {
+                const cellTriangles = this.getTrianglesInCell(cx, cy);
+                for (const triIdx of cellTriangles) {
+                    if (!candidateTriangles.includes(triIdx)) {
+                        candidateTriangles.push(triIdx);
+                    }
+                }
+            }
+        }
+        
+        if (candidateTriangles.length > 0) {
+            const { value } = seededRandom(currentSeed);
+            const randomIndex = Math.floor(value * candidateTriangles.length);
+            return candidateTriangles[randomIndex];
+        }
+        
+        return this.getRandomTriangle(navmesh, currentSeed);
     }
 } 

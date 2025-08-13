@@ -1,18 +1,29 @@
 export interface FPSMetrics {
   currentFPS: number;
   averageFPS: number;
+  longAverageFPS: number; // 10-second average
   maxFrameTime: number;
 }
 
 export class FPSCounter {
-  private frameTimestamps: number[] = [];
+  // Circular buffer for frame timestamps using typed array
+  private frameTimestamps: Float64Array;
+  private bufferIndex = 0;
+  private bufferSize = 0;
+  private readonly MAX_BUFFER_SIZE = 1200; // 20 seconds * 60 FPS
+  
   private lastFrameTime = 0;
   private currentFPS = 0;
   
   // Configuration constants
   private readonly HISTORY_DURATION_MS = 2000; // 2 seconds
+  private readonly LONG_HISTORY_DURATION_MS = 10000; // 10 seconds
   private readonly MAX_FRAME_TIME_MS = 1000; // Cap at 1 second to handle browser throttling
   private readonly MIN_FRAME_TIME_MS = 1; // Minimum meaningful frame time
+
+  constructor() {
+    this.frameTimestamps = new Float64Array(this.MAX_BUFFER_SIZE);
+  }
   
   /**
    * Update the FPS counter with a new frame timestamp
@@ -33,11 +44,14 @@ export class FPSCounter {
       // If deltaTime is too small, keep the previous FPS value
     }
     
-    // Add current frame timestamp to history
-    this.frameTimestamps.push(now);
+    // Add current frame timestamp to circular buffer
+    this.frameTimestamps[this.bufferIndex] = now;
+    this.bufferIndex = (this.bufferIndex + 1) % this.MAX_BUFFER_SIZE;
     
-    // Remove timestamps older than our history duration
-    this.cleanupOldFrames(now);
+    // Track how many frames we have (up to MAX_BUFFER_SIZE)
+    if (this.bufferSize < this.MAX_BUFFER_SIZE) {
+      this.bufferSize++;
+    }
     
     this.lastFrameTime = now;
   }
@@ -53,42 +67,141 @@ export class FPSCounter {
    * Get the average FPS over the last two seconds
    */
   public getAverageFPS(): number {
-    if (this.frameTimestamps.length < 2) {
+    return this.calculateAverageFPS(this.HISTORY_DURATION_MS);
+  }
+  
+  /**
+   * Get the average FPS over the last ten seconds
+   */
+  public getLongAverageFPS(): number {
+    return this.calculateAverageFPS(this.LONG_HISTORY_DURATION_MS);
+  }
+  
+  /**
+   * Calculate average FPS over a specified duration
+   */
+  private calculateAverageFPS(durationMs: number): number {
+    if (this.bufferSize < 2) {
       return 0;
     }
     
-    const timeSpan = this.frameTimestamps[this.frameTimestamps.length - 1] - this.frameTimestamps[0];
+    const now = this.lastFrameTime;
+    const cutoffTime = now - durationMs;
+    
+    // Find oldest frame within the time window
+    let oldestValidIndex = -1;
+    let oldestValidTime = now;
+    
+    // Single pass through circular buffer
+    if (this.bufferSize < this.MAX_BUFFER_SIZE) {
+      // Buffer not full, iterate sequentially
+      for (let i = 0; i < this.bufferSize; i++) {
+        const timestamp = this.frameTimestamps[i];
+        if (timestamp >= cutoffTime && timestamp < oldestValidTime) {
+          oldestValidTime = timestamp;
+          oldestValidIndex = i;
+        }
+      }
+    } else {
+      // Buffer is full, iterate chronologically
+      for (let i = 0; i < this.MAX_BUFFER_SIZE; i++) {
+        const idx = (this.bufferIndex + i) % this.MAX_BUFFER_SIZE;
+        const timestamp = this.frameTimestamps[idx];
+        
+        if (timestamp >= cutoffTime) {
+          // Found first valid timestamp (oldest in range)
+          oldestValidTime = timestamp;
+          oldestValidIndex = idx;
+          break;
+        }
+      }
+    }
+    
+    if (oldestValidIndex === -1) {
+      return 0; // No frames in time window
+    }
+    
+    const timeSpan = now - oldestValidTime;
     if (timeSpan <= 0) {
       return 0;
     }
     
-    // Number of frames divided by time span in seconds
-    const frameCount = this.frameTimestamps.length - 1; // Subtract 1 because we count intervals
-    const averageFPS = (frameCount * 1000) / timeSpan;
+    // Count frames from oldest valid to now
+    let frameCount = 0;
+    if (this.bufferSize < this.MAX_BUFFER_SIZE) {
+      // Count frames from oldestValidIndex to latest
+      for (let i = oldestValidIndex; i < this.bufferSize; i++) {
+        if (this.frameTimestamps[i] >= cutoffTime) {
+          frameCount++;
+        }
+      }
+    } else {
+      // Count frames chronologically from oldest valid
+      let found = false;
+      for (let i = 0; i < this.MAX_BUFFER_SIZE; i++) {
+        const idx = (this.bufferIndex + i) % this.MAX_BUFFER_SIZE;
+        const timestamp = this.frameTimestamps[idx];
+        
+        if (timestamp >= cutoffTime) {
+          found = true;
+        }
+        if (found) {
+          frameCount++;
+        }
+      }
+    }
     
-    return Math.round(averageFPS); // Round to integer
+    const averageFPS = ((frameCount - 1) * 1000) / timeSpan; // -1 because we count intervals
+    return Math.round(averageFPS);
   }
   
   /**
    * Get the maximum frame time (worst performance) over the last two seconds
    */
   public getMaxFrameTime(): number {
-    if (this.frameTimestamps.length < 2) {
+    if (this.bufferSize < 2) {
       return 0;
     }
     
+    const now = this.lastFrameTime;
+    const cutoffTime = now - this.HISTORY_DURATION_MS;
     let maxFrameTime = 0;
+    let prevTimestamp = -1;
     
-    for (let i = 1; i < this.frameTimestamps.length; i++) {
-      const frameTime = this.frameTimestamps[i] - this.frameTimestamps[i - 1];
-      
-      // Only consider valid frame times (ignore browser throttling)
-      if (frameTime <= this.MAX_FRAME_TIME_MS) {
-        maxFrameTime = Math.max(maxFrameTime, frameTime);
+    // Single pass through circular buffer to find max frame time
+    if (this.bufferSize < this.MAX_BUFFER_SIZE) {
+      // Buffer not full, iterate sequentially
+      for (let i = 0; i < this.bufferSize; i++) {
+        const timestamp = this.frameTimestamps[i];
+        if (timestamp >= cutoffTime) {
+          if (prevTimestamp >= 0) {
+            const frameTime = timestamp - prevTimestamp;
+            if (frameTime <= this.MAX_FRAME_TIME_MS) {
+              maxFrameTime = Math.max(maxFrameTime, frameTime);
+            }
+          }
+          prevTimestamp = timestamp;
+        }
+      }
+    } else {
+      // Buffer is full, iterate chronologically
+      for (let i = 0; i < this.MAX_BUFFER_SIZE; i++) {
+        const idx = (this.bufferIndex + i) % this.MAX_BUFFER_SIZE;
+        const timestamp = this.frameTimestamps[idx];
+        
+        if (timestamp >= cutoffTime) {
+          if (prevTimestamp >= 0) {
+            const frameTime = timestamp - prevTimestamp;
+            if (frameTime <= this.MAX_FRAME_TIME_MS) {
+              maxFrameTime = Math.max(maxFrameTime, frameTime);
+            }
+          }
+          prevTimestamp = timestamp;
+        }
       }
     }
     
-    return Math.round(maxFrameTime); // Round to integer
+    return Math.round(maxFrameTime);
   }
   
   /**
@@ -98,6 +211,7 @@ export class FPSCounter {
     return {
       currentFPS: this.getCurrentFPS(),
       averageFPS: this.getAverageFPS(),
+      longAverageFPS: this.getLongAverageFPS(),
       maxFrameTime: this.getMaxFrameTime()
     };
   }
@@ -106,7 +220,9 @@ export class FPSCounter {
    * Reset the FPS counter, clearing all history
    */
   public reset(): void {
-    this.frameTimestamps = [];
+    this.frameTimestamps.fill(0);
+    this.bufferIndex = 0;
+    this.bufferSize = 0;
     this.lastFrameTime = 0;
     this.currentFPS = 0;
   }
@@ -115,26 +231,6 @@ export class FPSCounter {
    * Get the number of frames recorded in the current history window
    */
   public getFrameCount(): number {
-    return this.frameTimestamps.length;
-  }
-  
-  /**
-   * Remove frame timestamps older than the history duration
-   */
-  private cleanupOldFrames(currentTime: number): void {
-    const cutoffTime = currentTime - this.HISTORY_DURATION_MS;
-    
-    // Remove frames older than the cutoff time
-    let removeCount = 0;
-    for (let i = 0; i < this.frameTimestamps.length; i++) {
-      if (this.frameTimestamps[i] >= cutoffTime) {
-        break;
-      }
-      removeCount++;
-    }
-    
-    if (removeCount > 0) {
-      this.frameTimestamps = this.frameTimestamps.slice(removeCount);
-    }
+    return this.bufferSize;
   }
 } 

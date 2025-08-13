@@ -1,5 +1,5 @@
 
-import { raycast } from "./Raycasting";
+import { raycastPoint } from "./Raycasting";
 import { dot, length_sq, Point2, copy, subtract, scale, add, normalize } from "./core/math";
 import { Navmesh } from "./navmesh/Navmesh";
 import type { Avatar } from "./GameState";
@@ -105,13 +105,13 @@ export function updateAvatar(avatar: Avatar, deltaTime: number, navmesh: Navmesh
     avatar.wallContact = false;
     
     if (deltaTime > 0 && length_sq(avatar.velocity) > 0) {
-        const raycastResult = raycast(navmesh, startPoint, endPointForRecast, avatar.lastTriangle);
+        const raycastResult = raycastPoint(navmesh, startPoint, endPointForRecast, avatar.lastTriangle, undefined);
 
-        if (raycastResult.hit) {
+        if (raycastResult.hitP1 && raycastResult.hitP2) {
             avatar.wallContact = true;
             
             // Calculate wall vector and normal
-            const wallVector = { x: raycastResult.hit.p2.x - raycastResult.hit.p1.x, y: raycastResult.hit.p2.y - raycastResult.hit.p1.y };
+            const wallVector = { x: raycastResult.hitP2.x - raycastResult.hitP1.x, y: raycastResult.hitP2.y - raycastResult.hitP1.y };
             let wallNormal = { x: -wallVector.y, y: wallVector.x } as Point2;
             
             // Normalize the wall normal

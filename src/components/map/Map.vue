@@ -12,6 +12,7 @@ import type { SceneState } from '../../logic/drawing/SceneState';
 import { setupMapView } from '../../logic/composables/setupMapView';
 import { useMapInteractions } from '../../logic/composables/useMapInteractions';
 import { DynamicScene } from '../../logic/drawing/DynamicScene';
+import { WasmAgentSystem } from '../../logic/WasmAgentSystem';
 
 const props = defineProps({
   layerVisibility: {
@@ -24,6 +25,7 @@ const emit = defineEmits(['map-event']);
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
 const dynamicScene = inject<DynamicScene>('dynamicScene');
+const wasmAgentSystem = inject<WasmAgentSystem>('wasmAgentSystem');
 const mapElement = ref<HTMLDivElement | null>(null);
 const pixieLayer = shallowRef<PixiLayer | null>(null);
 
@@ -42,10 +44,13 @@ onMounted(async () => {
   
   const { init } = useMapInteractions(mapInstance.map, gameState, sceneState, pixieLayer, emit);
 
-  if (gameState && sceneState && dynamicScene) {
-    const newPixieLayer = new PixiLayer(mapInstance.map, gameState, sceneState, dynamicScene);
+  if (gameState && sceneState && dynamicScene && wasmAgentSystem) {
+    const newPixieLayer = new PixiLayer(mapInstance.map, gameState, sceneState, dynamicScene, wasmAgentSystem);
     await newPixieLayer.init();
     pixieLayer.value = newPixieLayer;
+    
+    // Emit the pixieLayer reference to App.vue
+    emit('map-event', { type: 'pixie-layer-ready', payload: { pixieLayer: newPixieLayer } });
   }
 
   // Initialize the interactions after everything is set up

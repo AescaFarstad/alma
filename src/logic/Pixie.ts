@@ -7,7 +7,8 @@ import { DrawPrimitives } from './drawing/DrawPrimitives';
 import { SceneState } from './drawing/SceneState';
 import { DynamicScene } from './drawing/DynamicScene';
 import { DrawDynamicScene } from './drawing/DrawDynamicScene';
-import { AgentVisualPool } from './drawing/AgentVisualPool';
+import { AgentRenderer, AgentRenderingMode } from './drawing/AgentRenderer';
+import { WasmAgentSystem } from './WasmAgentSystem';
 
 export class PixiLayer {
     private app: PIXI.Application;
@@ -25,23 +26,39 @@ export class PixiLayer {
     private dynamicPrimitives: PrimitiveState;
     private sceneState: SceneState;
     private dynamicScene: DynamicScene;
-    private agentPool: AgentVisualPool;
+    private agentRenderer: AgentRenderer;
+    private wasmAgentSystem: WasmAgentSystem;
     private stopped = false;
 
-    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState, dynamicScene: DynamicScene) {
+    private wasmCanvas: HTMLCanvasElement | null = null;
+
+    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState, dynamicScene: DynamicScene, wasmAgentSystem: WasmAgentSystem) {
         this.olMap = olMap;
         this.gameState = gameState;
         this.sceneState = sceneState;
         this.dynamicScene = dynamicScene;
+        this.wasmAgentSystem = wasmAgentSystem;
         this.app = new PIXI.Application();
         this.boundSync = this.sync.bind(this);
         this.staticPrimitives = new PrimitiveState();
         this.dynamicPrimitives = new PrimitiveState();
-        this.agentPool = new AgentVisualPool();
+        this.agentRenderer = new AgentRenderer();
     }
 
     public async init() {
         const mapElement = this.olMap.getTargetElement();
+
+        // Prepare WASM GL canvas (always present below Pixi)
+        const c = document.createElement('canvas');
+        c.id = 'wasm-agents-canvas';
+        const style = c.style as CSSStyleDeclaration;
+        style.position = 'absolute';
+        style.top = '0';
+        style.left = '0';
+        style.pointerEvents = 'none';
+        style.zIndex = '0';
+        mapElement.appendChild(c as unknown as Node);
+        this.wasmCanvas = c;
 
         await this.app.init({
             width: mapElement.clientWidth,
@@ -51,12 +68,15 @@ export class PixiLayer {
             resolution: window.devicePixelRatio,
         });
 
+        await this.agentRenderer.load();
+
         if (this.app.canvas.style) {
             const style = this.app.canvas.style as CSSStyleDeclaration;
             style.position = 'absolute';
             style.top = '0';
             style.left = '0';
             style.pointerEvents = 'none';
+            style.zIndex = '1';
         }
         
         mapElement.appendChild(this.app.canvas as unknown as Node);
@@ -79,6 +99,11 @@ export class PixiLayer {
         this.agentTextContainer = new PIXI.Container();
         this.app.stage.addChild(this.agentTextContainer);
 
+        // Initialize WASM GL renderer resources unconditionally
+        this.resizeWasmCanvas();
+        this.wasmAgentSystem.initRenderer('#wasm-agents-canvas');
+        this.wasmAgentSystem.uploadAtlasFromUrl('/img/base.webp').catch(() => {});
+
         const view = this.olMap.getView();
         view.on('change:center', this.boundSync);
         view.on('change:resolution', this.boundSync);
@@ -99,19 +124,69 @@ export class PixiLayer {
     private buildDynamicScene() {
         DrawDynamicScene.buildDynamicPrimitives(this.dynamicPrimitives, this.dynamicScene, this.gameState, this.olMap);
         
-        // Update agent visuals directly on PIXI containers
-        this.agentPool.syncWithAgents(
+        this.agentRenderer.syncWithAgents(
             this.gameState.agents, 
             this.agentGraphicsContainer, 
             this.agentTextContainer, 
             this.olMap
         );
+
+        // Pixi WASM-sprite rendering (always on when sprite mode is active)
+        const agentsEnabled = this.agentRenderer.isEnabled();
+        const renderMode = this.agentRenderer.getRenderingMode();
+        
+        if (agentsEnabled && renderMode === 'sprite') {
+            const wasmPositions = this.wasmAgentSystem.agentDataViews.positions;
+            const wasmLooks = this.wasmAgentSystem.agentDataViews.looks;
+            const wasmFrameIds = this.wasmAgentSystem.agentDataViews.frame_ids;
+            this.agentRenderer.wasmSpritePool.syncWithWasmData(
+                wasmPositions,
+                wasmLooks,
+                wasmFrameIds,
+                this.wasmAgentSystem.agents,
+                this.agentGraphicsContainer,
+                agentsEnabled,
+                renderMode
+            );
+        } else {
+            // Clear sprites when disabled - minimal processing
+            this.agentRenderer.wasmSpritePool.syncWithWasmData(
+                new Float32Array(0),
+                new Float32Array(0),
+                new Uint16Array(0),
+                [],
+                this.agentGraphicsContainer,
+                agentsEnabled,
+                renderMode
+            );
+        }
     }
 
     private resize() {
         const mapElement = this.olMap.getTargetElement();
         this.app.renderer.resize(mapElement.clientWidth, mapElement.clientHeight);
+        this.resizeWasmCanvas();
         this.sync();
+    }
+
+    private resizeWasmCanvas() {
+        if (!this.wasmCanvas) return;
+        const mapElement = this.olMap.getTargetElement();
+        const cssW = mapElement.clientWidth;
+        const cssH = mapElement.clientHeight;
+        const dpr = window.devicePixelRatio || 1;
+        this.wasmCanvas.style.width = cssW + 'px';
+        this.wasmCanvas.style.height = cssH + 'px';
+        this.wasmCanvas.width = Math.max(1, Math.floor(cssW * dpr));
+        this.wasmCanvas.height = Math.max(1, Math.floor(cssH * dpr));
+    }
+
+    public setAgentRenderingMode(mode: AgentRenderingMode): void {
+        this.agentRenderer.setRenderingMode(mode);
+    }
+
+    public setAgentRenderingEnabled(enabled: boolean): void {
+        this.agentRenderer.setEnabled(enabled);
     }
 
     private sync() {
@@ -136,12 +211,33 @@ export class PixiLayer {
         this.app.stage.scale.set(scale);
     }
 
+    private computeWorldToClip3x3(): number[] {
+        const view = this.olMap.getView();
+        const center = view.getCenter();
+        if (!center) return [1,0,0, 0,1,0, 0,0,1];
+        const resolution = view.getResolution()!;
+        const mapElement = this.olMap.getTargetElement();
+        const cssW = mapElement.clientWidth;
+        const cssH = mapElement.clientHeight;
+        const dpr = window.devicePixelRatio || 1;
+        const widthPx = Math.max(1, Math.floor(cssW * dpr));
+        const heightPx = Math.max(1, Math.floor(cssH * dpr));
+
+        const worldTopLeftX = center[0] - (cssW / 2) * resolution;
+        const worldTopLeftY = center[1] + (cssH / 2) * resolution;
+        const s_px = (1 / resolution) * dpr; // world units -> device pixels
+
+        const a = 2 * s_px / widthPx;
+        const c = -1 - worldTopLeftX * a;
+        const e = 2 * s_px / heightPx;
+        const f = 1 - worldTopLeftY * e;
+        // Row-major 3x3
+        return [a, 0, c,  0, e, f,  0, 0, 1];
+    }
+
     private tick() {
-        if (this.stopped) {
-            return;
-        }
+        if (this.stopped) return;
         requestAnimationFrame(this.tick.bind(this));
-        // console.log("[Pixie] tick");
 
         if (this.sceneState.isDirty) {
             this.buildScene();

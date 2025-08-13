@@ -174,7 +174,7 @@ export async function loadAndProcessNavmesh(gameState: GameState): Promise<void>
     await loadNavmeshData(gameState.navmesh);
 }
 
-export async function loadBlobData(gameState: GameState): Promise<void> {
+export async function loadBlobData(gameState: GameState): Promise<Blob[]> {
     const blobs = await loadBlobs();
     
     for (const blob of blobs) {
@@ -215,4 +215,5 @@ export async function loadBlobData(gameState: GameState): Promise<void> {
     });
 
     gameState.blobSpatialIndex.load(blobBBoxes);
+    return blobs;
 } 

@@ -3,6 +3,13 @@ import { Agent, AgentState } from '../Agent';
 import { Map as OlMap } from 'ol';
 import {length} from '../core/math.ts'
 
+// Global agent visibility control
+export let agentRenderingEnabled = true;
+
+export function setAgentRenderingEnabled(enabled: boolean) {
+    agentRenderingEnabled = enabled;
+}
+
 interface AgentPixiElements {
     // Graphics objects for visual elements
     triangle: PIXI.Graphics;
@@ -40,6 +47,9 @@ export class AgentVisualPool {
     private dumbAgentsDrawn = 0;
     private escapingAgentsDrawn = 0;
     
+    // Track if agents were previously visible to handle one-time cleanup
+    private wasRenderingEnabled = true;
+    
     // --- Drawing Toggles ---
     private readonly SHOW_PATH_LINES = false;
     private readonly SHOW_SPEED_LINE = false;
@@ -67,6 +77,20 @@ export class AgentVisualPool {
         textContainer: PIXI.Container,
         olMap: OlMap
     ): void {
+        // If agents are disabled and we need to clean up
+        if (!agentRenderingEnabled) {
+            if (this.wasRenderingEnabled) {
+                // One-time cleanup: remove all agents from containers
+                this.removeAllAgentsFromContainers(graphicsContainer, textContainer);
+                this.wasRenderingEnabled = false;
+            }
+            // Skip all agent processing when disabled
+            return;
+        }
+        
+        // Mark that rendering is now enabled
+        this.wasRenderingEnabled = true;
+        
         // Reset counters
         this.smartAgentsDrawn = 0;
         this.dumbAgentsDrawn = 0;
@@ -345,7 +369,8 @@ export class AgentVisualPool {
         const text = element.debugText;
 
         const speed = length(agent.velocity);        
-        text.text = `${Math.round(speed)} d: ${Math.round(length(agent.debug_desiredVelocity))}`;
+        // text.text = `${Math.round(speed)} d: ${Math.round(length(agent.debug_desiredVelocity))} st:${Math.round(agent.stuckRating)}`;
+        text.text = agent.stuckRating > 15 ? `${Math.round(agent.stuckRating)}` : '';
         text.x = pos.x;
         text.y = -pos.y + 8; // Offset above the agent
         
@@ -414,6 +439,49 @@ export class AgentVisualPool {
         
         // Remove unused escaping agents
         for (let i = this.escapingAgentsDrawn; i < this.escapingAgentPool.length; i++) {
+            const element = this.escapingAgentPool[i];
+            this.ensureNotInContainer(element.triangle, graphicsContainer, 'triangleInContainer', element);
+            this.ensureNotInContainer(element.pathLine1, graphicsContainer, 'pathLine1InContainer', element);
+            this.ensureNotInContainer(element.pathLine2, graphicsContainer, 'pathLine2InContainer', element);
+            this.ensureNotInContainer(element.targetCircle, graphicsContainer, 'targetCircleInContainer', element);
+            this.ensureNotInContainer(element.accelLine, graphicsContainer, 'accelLineInContainer', element);
+            this.ensureNotInContainer(element.velocityLine, graphicsContainer, 'velocityLineInContainer', element);
+            this.ensureNotInContainer(element.velocityDiffLine, graphicsContainer, 'velocityDiffLineInContainer', element);
+            this.ensureNotInContainer(element.desiredVelocityLine, graphicsContainer, 'desiredVelocityLineInContainer', element);
+            this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
+        }
+    }
+
+    private removeAllAgentsFromContainers(
+        graphicsContainer: PIXI.Container, 
+        textContainer: PIXI.Container
+    ): void {
+        // Remove all agents from graphics container
+        for (let i = 0; i < this.smartAgentPool.length; i++) {
+            const element = this.smartAgentPool[i];
+            this.ensureNotInContainer(element.triangle, graphicsContainer, 'triangleInContainer', element);
+            this.ensureNotInContainer(element.pathLine1, graphicsContainer, 'pathLine1InContainer', element);
+            this.ensureNotInContainer(element.pathLine2, graphicsContainer, 'pathLine2InContainer', element);
+            this.ensureNotInContainer(element.targetCircle, graphicsContainer, 'targetCircleInContainer', element);
+            this.ensureNotInContainer(element.accelLine, graphicsContainer, 'accelLineInContainer', element);
+            this.ensureNotInContainer(element.velocityLine, graphicsContainer, 'velocityLineInContainer', element);
+            this.ensureNotInContainer(element.velocityDiffLine, graphicsContainer, 'velocityDiffLineInContainer', element);
+            this.ensureNotInContainer(element.desiredVelocityLine, graphicsContainer, 'desiredVelocityLineInContainer', element);
+            this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
+        }
+        for (let i = 0; i < this.dumbAgentPool.length; i++) {
+            const element = this.dumbAgentPool[i];
+            this.ensureNotInContainer(element.triangle, graphicsContainer, 'triangleInContainer', element);
+            this.ensureNotInContainer(element.pathLine1, graphicsContainer, 'pathLine1InContainer', element);
+            this.ensureNotInContainer(element.pathLine2, graphicsContainer, 'pathLine2InContainer', element);
+            this.ensureNotInContainer(element.targetCircle, graphicsContainer, 'targetCircleInContainer', element);
+            this.ensureNotInContainer(element.accelLine, graphicsContainer, 'accelLineInContainer', element);
+            this.ensureNotInContainer(element.velocityLine, graphicsContainer, 'velocityLineInContainer', element);
+            this.ensureNotInContainer(element.velocityDiffLine, graphicsContainer, 'velocityDiffLineInContainer', element);
+            this.ensureNotInContainer(element.desiredVelocityLine, graphicsContainer, 'desiredVelocityLineInContainer', element);
+            this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
+        }
+        for (let i = 0; i < this.escapingAgentPool.length; i++) {
             const element = this.escapingAgentPool[i];
             this.ensureNotInContainer(element.triangle, graphicsContainer, 'triangleInContainer', element);
             this.ensureNotInContainer(element.pathLine1, graphicsContainer, 'pathLine1InContainer', element);

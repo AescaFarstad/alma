@@ -28,7 +28,7 @@ export async function loadNavmeshData(navmesh: Navmesh): Promise<void> {
             const statsJson = statsLine.substring('stats:'.length);
             const stats = JSON.parse(statsJson);
             if (stats.bbox) {
-                navmesh.bbox = stats.bbox;
+                navmesh.bbox = new Float32Array(stats.bbox);
             }
         }
 
@@ -39,6 +39,7 @@ export async function loadNavmeshData(navmesh: Navmesh): Promise<void> {
 
     } catch (error) {
         console.error("Error loading navmesh data:", error);
+        console.error("Stack trace:", error instanceof Error ? error.stack : 'No stack trace');
     }
 }
 

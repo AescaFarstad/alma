@@ -55,6 +55,8 @@ const gameState = inject<GameState>('gameState');
 const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 const sceneState = inject<SceneState>('sceneState');
 
+const wasmRenderEnabled = inject<Ref<boolean>>('wasmRenderEnabled');
+
 const contextMenu = reactive({
   visible: false,
   x: 0,
@@ -62,8 +64,9 @@ const contextMenu = reactive({
   coordinate: { lng: 0, lat: 0 },
 });
 
-const mapComponent = ref<{ pixieLayer: PixiLayer | null } | null>(null);
+const mapComponent = ref<{ pixieLayer: { value: PixiLayer | null } } | null>(null);
 const mapReady = ref(false);
+const pixieLayerRef = ref<PixiLayer | null>(null);
 const mapCenter = ref<{ lng: number, lat: number } | null>(null);
 
 const mouseCoordinates = ref<MouseCoordinates>({ lng: 0, lat: 0 });
@@ -91,6 +94,15 @@ const hideContextMenu = () => {
 };
 
 const handleMapEvent = (event: { type: string, payload: any }) => {
+  // Handle map-ready event
+  if (event.type === 'map-ready') {
+    mapReady.value = true;
+  }
+  
+  // Handle pixie layer ready event
+  if (event.type === 'pixie-layer-ready') {
+    pixieLayerRef.value = event.payload.pixieLayer;
+  }
   const eventHandlers: Record<string, (payload: any) => void> = {
     'show-context-menu': (payload) => {
       contextMenu.visible = true;
@@ -151,6 +163,21 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
       if (combinedLayer) {
         combinedLayer.getSource()?.refresh();
       }
+    },
+    'set-agent-render-mode': (payload) => {
+        if (mapComponent.value?.pixieLayer?.value) {
+            mapComponent.value.pixieLayer.value.setAgentRenderingMode(payload.mode);
+        }
+    },
+    'toggle-agents': (payload) => {
+        if (pixieLayerRef.value) {
+            pixieLayerRef.value.setAgentRenderingEnabled(payload.enabled);
+        }
+    },
+    'toggle-wasm-render': (payload) => {
+        if (wasmRenderEnabled) {
+          wasmRenderEnabled.value = payload.enabled;
+        }
     }
   };
 
@@ -163,6 +190,7 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
 provide('gameState', gameState);
 provide('fpsMetrics', fpsMetrics);
 provide('pixieLayer', mapComponent.value?.pixieLayer);
+if (wasmRenderEnabled) provide('wasmRenderEnabled', wasmRenderEnabled);
 </script>
 
 <style>
