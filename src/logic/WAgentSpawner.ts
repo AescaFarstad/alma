@@ -41,14 +41,14 @@ export function updateWAgentSpawners(spawners: WAgentSpawner[], wasmAgentSystem:
             const agentIndex = wasmAgentSystem.agents.length - 1;
             const actualAgentIndex = wasmAgentSystem.agents[agentIndex].agentIndex;
 
-            // Initialize current_poly like TS AgentSpawner does
-            const currentPolyView = wasmAgentSystem.agentDataViews.current_polys;
-            const lastValidPolysView = wasmAgentSystem.agentDataViews.last_valid_polys;
-            let startPoly = -1;
-            if (currentPolyView && lastValidPolysView) {
-                startPoly = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
-                currentPolyView[actualAgentIndex] = startPoly;
-                lastValidPolysView[actualAgentIndex] = startPoly;
+            // Initialize current_tris like TS AgentSpawner does
+            const currentTriView = wasmAgentSystem.agentDataViews.current_tris;
+            const lastValidTrisView = wasmAgentSystem.agentDataViews.last_valid_tris;
+            let startTri = -1;
+            if (currentTriView && lastValidTrisView) {
+                startTri = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
+                currentTriView[actualAgentIndex] = startTri;
+                lastValidTrisView[actualAgentIndex] = startTri;
             }
 
             // Set agent parameters directly through shared memory data views
@@ -86,6 +86,7 @@ export function updateWAgentSpawners(spawners: WAgentSpawner[], wasmAgentSystem:
                 if (maxFrustrationsView) maxFrustrationsView[actualAgentIndex] = maxFrustration;
                 if (arrivalDesiredSpeedsView) arrivalDesiredSpeedsView[actualAgentIndex] = arrivalDesiredSpeed;
                 if (arrivalThresholdSqsView) arrivalThresholdSqsView[actualAgentIndex] = arrivalThresholdSq;
+                wasmAgentSystem.agentDataViews.look_speeds[actualAgentIndex] = 50;
 
                 // Calculate and set maxSpeed (same formula as regular Agent)
                 let maxSpeed: number;

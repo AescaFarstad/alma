@@ -49,6 +49,7 @@ import { useMeasurement } from './logic/composables/useMeasurement';
 import { usePointMarks } from './logic/composables/usePointMarks';
 import { useAvatarState } from './logic/composables/useAvatarState';
 import { useNavmeshTrianglesDebug } from './logic/composables/useNavmeshTrianglesDebug';
+import type { WasmAgentSystem } from './logic/WasmAgentSystem';
 
 const agentCount = inject<Ref<number>>('agentCount');
 const gameState = inject<GameState>('gameState');
@@ -56,6 +57,7 @@ const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 const sceneState = inject<SceneState>('sceneState');
 
 const wasmRenderEnabled = inject<Ref<boolean>>('wasmRenderEnabled');
+const wasmAgentSystem = inject<WasmAgentSystem>('wasmAgentSystem');
 
 const contextMenu = reactive({
   visible: false,
@@ -177,6 +179,9 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
     'toggle-wasm-render': (payload) => {
         if (wasmRenderEnabled) {
           wasmRenderEnabled.value = payload.enabled;
+        }
+        if (!payload.enabled && wasmAgentSystem) {
+          wasmAgentSystem.clearRenderer();
         }
     }
   };

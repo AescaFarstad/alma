@@ -31,4 +31,4 @@ RaycastHitOnlyResult raycastPoint(
     int endTriIdx = -1
 );
 
-#endif // RAYCASTING_H 
+#endif // RAYCASTING_H

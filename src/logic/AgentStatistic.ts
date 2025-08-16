@@ -10,7 +10,7 @@ export function resetAgentStuck(agent: Agent){
         agent.lastDistanceToNextCorner = Number.POSITIVE_INFINITY;
         agent.stuckRating = 0;
         agent.sightRating = 0;
-        agent.lastNextCornerPoly = -1; 
+        agent.lastNextCornerTri = -1; 
         set_(agent.lastEndTarget, agent.endTarget);
 }
 
@@ -40,9 +40,9 @@ export function updateAgentStatistic(agent: Agent, gs: GameState, deltaTime: num
 
         const dist = distance(agent.coordinate, agent.nextCorner);
 
-        if (agent.lastNextCornerPoly !== agent.nextCornerPoly) {
+        if (agent.lastNextCornerTri !== agent.nextCornerTri) {
             agent.lastDistanceToNextCorner = dist;
-            agent.lastNextCornerPoly = agent.nextCornerPoly;
+            agent.lastNextCornerTri = agent.nextCornerTri;
             agent.sightRating = 0;
         }
 

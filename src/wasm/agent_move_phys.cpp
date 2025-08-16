@@ -113,7 +113,7 @@ void update_agent_phys(int agentIndex, float deltaTime) {
             Point2 normVelocity = math::normalize(agent_data.velocities[agentIndex]);
             Point2 endPointForRecast = endPoint + (normVelocity * 0.45f);
             
-            RaycastHitOnlyResult raycastResult = raycastPoint(agent_data.positions[agentIndex], endPointForRecast, agent_data.current_polys[agentIndex]);
+            RaycastHitOnlyResult raycastResult = raycastPoint(agent_data.positions[agentIndex], endPointForRecast, agent_data.current_tris[agentIndex]);
 
             if (raycastResult.hasHit) {
                 if (!g_wall_contact.empty() && g_wall_contact[agentIndex] == 0) {
@@ -141,12 +141,12 @@ void update_agent_phys(int agentIndex, float deltaTime) {
         }
     }
     
-    int newPoly = is_point_in_navmesh(agent_data.positions[agentIndex], agent_data.current_polys[agentIndex]);
-    if (newPoly != -1) {
-        agent_data.current_polys[agentIndex] = newPoly;
+    int newTri = is_point_in_navmesh(agent_data.positions[agentIndex], agent_data.current_tris[agentIndex]);
+    if (newTri != -1) {
+        agent_data.current_tris[agentIndex] = newTri;
         agent_data.last_valid_positions[agentIndex] = agent_data.positions[agentIndex];
-        agent_data.last_valid_polys[agentIndex] = newPoly;
+        agent_data.last_valid_tris[agentIndex] = newTri;
     } else {
-        agent_data.current_polys[agentIndex] = -1;
+        agent_data.current_tris[agentIndex] = -1;
     }
 }

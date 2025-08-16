@@ -72,7 +72,7 @@ export function analyzeStuckAgent(agent: Agent): StuckAgentAnalysis {
   }
 
   // Check corridor state
-  if (agent.corridor.length === 1 && agent.currentPoly === agent.corridor[0]) {
+  if (agent.corridor.length === 1 && agent.currentTri === agent.corridor[0]) {
     analysis.recommendations.push('Agent is in destination triangle, should transition to Standing state');
   }
 

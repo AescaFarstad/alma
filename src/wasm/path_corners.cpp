@@ -16,7 +16,7 @@ static Portal getPortalPoints(int tri1Idx, int tri2Idx);
 static float triarea2(const Point2& p1, const Point2& p2, const Point2& p3);
 static bool isPointsEqual(const Point2& p1, const Point2& p2, float epsilon = 1e-6);
 static void funnel_dual(const std::vector<Portal>& portals, const std::vector<int>& corridor, DualCorner& result);
-static void apply_offset_to_point(Point2& point, int poly, const Point2& end_pos, float offset);
+static void apply_offset_to_point(Point2& point, int tri, const Point2& end_pos, float offset);
 
 std::vector<Corner> findCorners(const std::vector<int>& corridor, const Point2& startPoint, const Point2& endPoint) {
     if (corridor.empty()) {
@@ -91,9 +91,9 @@ DualCorner find_next_corner(Point2 pos, const std::vector<int>& corridor, Point2
     
     if (corridor.empty()) {
         result.corner1 = end_pos;
-        result.poly1 = -1;
+        result.tri1 = -1;
         result.corner2 = end_pos;
-        result.poly2 = -1;
+        result.tri2 = -1;
         result.numValid = 1;
         return result;
     }
@@ -101,9 +101,9 @@ DualCorner find_next_corner(Point2 pos, const std::vector<int>& corridor, Point2
     // Special case: single triangle corridor - just go directly to the end point
     if (corridor.size() == 1) {
         result.corner1 = end_pos;
-        result.poly1 = corridor[0];
+        result.tri1 = corridor[0];
         result.corner2 = end_pos;
-        result.poly2 = corridor[0];
+        result.tri2 = corridor[0];
         result.numValid = 1;
         return result;
     }
@@ -113,18 +113,18 @@ DualCorner find_next_corner(Point2 pos, const std::vector<int>& corridor, Point2
 
     if (result.numValid == 0) {
         result.corner1 = end_pos;
-        result.poly1 = -1;
+        result.tri1 = -1;
         result.corner2 = end_pos;
-        result.poly2 = -1;
+        result.tri2 = -1;
         result.numValid = 1;
         return result;
     }
 
     // Apply offset to corners if needed
     if (offset > 0) {
-        apply_offset_to_point(result.corner1, result.poly1, end_pos, offset);
+        apply_offset_to_point(result.corner1, result.tri1, end_pos, offset);
         if (result.numValid == 2) {
-            apply_offset_to_point(result.corner2, result.poly2, end_pos, offset);
+            apply_offset_to_point(result.corner2, result.tri2, end_pos, offset);
         }
     }
 
@@ -189,19 +189,19 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
     if (portals.empty()) {
         result.corner1 = Point2(0, 0);
         result.corner2 = Point2(0, 0);
-        result.poly1 = -1;
-        result.poly2 = -1;
+        result.tri1 = -1;
+        result.tri2 = -1;
         result.numValid = 0;
         return;
     }
     
     if (portals.size() == 1) {
         Point2 corner = portals[0].left;
-        int poly = corridor.empty() ? -1 : corridor[0];
+        int tri = corridor.empty() ? -1 : corridor[0];
         result.corner1 = corner;
-        result.poly1 = poly;
+        result.tri1 = tri;
         result.corner2 = corner;
-        result.poly2 = poly;
+        result.tri2 = tri;
         result.numValid = 1;
         return;
     }
@@ -238,14 +238,14 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                     // Check if this corner is actually the start point (agent's current position)
                     if (!leftEqualsStart) {
                         result.corner1 = portalLeft;
-                        result.poly1 = corridor[leftIndex];
+                        result.tri1 = corridor[leftIndex];
                         cornersFound = 1;
                     }
                 } else {
                     bool corner1EqualsLeft = isPointsEqual(result.corner1, portalLeft);
                     if (!corner1EqualsLeft) {
                         result.corner2 = portalLeft;
-                        result.poly2 = corridor[leftIndex];
+                        result.tri2 = corridor[leftIndex];
                         result.numValid = 2;
                         return;
                     }
@@ -282,14 +282,14 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                     // Check if this corner is actually the start point (agent's current position)  
                     if (!rightEqualsStart) {
                         result.corner1 = portalRight;
-                        result.poly1 = corridor[rightIndex];
+                        result.tri1 = corridor[rightIndex];
                         cornersFound = 1;
                     }
                 } else {
                     bool corner1EqualsRight = isPointsEqual(result.corner1, portalRight);
                     if (!corner1EqualsRight) {
                         result.corner2 = portalRight;
-                        result.poly2 = corridor[rightIndex];
+                        result.tri2 = corridor[rightIndex];
                         result.numValid = 2;
                         return;
                     }
@@ -310,13 +310,13 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
 
     // Add the final point if we haven't found 2 corners yet
     Point2 endPoint = portals.back().left;
-    int endPoly = corridor.empty() ? -1 : corridor.back();
+    int endTri = corridor.empty() ? -1 : corridor.back();
 
     if (cornersFound == 0) {
         result.corner1 = endPoint;
-        result.poly1 = endPoly;
+        result.tri1 = endTri;
         result.corner2 = endPoint;
-        result.poly2 = endPoly;
+        result.tri2 = endTri;
         result.numValid = 1;
     } else {
         // First corner already set, just add the endpoint as second corner
@@ -325,14 +325,14 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
             result.numValid = 1;
         } else {
             result.corner2 = endPoint;
-            result.poly2 = endPoly;
+            result.tri2 = endTri;
             result.numValid = 2;
         }
     }
 }
 
-static void apply_offset_to_point(Point2& point, int poly, const Point2& end_pos, float offset) {
-    if (poly == -1 || offset <= 0) return;
+static void apply_offset_to_point(Point2& point, int tri, const Point2& end_pos, float offset) {
+    if (tri == -1 || offset <= 0) return;
     
     bool isEndPoint = isPointsEqual(point, end_pos);
     if (isEndPoint) return;

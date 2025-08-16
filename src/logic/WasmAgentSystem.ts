@@ -25,6 +25,7 @@ export class WasmAgentSystem {
     private _spriteUploadAtlasRGBA: ((ptr: number, w: number, h: number) => void) | null = null;
     private _spriteUploadFrameTable: ((ptr: number, frameCount: number) => void) | null = null;
     private _updateRT: ((dt: number, mPtr: number, widthPx: number, heightPx: number, dpr: number) => void) | null = null;
+    private _spriteRendererClear: (() => void) | null = null;
 
     private cameraMatrixPtr: number = 0; // 9 floats
 
@@ -50,6 +51,7 @@ export class WasmAgentSystem {
             this._spriteUploadAtlasRGBA = (this.wasm as any).cwrap("sprite_upload_atlas_rgba", null, ["number", "number", "number"]) as (p: number, w: number, h: number) => void;
             this._spriteUploadFrameTable = (this.wasm as any).cwrap("sprite_upload_frame_table", null, ["number", "number"]) as (p: number, count: number) => void;
             this._updateRT = (this.wasm as any).cwrap("update_rt", null, ["number", "number", "number", "number", "number"]) as (dt: number, mptr: number, w: number, h: number, dpr: number) => void;
+            this._spriteRendererClear = (this.wasm as any).cwrap("sprite_renderer_clear", null, []) as () => void;
 
         }
 
@@ -220,6 +222,12 @@ export class WasmAgentSystem {
         }
     }
 
+    public clearRenderer(): void {
+        if (this._spriteRendererClear) {
+            this._spriteRendererClear();
+        }
+    }
+
     public isReady(): boolean {
         return !!(this.wasm && 
                  (this.sharedBufferPtr !== undefined) && 
@@ -364,14 +372,10 @@ export class WasmAgentSystem {
             console.warn('Cannot create WAgent: WASM module not initialized');
             return;
         }
-        try {
-            const agentIndex = (this.wasm as WasmModule)._add_agent(x, y);
-            if (agentIndex !== -1) {
-                const agent = new WAgent(agentIndex, display);
-                this.agents.push(agent);
-            }
-        } catch (error) {
-            console.error('Error creating WAgent:', error);
+        const agentIndex = (this.wasm as WasmModule)._add_agent(x, y);
+        if (agentIndex !== -1) {
+            const agent = new WAgent(agentIndex, display);
+            this.agents.push(agent);
         }
     }
 

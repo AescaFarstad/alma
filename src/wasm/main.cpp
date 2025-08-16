@@ -109,14 +109,11 @@ EMSCRIPTEN_KEEPALIVE void init(uint8_t* sharedBuffer, uint8_t* navmeshBuffer, in
     nav_offset += sizeof(int32_t) * navmesh_data.numTriangles * 3;
 
     navmesh_data.centroids = reinterpret_cast<Point2*>(navmeshBuffer + nav_offset);
-    
-    // 3. Build the spatial index
+
     build_nav_tri_index();
 
-    // 4. Initialize the agent grid
     initialize_agent_grid(maxAgents);
-    
-    // 5. Initialize the blob spatial index
+
     blob_spatial_index.initialize();
 }
 
@@ -128,9 +125,6 @@ EMSCRIPTEN_KEEPALIVE void update_simulation(float dt) {
     g_sim_time += dt;
     // Basic log with throttling to avoid spamming
     static int frameCount = 0;
-    if ((frameCount++ % 120) == 0) {
-        std::cout << "[WASM] update_simulation dt=" << dt << " active_agents=" << active_agents << std::endl;
-    }
     
     // 1. Update agents
     for (int i = 0; i < active_agents; ++i) {

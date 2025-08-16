@@ -32,11 +32,11 @@ export function updateSpawners(gs: GameState, dt: number) {
                 newAgent.intelligence = 0;
             }
             newAgent.display = "character_blonde_green"
-            newAgent.currentPoly = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
-            newAgent.lastValidPoly = newAgent.currentPoly;
+            newAgent.currentTri = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
+            newAgent.lastValidTri = newAgent.currentTri;
             // newAgent.endTarget = { "x": 344.8666687011719, "y": 208.2133331298828 };
-            // newAgent.endTargetPoly = 2852;
-            // findPathToDestination(gs.navmesh, gs, newAgent, newAgent.currentPoly, newAgent.endTargetPoly, "hardcoded")
+            // newAgent.endTargetTri = 2852;
+            // findPathToDestination(gs.navmesh, gs, newAgent, newAgent.currentTri, newAgent.endTargetTri, "hardcoded")
             // newAgent.state = AgentState.Traveling
             gs.agents.push(newAgent);
             // Rare event: spawn

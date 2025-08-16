@@ -14,9 +14,9 @@ export const CORNER_OFFSET_SQ = CORNER_OFFSET * CORNER_OFFSET;
 // Reusable objects to avoid allocations
 const reusableDualCorner: DualCorner = {
     corner1: { x: 0, y: 0 },
-    poly1: -1,
+    tri1: -1,
     corner2: { x: 0, y: 0 },
-    poly2: -1,
+    tri2: -1,
     numValid: 0
 };
 
@@ -24,11 +24,11 @@ export function findPathToDestination(
     navmesh: Navmesh, 
     gs: GameState, 
     agent: Agent, 
-    startPoly: number, 
-    endPoly: number, 
+    startTri: number, 
+    endTri: number, 
     errorContext: string
 ): boolean {
-    const corridorResult = findCorridor(navmesh, agent.coordinate, agent.endTarget, startPoly, endPoly);
+    const corridorResult = findCorridor(navmesh, agent.coordinate, agent.endTarget, startTri, endTri);
     agent.corridor = corridorResult ?? [];
 
     if (agent.corridor.length > 0) {
@@ -36,8 +36,8 @@ export function findPathToDestination(
         if (reusableDualCorner.numValid > 0) {
             set_(agent.nextCorner, reusableDualCorner.corner1);
             set_(agent.nextCorner2, reusableDualCorner.corner2);
-            agent.nextCornerPoly = reusableDualCorner.poly1;
-            agent.nextCorner2Poly = reusableDualCorner.poly2;
+            agent.nextCornerTri = reusableDualCorner.tri1;
+            agent.nextCorner2Tri = reusableDualCorner.tri2;
             agent.numValidCorners = reusableDualCorner.numValid;
             agent.pathFrustration = 0;
             
@@ -54,40 +54,40 @@ export function findPathToDestination(
 
 /**
  * Performs raycast and patches the agent's corridor if successful.
- * If raycast succeeds (clear line of sight), replaces corridor segments up to the target poly
+ * If raycast succeeds (clear line of sight), replaces corridor segments up to the target triangle
  * with the more direct raycast corridor.
  * 
  * @param navmesh - The navigation mesh
  * @param agent - The agent whose corridor to patch
  * @param targetPoint - The target point to raycast to
- * @param targetPoly - The polygon containing the target point
+ * @param targetTri - The triangle containing the target point
  * @returns true if raycast succeeded and corridor was patched, false otherwise
  */
 export function raycastAndPatchCorridor(
     navmesh: Navmesh,
     agent: Agent,
     targetPoint: Point2,
-    targetPoly: number
+    targetTri: number
 ): boolean {
-    const raycastResult = raycastCorridor(navmesh, agent.coordinate, targetPoint, agent.currentPoly, targetPoly);
+    const raycastResult = raycastCorridor(navmesh, agent.coordinate, targetPoint, agent.currentTri, targetTri);
     
     if (!raycastResult.hitP1 && !raycastResult.hitP2 && raycastResult.corridor) {
         // Raycast succeeded - we have a clear line of sight
-        // Find where the target poly appears in the current corridor
-        let targetPolyIndex = -1;
+        // Find where the target triangle appears in the current corridor
+        let targetTriIndex = -1;
         for (let i = 0; i < agent.corridor.length; i++) {
-            if (agent.corridor[i] === targetPoly) {
-                targetPolyIndex = i;
+            if (agent.corridor[i] === targetTri) {
+                targetTriIndex = i;
                 break;
             }
         }
         
-        if (targetPolyIndex !== -1) {
-            // Replace corridor up to target poly with raycast corridor
-            // Keep the rest of the corridor after target poly
+        if (targetTriIndex !== -1) {
+            // Replace corridor up to target triangle with raycast corridor
+            // Keep the rest of the corridor after target triangle
             agent.corridor = [
                 ...raycastResult.corridor,
-                ...agent.corridor.slice(targetPolyIndex + 1)
+                ...agent.corridor.slice(targetTriIndex + 1)
             ];
             return true;
         }

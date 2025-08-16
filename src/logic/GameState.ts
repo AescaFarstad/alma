@@ -43,7 +43,7 @@ export type LaserBlast = {
     corridor: number[] | null;
 };
 const spawnersCooldown = 0.03;
-export const wagentsLimit = 11999;
+export const wagentsLimit = 1199;
 export const agentsLimit = 10;
 export class GameState { // This is a POD class. No functions allowed.
     public lib : Lib;
@@ -228,8 +228,8 @@ export class GameState { // This is a POD class. No functions allowed.
                 newAgent.intelligence = 0;
             }
 
-            newAgent.currentPoly = triangleIndex;
-            newAgent.lastValidPoly = newAgent.currentPoly;
+            newAgent.currentTri = triangleIndex;
+            newAgent.lastValidTri = newAgent.currentTri;
             
             this.agents.push(newAgent);
         }

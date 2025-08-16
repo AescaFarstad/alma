@@ -10,25 +10,25 @@ export interface AgentDataViews {
   is_alive: Uint8Array;
 
   // Navigation data
-  current_polys: Int32Array;
+  current_tris: Int32Array;
   next_corners: Float32Array;
-  next_corner_polys: Int32Array;
+  next_corner_tris: Int32Array;
   next_corners2: Float32Array;
-  next_corner_polys2: Int32Array;
+  next_corner_tris2: Int32Array;
   num_valid_corners: Uint8Array;
   pre_escape_corners: Float32Array;
-  pre_escape_corner_polys: Int32Array;
+  pre_escape_corner_tris: Int32Array;
   end_targets: Float32Array;
-  end_target_polys: Int32Array;
+  end_target_tris: Int32Array;
   last_valid_positions: Float32Array;
-  last_valid_polys: Int32Array;
+  last_valid_tris: Int32Array;
 
   // Statistics
   last_end_targets: Float32Array;
   min_corridor_lengths: Int32Array;
   last_distances_to_next_corner: Float32Array;
   sight_ratings: Float32Array;
-  last_next_corner_polys: Int32Array;
+  last_next_corner_tris: Int32Array;
   stuck_ratings: Float32Array;
   path_frustrations: Float32Array;
 
@@ -65,18 +65,18 @@ export function calculateAgentDataSize(maxAgents: number): number {
   totalSize += sizeOfBool * maxAgents; // is_alive
 
   // Navigation data
-  totalSize += sizeOfInt * maxAgents; // current_polys
+  totalSize += sizeOfInt * maxAgents; // current_tris
   totalSize += sizeOfPoint2 * maxAgents; // next_corners
-  totalSize += sizeOfInt * maxAgents; // next_corner_polys
+  totalSize += sizeOfInt * maxAgents; // next_corner_tris
   totalSize += sizeOfPoint2 * maxAgents; // next_corners2
-  totalSize += sizeOfInt * maxAgents; // next_corner_polys2
+  totalSize += sizeOfInt * maxAgents; // next_corner_tris2
   totalSize += sizeOfUint8 * maxAgents; // num_valid_corners
   totalSize += sizeOfPoint2 * maxAgents; // pre_escape_corners
-  totalSize += sizeOfInt * maxAgents; // pre_escape_corner_polys
+  totalSize += sizeOfInt * maxAgents; // pre_escape_corner_tris
   totalSize += sizeOfPoint2 * maxAgents; // end_targets
-  totalSize += sizeOfInt * maxAgents; // end_target_polys
+  totalSize += sizeOfInt * maxAgents; // end_target_tris
   totalSize += sizeOfPoint2 * maxAgents; // last_valid_positions
-  totalSize += sizeOfInt * maxAgents; // last_valid_polys
+  totalSize += sizeOfInt * maxAgents; // last_valid_tris
   totalSize += sizeOfFloat * maxAgents; // stuck_ratings
   totalSize += sizeOfFloat * maxAgents; // path_frustrations
 
@@ -85,7 +85,7 @@ export function calculateAgentDataSize(maxAgents: number): number {
   totalSize += sizeOfInt * maxAgents; // min_corridor_lengths
   totalSize += sizeOfFloat * maxAgents; // last_distances_to_next_corner
   totalSize += sizeOfFloat * maxAgents; // sight_ratings
-  totalSize += sizeOfInt * maxAgents; // last_next_corner_polys
+  totalSize += sizeOfInt * maxAgents; // last_next_corner_tris
 
   // Parameters
   totalSize += sizeOfFloat * maxAgents; // max_speeds
@@ -129,19 +129,19 @@ export function createAgentDataViews(wasm: WasmModule, sharedBufferPtr: number, 
   offset += maxAgents * 1;
 
   // Navigation data
-  views.current_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.current_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.next_corners = new Float32Array(wasmHeap.buffer, offset, maxAgents * 2);
   offset += maxAgents * 2 * 4;
 
-  views.next_corner_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.next_corner_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.next_corners2 = new Float32Array(wasmHeap.buffer, offset, maxAgents * 2);
   offset += maxAgents * 2 * 4;
 
-  views.next_corner_polys2 = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.next_corner_tris2 = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.num_valid_corners = new Uint8Array(wasmHeap.buffer, offset, maxAgents);
@@ -150,19 +150,19 @@ export function createAgentDataViews(wasm: WasmModule, sharedBufferPtr: number, 
   views.pre_escape_corners = new Float32Array(wasmHeap.buffer, offset, maxAgents * 2);
   offset += maxAgents * 2 * 4;
 
-  views.pre_escape_corner_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.pre_escape_corner_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.end_targets = new Float32Array(wasmHeap.buffer, offset, maxAgents * 2);
   offset += maxAgents * 2 * 4;
 
-  views.end_target_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.end_target_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.last_valid_positions = new Float32Array(wasmHeap.buffer, offset, maxAgents * 2);
   offset += maxAgents * 2 * 4;
 
-  views.last_valid_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.last_valid_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   views.stuck_ratings = new Float32Array(wasmHeap.buffer, offset, maxAgents);
@@ -184,7 +184,7 @@ export function createAgentDataViews(wasm: WasmModule, sharedBufferPtr: number, 
   views.sight_ratings = new Float32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
-  views.last_next_corner_polys = new Int32Array(wasmHeap.buffer, offset, maxAgents);
+  views.last_next_corner_tris = new Int32Array(wasmHeap.buffer, offset, maxAgents);
   offset += maxAgents * 4;
 
   // Parameters

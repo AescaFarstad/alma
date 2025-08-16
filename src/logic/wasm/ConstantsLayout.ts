@@ -9,6 +9,7 @@ export interface ConstantsOffsets {
   PATH_LOG_RATE: number;
   CORNER_OFFSET: number;
   CORNER_OFFSET_SQ: number;
+  LOOK_ROT_SPEED_RAD_S: number;
 }
 
 // Offsets in bytes; MUST stay in sync with src/wasm/constants_layout.h
@@ -23,9 +24,10 @@ export const CONSTANTS_OFFSETS: ConstantsOffsets = {
   PATH_LOG_RATE: 28,
   CORNER_OFFSET: 32,
   CORNER_OFFSET_SQ: 36,
+  LOOK_ROT_SPEED_RAD_S: 40,
 };
 
-export const CONSTANTS_BUFFER_SIZE_BYTES = 40; // last offset 36 + 4 bytes
+export const CONSTANTS_BUFFER_SIZE_BYTES = 44; // last offset 40 + 4 bytes
 
 import { WasmModule } from "../../WasmModule";
 import {
@@ -37,6 +39,7 @@ import {
   STUCK_DANGER_2,
   STUCK_DANGER_3,
   PATH_LOG_RATE,
+  LOOK_ROT_SPEED_RAD_S,
 } from "../Agent";
 import { CORNER_OFFSET, CORNER_OFFSET_SQ } from "../AgentNavUtils";
 
@@ -67,6 +70,7 @@ export function allocateAndUploadConstantsBuffer(wasm: WasmModule): number {
   view.setInt32(CONSTANTS_OFFSETS.PATH_LOG_RATE, PATH_LOG_RATE | 0, true);
   view.setFloat32(CONSTANTS_OFFSETS.CORNER_OFFSET, CORNER_OFFSET, true);
   view.setFloat32(CONSTANTS_OFFSETS.CORNER_OFFSET_SQ, CORNER_OFFSET_SQ, true);
+  view.setFloat32(CONSTANTS_OFFSETS.LOOK_ROT_SPEED_RAD_S, LOOK_ROT_SPEED_RAD_S, true);
 
   // Register with WASM
   if (!(wasm as any)._set_constants_buffer) {

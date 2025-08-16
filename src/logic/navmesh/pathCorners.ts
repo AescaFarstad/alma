@@ -6,16 +6,16 @@ import { GameState } from "../GameState";
 
 export type Corner = {
     point: Point2;
-    poly: number;
+    tri: number;
 };
 
-export type DualCorner = {
+export interface DualCorner {
     corner1: Point2;
-    poly1: number;
+    tri1: number;
     corner2: Point2;
-    poly2: number;
+    tri2: number;
     numValid: 0 | 1 | 2;
-};
+}
 
 // Reusable objects to avoid allocations
 const reusableSearchBox = {
@@ -35,9 +35,9 @@ export function findCorners(navmesh: Navmesh, corridor: number[], startPoint: Po
 export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number[], startPoint: Point2, endPoint: Point2, offset: number, result: DualCorner): void {
     if (corridor.length === 0) {
         set_(result.corner1, endPoint);
-        result.poly1 = -1;
+        result.tri1 = -1;
         set_(result.corner2, endPoint);
-        result.poly2 = -1;
+        result.tri2 = -1;
         result.numValid = 1;
         return;
     }
@@ -45,9 +45,9 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
     // Special case: single triangle corridor - just go directly to the end point
     if (corridor.length === 1) {
         set_(result.corner1, endPoint);
-        result.poly1 = corridor[0];
+        result.tri1 = corridor[0];
         set_(result.corner2, endPoint);
-        result.poly2 = corridor[0];
+        result.tri2 = corridor[0];
         result.numValid = 1;
         return;
     }
@@ -58,16 +58,16 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
 
     if (result.numValid === 0) {
         set_(result.corner1, endPoint);
-        result.poly1 = -1;
+        result.tri1 = -1;
         set_(result.corner2, endPoint);
-        result.poly2 = -1;
+        result.tri2 = -1;
         result.numValid = 1;
         return;
     }
 
     // Apply offset to a corner point (modifies in place)
-    const applyOffsetToPoint = (point: Point2, poly: number): void => {
-        if (poly !== -1 && offset > 0) {
+    const applyOffsetToPoint = (point: Point2, tri: number): void => {
+        if (tri !== -1 && offset > 0) {
             const isEndPoint = point.x === endPoint.x && point.y === endPoint.y;
 
             if (!isEndPoint) {
@@ -136,8 +136,8 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
     }
 
     // Apply offset to both corners (modifies in place)
-    applyOffsetToPoint(result.corner1, result.poly1);
-    applyOffsetToPoint(result.corner2, result.poly2);
+    applyOffsetToPoint(result.corner1, result.tri1);
+    applyOffsetToPoint(result.corner2, result.tri2);
 }
 
 function getPortals(navmesh: Navmesh, corridor: number[], startPoint: Point2, endPoint: Point2): { left: Point2, right: Point2 }[] {
@@ -221,18 +221,18 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
         // This shouldn't happen, but handle it gracefully
         set(result.corner1, 0, 0);
         set(result.corner2, 0, 0);
-        result.poly1 = -1;
-        result.poly2 = -1;
+        result.tri1 = -1;
+        result.tri2 = -1;
         result.numValid = 0;
         return;
     }
     if (portals.length === 1) {
         const corner = portals[0].left;
-        const poly = corridor[0] ?? -1;
+        const tri = corridor[0] ?? -1;
         set_(result.corner1, corner);
-        result.poly1 = poly;
+        result.tri1 = tri;
         set_(result.corner2, corner);
-        result.poly2 = poly;
+        result.tri2 = tri;
         result.numValid = 1;
         return;
     }
@@ -269,14 +269,14 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
                     // Check if this corner is actually the start point (agent's current position)
                     if (!leftEqualsStart) {
                         set_(result.corner1, portalLeft);
-                        result.poly1 = corridor[leftIndex];
+                        result.tri1 = corridor[leftIndex];
                         cornersFound = 1;
                     }
                 } else {
                     const corner1EqualsLeft = isPointsEqual(result.corner1, portalLeft);
                     if (!corner1EqualsLeft) {
                         set_(result.corner2, portalLeft);
-                        result.poly2 = corridor[leftIndex];
+                        result.tri2 = corridor[leftIndex];
                         result.numValid = 2;
                         return;
                     }
@@ -313,14 +313,14 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
                     // Check if this corner is actually the start point (agent's current position)  
                     if (!rightEqualsStart) {
                         set_(result.corner1, portalRight);
-                        result.poly1 = corridor[rightIndex];
+                        result.tri1 = corridor[rightIndex];
                         cornersFound = 1;
                     }
                 } else {
                     const corner1EqualsRight = isPointsEqual(result.corner1, portalRight);
                     if (!corner1EqualsRight) {
                         set_(result.corner2, portalRight);
-                        result.poly2 = corridor[rightIndex];
+                        result.tri2 = corridor[rightIndex];
                         result.numValid = 2;
                         return;
                     }
@@ -342,13 +342,13 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
     // Add the final point if we haven't found 2 corners yet
     const lastPortal = portals[portals.length - 1];
     const endPoint = lastPortal.left;
-    const endPoly = corridor[corridor.length - 1];
+    const endTri = corridor[corridor.length - 1];
 
     if (cornersFound === 0) {
         set_(result.corner1, endPoint);
-        result.poly1 = endPoly;
+        result.tri1 = endTri;
         set_(result.corner2, endPoint);
-        result.poly2 = endPoly;
+        result.tri2 = endTri;
         result.numValid = 1;
     } else {
         // First corner already set, just add the endpoint as second corner
@@ -357,7 +357,7 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
             result.numValid = 1;
         } else {
             set_(result.corner2, endPoint);
-            result.poly2 = endPoly;
+            result.tri2 = endTri;
             result.numValid = 2;
         }
     }
@@ -365,11 +365,11 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
 
 function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], _navmesh: Navmesh): Corner[] {
     if (portals.length < 2) {
-        return [{ point: portals[0]?.left || { x: 0, y: 0 }, poly: corridor[0] ?? -1 }];
+        return [{ point: portals[0]?.left || { x: 0, y: 0 }, tri: corridor[0] ?? -1 }];
     }
 
     const path: Corner[] = [];
-    path.push({ point: portals[0].left, poly: corridor[0] });
+    path.push({ point: portals[0].left, tri: corridor[0] });
 
     let portalApex = portals[0].left;
     let portalLeft = portals[0].left;
@@ -390,7 +390,7 @@ function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], 
                 rightIndex = i;
             } else {
                 // Right over left, add left to path and restart scan
-                path.push({ point: portalLeft, poly: corridor[leftIndex] });
+                path.push({ point: portalLeft, tri: corridor[leftIndex] });
                 portalApex = portalLeft;
                 apexIndex = leftIndex;
                 
@@ -413,7 +413,7 @@ function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], 
                 leftIndex = i;
             } else {
                 // Left over right, add right to path and restart scan
-                path.push({ point: portalRight, poly: corridor[rightIndex] });
+                path.push({ point: portalRight, tri: corridor[rightIndex] });
                 portalApex = portalRight;
                 apexIndex = rightIndex;
                 
@@ -434,7 +434,7 @@ function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], 
     const lastPortal = portals[portals.length - 1];
     const lastCorner = path[path.length - 1];
     if (!isPointsEqual(lastCorner.point, lastPortal.left)) {
-        path.push({ point: lastPortal.left, poly: corridor[corridor.length - 1] });
+        path.push({ point: lastPortal.left, tri: corridor[corridor.length - 1] });
     }
 
     return path;

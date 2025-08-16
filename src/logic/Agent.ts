@@ -9,6 +9,9 @@ export const STUCK_DANGER_2 = 45;
 export const STUCK_DANGER_3 = 75;
 export const PATH_LOG_RATE = 3;
 
+// Shared constants
+export const LOOK_ROT_SPEED_RAD_S = 6.0; // radians per second (synced to WASM)
+
 
 export enum AgentState {
     Standing,
@@ -19,18 +22,18 @@ export enum AgentState {
 export class Agent {
     // Navigation
     corridor: number[] = [];
-    currentPoly: number = -1;
+    currentTri: number = -1;
     nextCorner: Point2 = { x: 0, y: 0 };
-    nextCornerPoly: number = -1;
+    nextCornerTri: number = -1;
     nextCorner2: Point2 = { x: 0, y: 0 };
-    nextCorner2Poly: number = -1;
+    nextCorner2Tri: number = -1;
     numValidCorners: 0 | 1 | 2 = 0;
     preEscapeCorner: Point2 = { x: 0, y: 0 };
-    preEscapeCornerPoly: number = -1;
+    preEscapeCornerTri: number = -1;
     lastValidPosition: Point2 = { x: 0, y: 0 };
-    lastValidPoly: number = -1;
+    lastValidTri: number = -1;
     endTarget: Point2 = { x: 0, y: 0 };
-    endTargetPoly: number = -1;
+    endTargetTri: number = -1;
     pathFrustration: number = 0;
     state: AgentState = AgentState.Standing;
     intelligence: number = 0;
@@ -48,7 +51,7 @@ export class Agent {
     isAlive:boolean = true;
     
     // Parameters
-    lookSpeed: number = 0.1;
+    lookSpeed: number = 50;
     maxSpeed: number = 3;
     accel: number = 20;
     resistance: number = 0.1;
@@ -60,7 +63,7 @@ export class Agent {
     lastDistanceToNextCorner: number = Number.POSITIVE_INFINITY;
     minCorridorLength: number = Number.POSITIVE_INFINITY;
     lastEndTarget: Point2  = { x: 0, y: 0 };
-    lastNextCornerPoly: number = -1;
+    lastNextCornerTri: number = -1;
     
     debugLog!: string[];
     pathLog: Point2[] = [];

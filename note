@@ -35,12 +35,71 @@ navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
 
 
 
+There is a 2d map of a city many square kilometers in size. ~100k vertices, 30k buildings.
+Buildings are impassible obstacles. They are polygons without holes.
+
+I combine buildings that are too close to each other to walk between them into blobs.
+Blobs keep info about which buildings became part fo them.
+Blobs are further simplified to decrease the amount of vertices.
+
+Then I triangulate everything - walkable area and blobs.
+Triangles inside blobs are stored after passable triangles. The max passible index is stored for comparisons later.
+8 fake triangles are added around the map as impassible walls.
+walkable convex polygons are combined using various NP-crunching methods
+blobs are a single polygon even though it might not be convex. They are not meant to be navigatable.
+
+since the building's original verticies may be lost during blob siplification, these are stored too.
+
+Grid-based spatial index is created for triangles and polygons. Each cell contains all that overlap even a part of it.
+
+in the game units may want to get to building N. We get blobs in the area, find which one contains that building, find neighbouring polygons, find which one of these are close enough to the real building's coordinates and these become the goal for pathfinding.
+
+pathfinding finds poly corridor which is then translated into corners. The unit keeps track of polies and if its pushed away from the path it can still safely continue if it's in the same poly or if the corner is directly visible.
+
+visibility is checked by following a chain of triangles. if all of them are < max passable triangle index -> visibility = true
+
+
+ids for triangles, polygons, buildings are simply their index.
+
+vertices float {x, y} [walkable area vertices][building vertices that are not present in walkable triangles]
+triangles int32 {v1, v2, v3} [passable][impassable][fake outer edge]
+neighbours int32 {tri1, tri2, tri3}
+polygons int32 {count, meta_info, verts_start, triangles_start, neighbours_start} [passable][impassable concave blobs]
+poly_centroids float {x, y}
+poly_verts int32 {v1, v2, v3, v4, v5 ... 'count' of them} [polygons, ]
+poly_tris int32 {tri1, tri2, tri3 ... 'count' - 2 of them}
+poly_neighbors int32 {tri1, tri2, tri3 ... 'count' of them}
+buildings int 32 {id, count, verts_start}
+building_verts int32 {v1, v2, v3, v4 ... 'count' of them}
+blob_buildings int32 {id | count, id1, id2 ...}
+building_meta JSON_STRING {data1\ndata2\n} // line number is the building id
 
 
 
+meta_info:
+    is negative for passable polygons. Can server as traversing speed indicator.
+    for blobs this indexes blob_buildings start. One bit is used to indicate whether it is a single id (as most of the buildings are 1:1 with blobs) or a series
 
+Constructed at runtime in a worker thread:
 
+triangle_to_polygon int32 {poly_id}
+building_to_polygon int32 {poly_id} //blob
+spatial_index_for triangles
+spatial_index_for polygons
+spatial_index_for blobs //separate one
 
+Blobs and polygons are separate because pathfinding doesn't want to deal with filtering out blobs.
+
+typical structure of a spatial index:
+private cellOffsets: Uint32Array = new Uint32Array(0);
+private cellTriangles: Int32Array = new Int32Array(0);
+private cellSize: number = 128; // Default grid cell size
+private gridWidth: number = 0;
+private gridHeight: number = 0;
+private minX: number = 0;
+private minY: number = 0;
+private maxX: number = 0;
+private maxY: number = 0;
 
 
 

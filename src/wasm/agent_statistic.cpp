@@ -12,7 +12,7 @@ void reset_agent_stuck(int i) {
     agent_data.last_distances_to_next_corner[i] = std::numeric_limits<float>::max();
     agent_data.stuck_ratings[i] = 0.0f;
     agent_data.sight_ratings[i] = 0.0f;
-    agent_data.last_next_corner_polys[i] = -1;
+    agent_data.last_next_corner_tris[i] = -1;
     agent_data.last_end_targets[i] = agent_data.end_targets[i];
 }
 
@@ -33,9 +33,9 @@ void update_agent_statistic(int i, float dt) {
 
         float dist = math::distance(agent_data.positions[i], agent_data.next_corners[i]);
 
-        if (agent_data.last_next_corner_polys[i] != agent_data.next_corner_polys[i]) {
+        if (agent_data.last_next_corner_tris[i] != agent_data.next_corner_tris[i]) {
             agent_data.last_distances_to_next_corner[i] = dist;
-            agent_data.last_next_corner_polys[i] = agent_data.next_corner_polys[i];
+            agent_data.last_next_corner_tris[i] = agent_data.next_corner_tris[i];
             agent_data.sight_ratings[i] = 0.0f;
         }
 

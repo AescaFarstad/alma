@@ -47,10 +47,18 @@ layout(location=3) in float i_scale;     // instance
 
 uniform mat3 u_worldToClip; // 3x3 affine to NDC
 uniform vec4 u_uv; // u0,v0,u1,v1
+uniform sampler2D u_atlas; // for textureSize
 out vec2 v_uv;
 
 void main() {
-  vec2 local = a_pos * i_scale; // uniform scale in world units
+  // derive aspect ratio of the frame in pixels (handles non-square atlases)
+  ivec2 texSize = textureSize(u_atlas, 0);
+  vec2 uvSize = abs(u_uv.zw - u_uv.xy);
+  vec2 pxSize = uvSize * vec2(texSize);
+  float aspect = pxSize.y > 0.0 ? (pxSize.x / pxSize.y) : 1.0;
+
+  // non-uniform scale in world units: i_scale encodes height; width = height * aspect
+  vec2 local = a_pos * vec2(i_scale * aspect, i_scale);
   vec2 rotated = vec2(
     local.x * i_cosSin.x - local.y * i_cosSin.y,
     local.x * i_cosSin.y + local.y * i_cosSin.x
@@ -170,14 +178,7 @@ void ensureTexture() {
 }
 
 void renderInstances(const float* m3x3) {
-    // Target sprite width in pixels at current zoom
-    const float kMinSpritePx = 1.0f;
-    const float kMaxSpritePx = 48.0f;
-    float targetPx = 24.0f;
-    if (g_pixelsPerWorld > 0.0f) {
-        targetPx = std::fmax(kMinSpritePx, std::fmin(kMaxSpritePx, 24.0f));
-    }
-    const float scaleWorld = (g_pixelsPerWorld > 0.0f) ? (targetPx / g_pixelsPerWorld) : 0.5f;
+    const float scaleWorld = 2.5f;
 
     int aliveCount = 0;
     for (int i = 0; i < active_agents; ++i) {
@@ -206,8 +207,11 @@ void renderInstances(const float* m3x3) {
         const Point2 p = agent_data.positions[i];
         const Point2 look = agent_data.looks[i];
         const float len = std::sqrt(look.x*look.x + look.y*look.y) + 1e-6f;
-        const float cosv = look.x / len;
-        const float sinv = -look.y / len; // match screen-space Y flip
+        // Rotate sprite so its "up" in texture aligns with look direction: apply -90 deg offset
+        const float cos_phi = look.x / len;
+        const float sin_phi = look.y / len; // no Y flip in WASM world space
+        const float cosv = sin_phi;    // cos(phi - pi/2) = sin(phi)
+        const float sinv = -cos_phi;   // sin(phi - pi/2) = -cos(phi)
         // find or create batch
         int batchIndex = -1;
         for (size_t b = 0; b < batches.size(); ++b) {
@@ -331,6 +335,14 @@ EMSCRIPTEN_KEEPALIVE void update_rt(float dt, const float* m3x3, int widthPx, in
     ensureTexture();
 
     renderInstances(m3x3);
+}
+
+EMSCRIPTEN_KEEPALIVE void sprite_renderer_clear() {
+    if (!g_ctx) return;
+    emscripten_webgl_make_context_current(g_ctx);
+    glViewport(0, 0, g_viewport_w, g_viewport_h);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 }
 
 } // extern "C" 

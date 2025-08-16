@@ -28,19 +28,19 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
 
 
     // Navigation data
-    agent_data.current_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.current_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
     
     agent_data.next_corners = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
 
-    agent_data.next_corner_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.next_corner_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     agent_data.next_corners2 = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
 
-    agent_data.next_corner_polys2 = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.next_corner_tris2 = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     agent_data.num_valid_corners = reinterpret_cast<uint8_t*>(sharedBuffer + offset);
@@ -49,19 +49,19 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     agent_data.pre_escape_corners = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
 
-    agent_data.pre_escape_corner_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.pre_escape_corner_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     agent_data.end_targets = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
 
-    agent_data.end_target_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.end_target_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     agent_data.last_valid_positions = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
 
-    agent_data.last_valid_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.last_valid_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     agent_data.stuck_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
@@ -83,7 +83,7 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     agent_data.sight_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
     offset += sizeof(float) * maxAgents;
 
-    agent_data.last_next_corner_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    agent_data.last_next_corner_tris = reinterpret_cast<int*>(sharedBuffer + offset);
     offset += sizeof(int) * maxAgents;
 
     // Parameters
@@ -114,15 +114,7 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     agent_data.predicament_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
     offset += sizeof(float) * maxAgents;
 
-    // Per-agent dynamic data (C++)
-    agent_data.corridors = reinterpret_cast<std::vector<int>*>(sharedBuffer + offset);
-    // Note: corridors is std::vector managed in C++; pointer here is only placeholder when mirrored; actual storage separate if needed
-    offset += sizeof(std::vector<int>) * maxAgents;
-
-    agent_data.corridor_indices = reinterpret_cast<int*>(sharedBuffer + offset);
-    offset += sizeof(int) * maxAgents;
-
-    // Frame ids at very end
+    // Frame ids at very end (per-agent, read/written from JS)
     agent_data.frame_ids = reinterpret_cast<uint16_t*>(sharedBuffer + offset);
     offset += sizeof(uint16_t) * maxAgents;
 }
@@ -137,18 +129,18 @@ void initialize_agent_defaults(int agentIndex, float x, float y) {
     agent_data.is_alive[agentIndex] = true;
 
     // Navigation defaults
-    agent_data.current_polys[agentIndex] = -1;
+    agent_data.current_tris[agentIndex] = -1;
     agent_data.next_corners[agentIndex] = {0,0};
-    agent_data.next_corner_polys[agentIndex] = -1;
+    agent_data.next_corner_tris[agentIndex] = -1;
     agent_data.next_corners2[agentIndex] = {0,0};
-    agent_data.next_corner_polys2[agentIndex] = -1;
+    agent_data.next_corner_tris2[agentIndex] = -1;
     agent_data.num_valid_corners[agentIndex] = 0;
     agent_data.pre_escape_corners[agentIndex] = {0,0};
-    agent_data.pre_escape_corner_polys[agentIndex] = -1;
+    agent_data.pre_escape_corner_tris[agentIndex] = -1;
     agent_data.end_targets[agentIndex] = {0,0};
-    agent_data.end_target_polys[agentIndex] = -1;
+    agent_data.end_target_tris[agentIndex] = -1;
     agent_data.last_valid_positions[agentIndex] = {x,y};
-    agent_data.last_valid_polys[agentIndex] = -1;
+    agent_data.last_valid_tris[agentIndex] = -1;
     agent_data.stuck_ratings[agentIndex] = 0.0f;
     agent_data.path_frustrations[agentIndex] = 0.0f;
     agent_data.predicament_ratings[agentIndex] = 0.0f;

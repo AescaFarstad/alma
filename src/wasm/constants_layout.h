@@ -19,6 +19,7 @@ extern uint8_t* g_constants_buffer; // defined in main.cpp
 #define OFFSET_PATH_LOG_RATE 28
 #define OFFSET_CORNER_OFFSET 32
 #define OFFSET_CORNER_OFFSET_SQ 36
+#define OFFSET_LOOK_ROT_SPEED_RAD_S 40
 
 // Named macros for convenience
 // All floats except PATH_LOG_RATE
@@ -32,5 +33,6 @@ extern uint8_t* g_constants_buffer; // defined in main.cpp
 #define PATH_LOG_RATE CONST_I32_AT(OFFSET_PATH_LOG_RATE)
 #define CORNER_OFFSET CONST_F32_AT(OFFSET_CORNER_OFFSET)
 #define CORNER_OFFSET_SQ CONST_F32_AT(OFFSET_CORNER_OFFSET_SQ)
+#define LOOK_ROT_SPEED_RAD_S CONST_F32_AT(OFFSET_LOOK_ROT_SPEED_RAD_S)
 
 #endif // CONSTANTS_LAYOUT_H 

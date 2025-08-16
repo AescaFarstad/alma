@@ -91,25 +91,25 @@ struct AgentSoA {
     bool* is_alive;
 
     // Navigation
-    int* current_polys;
+    int* current_tris;
     Point2* next_corners;
-    int* next_corner_polys;
+    int* next_corner_tris;
     Point2* next_corners2;
-    int* next_corner_polys2;
+    int* next_corner_tris2;
     uint8_t* num_valid_corners;  // 0, 1, or 2
     Point2* pre_escape_corners;
-    int* pre_escape_corner_polys;
+    int* pre_escape_corner_tris;
     Point2* end_targets;
-    int* end_target_polys;
+    int* end_target_tris;
     Point2* last_valid_positions;
-    int* last_valid_polys;
+    int* last_valid_tris;
 
     // Statistics
     Point2* last_end_targets;
     int* min_corridor_lengths;
     float* last_distances_to_next_corner;
     float* sight_ratings;
-    int* last_next_corner_polys;
+    int* last_next_corner_tris;
     float* stuck_ratings;
     float* path_frustrations;
 

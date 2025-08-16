@@ -31,11 +31,11 @@ DualCorner find_next_corner_wasm(int agentIndex) {
     return find_next_corner(agent_data.positions[agentIndex], current_corridor_view, agent_data.end_targets[agentIndex], CORNER_OFFSET);
 }
 
-void find_path_to_destination_wasm(int agentIndex, int startPoly, int endPoly) {
+void find_path_to_destination_wasm(int agentIndex, int startTri, int endTri) {
     // Use agent's current position and target to find corridor
     Point2 startPoint = agent_data.positions[agentIndex];
     Point2 endPoint = agent_data.end_targets[agentIndex];
-    std::vector<int> path = findCorridor(startPoint, endPoint, startPoly, endPoly);
+    std::vector<int> path = findCorridor(startPoint, endPoint, startTri, endTri);
     if (!path.empty()) {
         agent_data.corridors[agentIndex] = path;
         agent_data.corridor_indices[agentIndex] = 0;
@@ -44,9 +44,9 @@ void find_path_to_destination_wasm(int agentIndex, int startPoly, int endPoly) {
         DualCorner corners = find_next_corner_wasm(agentIndex);
         
         agent_data.next_corners[agentIndex] = corners.corner1;
-        agent_data.next_corner_polys[agentIndex] = corners.poly1;
+        agent_data.next_corner_tris[agentIndex] = corners.tri1;
         agent_data.next_corners2[agentIndex] = corners.corner2;
-        agent_data.next_corner_polys2[agentIndex] = corners.poly2;
+        agent_data.next_corner_tris2[agentIndex] = corners.tri2;
         agent_data.num_valid_corners[agentIndex] = corners.numValid;
 
     } else {
@@ -55,20 +55,20 @@ void find_path_to_destination_wasm(int agentIndex, int startPoly, int endPoly) {
     }
 }
 
-bool raycast_and_patch_corridor_wasm(int agentIndex, Point2 target, int targetPoly) {
+bool raycast_and_patch_corridor_wasm(int agentIndex, Point2 target, int targetTri) {
     // Use corridor-producing raycast to match TS splice behavior
-    RaycastWithCorridorResult result = raycastCorridor(agent_data.positions[agentIndex], target, agent_data.current_polys[agentIndex], targetPoly);
+    RaycastWithCorridorResult result = raycastCorridor(agent_data.positions[agentIndex], target, agent_data.current_tris[agentIndex], targetTri);
     if (!result.hasHit && !result.corridor.empty()) {
-        // Find target poly position in existing corridor
+        // Find target triangle position in existing corridor
         int targetIdx = -1;
         for (size_t i = 0; i < agent_data.corridors[agentIndex].size(); ++i) {
-            if (agent_data.corridors[agentIndex][i] == targetPoly) {
+            if (agent_data.corridors[agentIndex][i] == targetTri) {
                 targetIdx = static_cast<int>(i);
                 break;
             }
         }
         if (targetIdx != -1) {
-            // Build new corridor: LOS corridor + suffix after target poly
+            // Build new corridor: LOS corridor + suffix after target triangle
             std::vector<int> newCorridor;
             newCorridor.reserve(result.corridor.size() + (agent_data.corridors[agentIndex].size() - (targetIdx + 1)));
             newCorridor.insert(newCorridor.end(), result.corridor.begin(), result.corridor.end());
@@ -92,7 +92,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         if (agent_data.predicament_ratings[agentIndex] > 7) {
             std::cerr << "Predicament rating is too high, resetting. Agent " << agentIndex << std::endl;
         }
-        if (agent_data.current_polys[agentIndex] == -1) return;
+        if (agent_data.current_tris[agentIndex] == -1) return;
 
         // Log RNG before using seed (parity with TS)
         
@@ -105,7 +105,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         if (endNode == -1) endNode = get_random_triangle();
         
         agent_data.end_targets[agentIndex] = navmesh_data.centroids[endNode];
-        agent_data.end_target_polys[agentIndex] = endNode;
+        agent_data.end_target_tris[agentIndex] = endNode;
         agent_data.predicament_ratings[agentIndex] = 0;
         agent_data.corridors[agentIndex].clear();
         agent_data.corridor_indices[agentIndex] = 0;
@@ -113,7 +113,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         
         
         
-        find_path_to_destination_wasm(agentIndex, agent_data.current_polys[agentIndex], endNode);
+        find_path_to_destination_wasm(agentIndex, agent_data.current_tris[agentIndex], endNode);
         if(agent_data.num_valid_corners[agentIndex] > 0){
              agent_data.states[agentIndex] = AgentState::Traveling;
         }
@@ -122,16 +122,16 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
     else if (state == AgentState::Traveling) {
 
         // Check 1: Have we fallen off the navmesh?
-        if (agent_data.current_polys[agentIndex] == -1) {
+        if (agent_data.current_tris[agentIndex] == -1) {
             agent_data.states[agentIndex] = AgentState::Escaping;
             
             
             // Store pre-escape corner
             agent_data.pre_escape_corners[agentIndex] = agent_data.next_corners[agentIndex];
-            agent_data.pre_escape_corner_polys[agentIndex] = agent_data.next_corner_polys[agentIndex];
+            agent_data.pre_escape_corner_tris[agentIndex] = agent_data.next_corner_tris[agentIndex];
             
             agent_data.next_corners[agentIndex] = agent_data.last_valid_positions[agentIndex];
-            agent_data.next_corner_polys[agentIndex] = agent_data.last_valid_polys[agentIndex];
+            agent_data.next_corner_tris[agentIndex] = agent_data.last_valid_tris[agentIndex];
             return;
         }
 
@@ -140,7 +140,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
             bool needFullRepath = false;
             if (agent_data.sight_ratings[agentIndex] < 1) {
                 agent_data.sight_ratings[agentIndex]++;
-                if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_polys[agentIndex])) {
+                if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_tris[agentIndex])) {
                     agent_data.stuck_ratings[agentIndex] = 0;
                 } else {
                     needFullRepath = true;
@@ -154,7 +154,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
 
             if (needFullRepath) {
                 agent_data.predicament_ratings[agentIndex]++;
-                find_path_to_destination_wasm(agentIndex, agent_data.current_polys[agentIndex], agent_data.end_target_polys[agentIndex]);
+                find_path_to_destination_wasm(agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex]);
                 if (agent_data.num_valid_corners[agentIndex] > 0) {
                     
                 }
@@ -166,12 +166,12 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         // Check 2: Are we still on the planned path?
         bool on_path = false;
         int corridor_idx = -1;
-        // Check if the current polygon is anywhere in the corridor within the next 5 entries from current index (TS parity)
+        // Check if the current triangle is anywhere in the corridor within the next 5 entries from current index (TS parity)
         size_t start_idx = static_cast<size_t>(agent_data.corridor_indices[agentIndex]);
         if (start_idx < agent_data.corridors[agentIndex].size()) {
             size_t end_idx = std::min(agent_data.corridors[agentIndex].size(), start_idx + static_cast<size_t>(5));
             for (size_t i = start_idx; i < end_idx; ++i) {
-                if (agent_data.corridors[agentIndex][i] == agent_data.current_polys[agentIndex]) {
+                if (agent_data.corridors[agentIndex][i] == agent_data.current_tris[agentIndex]) {
                     on_path = true;
                     corridor_idx = static_cast<int>(i);
                     break;
@@ -184,13 +184,13 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
             if(agent_data.path_frustrations[agentIndex] > agent_data.max_frustrations[agentIndex]) {
                 // Path is too messed up, re-path to the original destination
                 agent_data.path_frustrations[agentIndex] = 0;
-                find_path_to_destination_wasm(agentIndex, agent_data.current_polys[agentIndex], agent_data.end_target_polys[agentIndex]);
+                find_path_to_destination_wasm(agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex]);
                 if (agent_data.num_valid_corners[agentIndex] == 0) {
                     // This can happen if the destination is very close.
                     // Verify with raycast that we have a clear line of sight to the destination
-                    if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_polys[agentIndex])) {
+                    if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_tris[agentIndex])) {
                         agent_data.next_corners[agentIndex] = agent_data.end_targets[agentIndex];
-                        agent_data.next_corner_polys[agentIndex] = agent_data.end_target_polys[agentIndex];
+                        agent_data.next_corner_tris[agentIndex] = agent_data.end_target_tris[agentIndex];
                     } else {
                         std::cerr << "Pathfinding failed to recover the path for agent " << agentIndex << std::endl;
                     }
@@ -242,9 +242,9 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
              DualCorner corners = find_next_corner_wasm(agentIndex);
             if (corners.numValid > 0) {
                  agent_data.next_corners[agentIndex] = corners.corner1;
-                agent_data.next_corner_polys[agentIndex] = corners.poly1;
+                agent_data.next_corner_tris[agentIndex] = corners.tri1;
                 agent_data.next_corners2[agentIndex] = corners.corner2;
-                agent_data.next_corner_polys2[agentIndex] = corners.poly2;
+                agent_data.next_corner_tris2[agentIndex] = corners.tri2;
                 agent_data.num_valid_corners[agentIndex] = corners.numValid;
 
                 int remaining = static_cast<int>(agent_data.corridors[agentIndex].size()) - agent_data.corridor_indices[agentIndex];
@@ -265,24 +265,24 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
     } 
     // State: Escaping - Trying to get back to the navmesh.
     else if (state == AgentState::Escaping) {
-        if (agent_data.current_polys[agentIndex] != -1) {
+        if (agent_data.current_tris[agentIndex] != -1) {
             // We're back on the navmesh! Re-path to our original destination.
             agent_data.states[agentIndex] = AgentState::Traveling;
             
 
-            if (agent_data.pre_escape_corner_polys[agentIndex] != -1) {
-                if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.pre_escape_corners[agentIndex], agent_data.pre_escape_corner_polys[agentIndex])) {
+            if (agent_data.pre_escape_corner_tris[agentIndex] != -1) {
+                if (raycast_and_patch_corridor_wasm(agentIndex, agent_data.pre_escape_corners[agentIndex], agent_data.pre_escape_corner_tris[agentIndex])) {
                     agent_data.next_corners[agentIndex] = agent_data.pre_escape_corners[agentIndex];
-                    agent_data.next_corner_polys[agentIndex] = agent_data.pre_escape_corner_polys[agentIndex];
+                    agent_data.next_corner_tris[agentIndex] = agent_data.pre_escape_corner_tris[agentIndex];
                     // Clear preEscapeCorner
                     agent_data.pre_escape_corners[agentIndex] = {0, 0};
-                    agent_data.pre_escape_corner_polys[agentIndex] = -1;
+                    agent_data.pre_escape_corner_tris[agentIndex] = -1;
                     return;
                 }
             }
             
-            if (agent_data.end_target_polys[agentIndex] != -1) {
-                find_path_to_destination_wasm(agentIndex, agent_data.current_polys[agentIndex], agent_data.end_target_polys[agentIndex]);
+            if (agent_data.end_target_tris[agentIndex] != -1) {
+                find_path_to_destination_wasm(agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex]);
                 if (agent_data.num_valid_corners[agentIndex] > 0) {
                     agent_data.states[agentIndex] = AgentState::Traveling;
                 } else {
@@ -295,9 +295,26 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
     }
     
     if (state == AgentState::Traveling || state == AgentState::Escaping) {
-        if (math::distance_sq(agent_data.next_corners[agentIndex], agent_data.positions[agentIndex]) > 0.01) {
-            agent_data.looks[agentIndex] = agent_data.next_corners[agentIndex] - agent_data.positions[agentIndex];
-            math::normalize_inplace(agent_data.looks[agentIndex]);
+        if (math::distance_sq(agent_data.next_corners[agentIndex], agent_data.positions[agentIndex]) > 0.01f) {
+            // Rotate look toward desired direction with angular speed limit
+            Point2 targetDir = agent_data.next_corners[agentIndex] - agent_data.positions[agentIndex];
+            math::normalize_inplace(targetDir);
+            Point2& curLook = agent_data.looks[agentIndex];
+            math::normalize_inplace(curLook);
+            const float dotVT = math::dot(curLook, targetDir);
+            const float clampedDot = std::max(-1.0f, std::min(1.0f, dotVT));
+            const float crossVT = curLook.x * targetDir.y - curLook.y * targetDir.x;
+            const float angleToTarget = std::atan2(crossVT, clampedDot);
+            const float maxStep = agent_data.look_speeds[agentIndex] * deltaTime;
+            float step = angleToTarget;
+            if (step > maxStep) step = maxStep;
+            else if (step < -maxStep) step = -maxStep;
+            const float s = std::sin(step);
+            const float c = std::cos(step);
+            const float newX = c * curLook.x - s * curLook.y;
+            const float newY = s * curLook.x + c * curLook.y;
+            curLook.x = newX;
+            curLook.y = newY;
         }
     }
 }

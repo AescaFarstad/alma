@@ -12,7 +12,6 @@ export interface WasmModule {
     _g_navTriIndexPackedHeader?: number;
     _set_rng_seed?: (seed: number) => void;
     _set_constants_buffer?: (ptr: number) => void;
-    _set_renderer_debug?: (enable: number) => void;
     
     ccall: (fname: string, returnType: string | null, argTypes: string[], args: any[]) => any;
     cwrap: (fname: string, returnType: string | null, argTypes: string[]) => Function;
@@ -24,6 +23,13 @@ export interface WasmModule {
     // Optional exported allocation helpers
     wasm_alloc?: (size: number) => number;
     wasm_free?: (ptr: number) => void;
+
+    // Optional sprite functions (may not be present in test builds)
+    _sprite_renderer_init?: (selectorPtr: number) => void;
+    _sprite_upload_atlas_rgba?: (ptr: number, w: number, h: number) => void;
+    _sprite_upload_frame_table?: (ptr: number, frameCount: number) => void;
+    _update_rt?: (dt: number, mPtr: number, w: number, h: number, dpr: number) => void;
+    _set_renderer_debug?: (enable: number) => void;
 }
 
 export interface BlobGeometry {

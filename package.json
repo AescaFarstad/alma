@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit -p tsconfig.app.json --composite false",
     "ts-node": "TS_NODE_PROJECT=tsconfig.node.json node --import=tsx",
-    "build:wasm": "source /mnt/WoB/WOB/web_rep/emsdk/emsdk_env.sh && make -C src/wasm"
+    "build:wasm": ". /mnt/WoB/WOB/web_rep/emsdk/emsdk_env.sh && make -C src/wasm"
   },
   "author": "",
   "license": "ISC",

@@ -139,7 +139,7 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
             set_(endPointForRecast, endPoint);
             add_(endPointForRecast, tempScaled);
             
-            const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentPoly, undefined);
+            const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentTri, undefined);
 
             if (raycastResult.hitP1 && raycastResult.hitP2) {
                 if (!agent.wallContact) {
@@ -171,13 +171,13 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
         }
     }
     
-    const newPoly = navmesh.triIndex.isPointInNavmesh(agent.coordinate, navmesh, agent.currentPoly);
-    if (newPoly !== -1) {
-        agent.currentPoly = newPoly;
+    const newTri = navmesh.triIndex.isPointInNavmesh(agent.coordinate, navmesh, agent.currentTri);
+    if (newTri !== -1) {
+        agent.currentTri = newTri;
         set_(agent.lastValidPosition, agent.coordinate);
-        agent.lastValidPoly = newPoly;
+        agent.lastValidTri = newTri;
     } else {
-        agent.currentPoly = -1;
+        agent.currentTri = -1;
         
     }
 

@@ -6,14 +6,14 @@
 
 struct Corner {
     Point2 point;
-    int poly;
+    int tri;
 };
 
 struct DualCorner {
     Point2 corner1;
-    int poly1;
+    int tri1;
     Point2 corner2;
-    int poly2;
+    int tri2;
     int numValid;
 };
 
