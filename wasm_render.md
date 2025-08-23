@@ -73,7 +73,7 @@ Add `src/wasm/sprite_renderer.h/.cpp` with:
   - Texture: atlas RGBA8
 
 - Per-frame single-call API (iteration 1)
-  - `void update_rt(float dt, const float* m3x3, int pixelWidth, int pixelHeight, float devicePixelRatio);`
+  - `void render(float dt, const float* m3x3, int pixelWidth, int pixelHeight, float devicePixelRatio);`
     - Performs agent simulation step (or call existing `update(dt)` internally)
     - Updates camera/viewport state
     - Builds instance buffer from SoA (`positions`, `looks`, `is_alive`)
@@ -153,7 +153,7 @@ void main() {
    - In `PixieLayer.tick()` (same RAF as Pixi/OL):
      - Compute world→clip 3×3 matrix from OL view
      - Query canvas pixel size and DPR
-     - Call `_update_rt(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`; this updates sim and renders agents within the same frame
+     - Call `_render(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`; this updates sim and renders agents within the same frame
    - JS does not perform any rendering steps or per-agent work
 
 ---
@@ -167,7 +167,7 @@ void main() {
   - `EXPORTED_FUNCTIONS=[
       "_init","_update","_add_agent","_get_active_agent_count",
       "_sprite_renderer_init", "_sprite_upload_atlas_rgba",
-      "_update_rt"
+      "_render"
     ]`
 - If OffscreenCanvas is evaluated later, ensure no extra buffering introduces frame latency; keep main-thread rendering for perfect sync.
 
@@ -207,13 +207,13 @@ void main() {
 
 - `src/logic/Pixie.ts`
   - Create/manage `wasmCanvas`
-  - In tick, call `_update_rt(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`
+  - In tick, call `_render(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`
 - `src/logic/drawing/AgentRenderer.ts`
   - Optional dev switch for selecting Pixi vs WASM drawing
 - `src/logic/WasmAgentSystem.ts`
   - Atlas upload during `init` (pixels + call into C++)
 - `src/wasm/sprite_renderer.h/.cpp` (new)
-  - Implement WebGL2 renderer and exported functions (`sprite_renderer_init`, `sprite_upload_atlas_rgba`, `update_rt`)
+  - Implement WebGL2 renderer and exported functions (`sprite_renderer_init`, `sprite_upload_atlas_rgba`, `render`)
 - `src/components/map/Map.vue`
   - No structural changes; the Pixi layer manages the overlay canvas
 
@@ -233,6 +233,6 @@ void main() {
   - `void sprite_renderer_init(const char* canvas_selector);`
   - `void sprite_upload_atlas_rgba(uint8_t* pixels, int width, int height);`
 - Per-frame (single call that also renders):
-  - `void update_rt(float dt, const float* m3x3, int widthPx, int heightPx, float dpr);`
+  - `void render(float dt, const float* m3x3, int widthPx, int heightPx, float dpr);`
 
 This revised plan matches the constraints for iteration 1 (single image, no tint), ensures perfect frame sync by rendering inside the same update call, enables antialiasing, and avoids any buffering scheme that could add latency relative to Pixi/OpenLayers. 

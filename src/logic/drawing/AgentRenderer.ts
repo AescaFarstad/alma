@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { Agent } from '../Agent';
+import { Agent } from '../agents/Agent';
 import { Map as OlMap } from 'ol';
 import { AgentVisualPool } from './AgentVisualPool';
 import { TsAgentSpritePool } from './TsAgentSpritePool';

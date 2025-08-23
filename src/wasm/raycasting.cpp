@@ -1,7 +1,7 @@
 #include "raycasting.h"
 #include "math_utils.h"
-#include "path_utils.h"
-#include "nav_tri_index.h"
+#include "nav_utils.h"
+#include "navmesh.h"
 #include <array>
 
 // Forward declaration of internal functions
@@ -9,8 +9,6 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
 static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex);
 static void getTrianglePoints(int triIdx, std::array<Point2, 3>& outPoints);
 
-// Global state dependencies
-extern NavmeshData navmesh_data;
 
 RaycastWithCorridorResult raycastCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
     int hitEdgeIndex = -1;
@@ -88,7 +86,7 @@ RaycastHitOnlyResult raycastPoint(const Point2& startPoint, const Point2& endPoi
 
 static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex) {
     int currentTriIdx = (startTriIdx != -1) ? startTriIdx : getTriangleFromPoint(startPoint);
-    if (currentTriIdx == -1) return {};
+    if (currentTriIdx == -1 || currentTriIdx >= g_navmesh.walkable_triangle_count) return {};
 
     std::vector<int> corridor;
     corridor.push_back(currentTriIdx);
@@ -119,7 +117,7 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
         } else {
             int entryEdgeIdx = -1;
             for (int i = 0; i < 3; ++i) {
-                if (navmesh_data.neighbors[currentTriIdx * 3 + i] == previousTriIdx) {
+                if (g_navmesh.neighbors[currentTriIdx * 3 + i] == previousTriIdx) {
                     entryEdgeIdx = i;
                     break;
                 }
@@ -137,8 +135,8 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
         }
         
         if (exitEdgeIdx != -1) {
-            nextTriIdx = navmesh_data.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-            if (nextTriIdx == -1) {
+            nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+            if (nextTriIdx == -1 || nextTriIdx >= g_navmesh.walkable_triangle_count) {
                 hitEdgeIndex = exitEdgeIdx;
                 return corridor;
             }
@@ -157,7 +155,7 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
 
 static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex) {
     int currentTriIdx = (startTriIdx != -1) ? startTriIdx : getTriangleFromPoint(startPoint);
-    if (currentTriIdx == -1) return -1;
+    if (currentTriIdx == -1 || currentTriIdx >= g_navmesh.walkable_triangle_count) return -1;
 
     const int MAX_ITERATIONS = 5000;
     int previousTriIdx = -1;
@@ -186,7 +184,7 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
         } else {
             int entryEdgeIdx = -1;
             for (int i = 0; i < 3; ++i) {
-                if (navmesh_data.neighbors[currentTriIdx * 3 + i] == previousTriIdx) {
+                if (g_navmesh.neighbors[currentTriIdx * 3 + i] == previousTriIdx) {
                     entryEdgeIdx = i;
                     break;
                 }
@@ -203,8 +201,8 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
         }
         
         if (exitEdgeIdx != -1) {
-            nextTriIdx = navmesh_data.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-            if (nextTriIdx == -1) {
+            nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+            if (nextTriIdx == -1 || nextTriIdx >= g_navmesh.walkable_triangle_count) {
                 hitEdgeIndex = exitEdgeIdx;
                 return currentTriIdx;
             }
@@ -222,11 +220,11 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
 
 static void getTrianglePoints(int triIdx, std::array<Point2, 3>& outPoints) {
     const int triVertexStartIndex = triIdx * 3;
-    const int p1Index = navmesh_data.triangles[triVertexStartIndex];
-    const int p2Index = navmesh_data.triangles[triVertexStartIndex + 1];
-    const int p3Index = navmesh_data.triangles[triVertexStartIndex + 2];
+    const int p1Index = g_navmesh.triangles[triVertexStartIndex];
+    const int p2Index = g_navmesh.triangles[triVertexStartIndex + 1];
+    const int p3Index = g_navmesh.triangles[triVertexStartIndex + 2];
 
-    outPoints[0] = navmesh_data.points[p1Index];
-    outPoints[1] = navmesh_data.points[p2Index];
-    outPoints[2] = navmesh_data.points[p3Index];
+    outPoints[0] = g_navmesh.vertices[p1Index];
+    outPoints[1] = g_navmesh.vertices[p2Index];
+    outPoints[2] = g_navmesh.vertices[p3Index];
 } 

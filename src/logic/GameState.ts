@@ -5,13 +5,16 @@ import { Lib } from "./lib/Lib";
 import RBush from "rbush";
 import { Navmesh } from "./navmesh/Navmesh";
 import { Point2 } from "./core/math";
-import { Agent, createAgent } from "./Agent";
+import { Agent, createAgent } from "./agents/Agent";
 import agentData from "./agent-data.json";
-import { Spawner } from "./AgentSpawner";
+import { Spawner } from "./agents/AgentSpawner";
 import { WAgentSpawner } from "./WAgentSpawner";
 import { seededRandom } from "./core/mathUtils";
 import { getTriangleFromPoint } from "./navmesh/pathCorridor";
-import { AgentGrid } from "./AgentGrid";
+import { AgentGrid } from "./agents/AgentGrid";
+import { Agents } from "./agents/Agents";
+import { getRandomTriangle } from "./navmesh/NavUtils";
+import { WAgent } from "./WAgent";
 
 // Constants for initial agent spawning
 const ENABLE_INITIAL_AGENT_SPAWNING = true;
@@ -42,8 +45,8 @@ export type LaserBlast = {
     creationTime: number;
     corridor: number[] | null;
 };
-const spawnersCooldown = 0.03;
-export const wagentsLimit = 1199;
+const spawnersCooldown = 0.02;
+export const wagentsLimit = 12000;
 export const agentsLimit = 10;
 export class GameState { // This is a POD class. No functions allowed.
     public lib : Lib;
@@ -53,14 +56,11 @@ export class GameState { // This is a POD class. No functions allowed.
     public uiState: {
         lastProcessedEventId: number;
     };
-    public buildingSpatialIndex: RBush<any>;
-    public blobSpatialIndex: RBush<any>;
 
     public connections: Connections;
 
-    public buildingsById: Record<string, any>;
-    public blobsById: Record<string, any>;
     public navmesh: Navmesh;
+    public wasm_agents: Agents;
 
     public pointMarks: { id: number, x: number, y: number }[];
     public nextPointMarkId: number;
@@ -69,6 +69,7 @@ export class GameState { // This is a POD class. No functions allowed.
     public nextLaserBlastId: number;
     public scheduledLaserBlasts: number;
     public agents: Agent[];
+    public wagents: WAgent[];
     public spawners: Spawner[];
     public wAgentSpawners: WAgentSpawner[];
     public agentGrid: AgentGrid;
@@ -93,12 +94,9 @@ export class GameState { // This is a POD class. No functions allowed.
         this.uiState = {
             lastProcessedEventId: -1,
         };
-        this.buildingSpatialIndex = new RBush();
-        this.blobSpatialIndex = new RBush();
         this.connections = new Connections();
-        this.buildingsById = {};
-        this.blobsById = {};
         this.navmesh = new Navmesh();
+        this.wasm_agents = new Agents();
         this.pointMarks = [];
         this.nextPointMarkId = 0;
         this.laserBlasts = [];
@@ -106,6 +104,7 @@ export class GameState { // This is a POD class. No functions allowed.
         this.scheduledLaserBlasts = 0;
         // this.agents = [agentData as Agent];
         this.agents = [];
+        this.wagents = [];
         // Comment out regular spawners and use WAgent spawners instead
         this.spawners = [
             
@@ -184,7 +183,7 @@ export class GameState { // This is a POD class. No functions allowed.
     }
 
     public startInitialAgentSpawning(): void {
-        if (!ENABLE_INITIAL_AGENT_SPAWNING || !this.navmesh.triIndex) {
+        if (!ENABLE_INITIAL_AGENT_SPAWNING || !this.navmesh.triangleIndex) {
             return;
         }
 
@@ -196,7 +195,7 @@ export class GameState { // This is a POD class. No functions allowed.
     }
 
     public continueInitialAgentSpawning(): void {
-        if (!this.initialAgentSpawningInProgress || !this.navmesh.triIndex) {
+        if (!this.initialAgentSpawningInProgress || !this.navmesh.triangleIndex) {
             return;
         }
 
@@ -204,7 +203,7 @@ export class GameState { // This is a POD class. No functions allowed.
         
         for (let i = 0; i < agentsToSpawn; i++) {
             // Use seeded random to get a triangle index
-            const triangleIndex = this.navmesh.triIndex.getRandomTriangle(this.navmesh, this.currentSpawnSeed);
+            const triangleIndex = getRandomTriangle(this.navmesh, this.currentSpawnSeed);
             const { newSeed } = seededRandom(this.currentSpawnSeed);
             this.currentSpawnSeed = newSeed;
             
@@ -248,9 +247,9 @@ export class GameState { // This is a POD class. No functions allowed.
     }
 
     private getRandomPointInTriangle(triangleIndex: number, seed: number): Point2 {
-        const { centroids } = this.navmesh;
-        const centroidX = centroids[triangleIndex * 2];
-        const centroidY = centroids[triangleIndex * 2 + 1];
+        const { triangle_centroids } = this.navmesh;
+        const centroidX = triangle_centroids[triangleIndex * 2];
+        const centroidY = triangle_centroids[triangleIndex * 2 + 1];
         
         return {
             x: centroidX,

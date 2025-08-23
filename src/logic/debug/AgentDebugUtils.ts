@@ -1,4 +1,4 @@
-import { Agent } from '../Agent';
+import { Agent } from '../agents/Agent';
 import { Point2 } from '../core/math';
 
 export interface ReferenceMap {
@@ -99,7 +99,7 @@ export function snapshotAgentPoints(agent: Agent, label: string): void {
       nextCorner2: { value: {...agent.nextCorner2}, ref: agent.nextCorner2 },
       endTarget: { value: {...agent.endTarget}, ref: agent.endTarget },
       lastValidPosition: { value: {...agent.lastValidPosition}, ref: agent.lastValidPosition },
-      preEscapeCorner: agent.preEscapeCornerPoly !== -1 ? { value: {...agent.preEscapeCorner}, ref: agent.preEscapeCorner } : { value: {...agent.preEscapeCorner}, ref: agent.preEscapeCorner, note: 'invalid' },
+      preEscapeCorner: agent.preEscapeCornerTri !== -1 ? { value: {...agent.preEscapeCorner}, ref: agent.preEscapeCorner } : { value: {...agent.preEscapeCorner}, ref: agent.preEscapeCorner, note: 'invalid' },
       velocity: { value: {...agent.velocity}, ref: agent.velocity },
       lastAppliedAccel: { value: {...agent.lastAppliedAccel}, ref: agent.lastAppliedAccel },
       look: { value: {...agent.look}, ref: agent.look }

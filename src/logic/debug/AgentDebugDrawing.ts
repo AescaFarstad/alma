@@ -1,4 +1,4 @@
-import { Agent } from "../Agent";
+import { Agent } from "../agents/Agent";
 import { Point2, distance } from "../core/math";
 import { sceneState, ACMAGENTA, ACGREEN } from "../drawing/SceneState";
 

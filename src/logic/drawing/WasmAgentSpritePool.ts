@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { BaseAgentSpritePool, AgentSpriteElements } from './BaseAgentSpritePool';
-import { WAgent } from '../WAgent';
+import { Agents } from '../agents/Agents';
 import type { AgentRenderingMode } from './AgentRenderer';
 
 export class WasmAgentSpritePool extends BaseAgentSpritePool {
@@ -11,10 +11,8 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
     }
 
     public syncWithWasmData(
-        positions: Float32Array,
-        looks: Float32Array,
-        frameIds: Uint16Array,
-        agents: WAgent[],
+        agents: Agents,
+        wagentsCount: number,
         container: PIXI.Container,
         globalEnabled: boolean = true,
         renderMode: AgentRenderingMode = 'sprite'
@@ -34,7 +32,8 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
             return;
         }
 
-        if (agents.length === 0) {
+        // Check if WASM agents are initialized and we have active agents
+        if (!agents.positions || !agents.is_alive || wagentsCount === 0) {
             if (this.wasRenderingEnabled) {
                 this.removeAllAgentsFromContainers(container);
                 this.wasRenderingEnabled = false;
@@ -45,9 +44,14 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
         this.wasRenderingEnabled = true;
         this.drawnCounts.clear();
 
-        // Iterate over agents; position/look arrays are 2*agents.length in size
-        for (let i = 0; i < agents.length; i++) {
-            const fid = (frameIds && frameIds.length > i) ? frameIds[i] : 0;
+        // Iterate over allocated agent slots, skipping dead agents
+        for (let i = 0; i < wagentsCount; i++) {
+            // Skip dead agents
+            if (!agents.is_alive[i]) {
+                continue;
+            }
+
+            const fid = (agents.frame_ids && agents.frame_ids.length > i) ? agents.frame_ids[i] : 0;
             const displayName = this.getFrameNameById(fid);
             if (!this.pools.has(displayName)) {
                 this.pools.set(displayName, []);
@@ -65,9 +69,9 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
             }
             
             const { sprite } = element;
-            sprite.x = positions[i * 2];
-            sprite.y = -positions[i * 2 + 1];
-            sprite.rotation = Math.atan2(-looks[i * 2 + 1], looks[i * 2]) - Math.PI / 2;
+            sprite.x = agents.positions[i * 2];
+            sprite.y = -agents.positions[i * 2 + 1];
+            sprite.rotation = Math.atan2(-agents.looks[i * 2 + 1], agents.looks[i * 2]) - Math.PI / 2;
             const AGENT_SPRITE_SCALE = 0.3;
             sprite.scale.set(AGENT_SPRITE_SCALE);
             this.ensureInContainer(element, container);

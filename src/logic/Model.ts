@@ -7,15 +7,13 @@ import { dynamicScene } from "./drawing/DynamicScene";
 import { raycastCorridor } from "./Raycasting";
 import { getLineSegmentIntersectionPoint } from "./core/math";
 import { updateAvatar } from "./Avatar";
-import { updateAgentPhys } from "./AgentMovePhys";
-import { updateAgentNavigation } from "./AgentNavigation";
-import { updateSpawners } from "./AgentSpawner";
+import { updateAgentPhys } from "./agents/AgentMovePhys";
+import { updateAgentNavigation } from "./agents/AgentNavigation";
+import { updateSpawners } from "./agents/AgentSpawner";
 import { updateWAgentSpawners } from "./WAgentSpawner";
-import { WasmAgentSystem } from "./WasmAgentSystem";
-import { updateAgentStatistic } from "./AgentStatistic";
-import { updateAgentCollisions } from "./AgentCollision";
-import { AgentGrid } from "./AgentGrid";
-import { mapInstance } from "../map_instance";
+import { updateAgentStatistic } from "./agents/AgentStatistic";
+import { updateAgentCollisions } from "./agents/AgentCollision";
+import { WasmFacade } from "./WasmFacade";
 
 /**
  * A global queue for commands. Components or other systems can push commands here.
@@ -27,9 +25,8 @@ export const globalInputQueue: CmdInput[] = [];
  * The main update loop for the game logic.
  * @param gs The game state.
  * @param deltaTime The time elapsed since the last frame, in seconds.
- * @param wasmAgentSystem The WASM agent system for WAgent spawning.
  */
-export function update(gs: GameState, deltaTime: number, wasmAgentSystem?: WasmAgentSystem): void {
+export function update(gs: GameState, deltaTime: number): void {
     const scaledDeltaTime = deltaTime * gs.timeScale.current;
     
     if (gs.timeScale.current === 0 && gs.allowedUpdates > 0) {
@@ -78,17 +75,12 @@ export function update(gs: GameState, deltaTime: number, wasmAgentSystem?: WasmA
     
     if (deltaTime > 0) {
         updateAvatar(gs.avatar, scaledDeltaTime, gs.navmesh);
+
         // Re-enable regular TS spawner updates to run side-by-side with WASM
         updateSpawners(gs, scaledDeltaTime);
-        
-        // Update WAgent spawners if wasmAgentSystem is available
-        if (wasmAgentSystem) {
-            updateWAgentSpawners(gs.wAgentSpawners, wasmAgentSystem, scaledDeltaTime, gs);
-            // WASM simulation only - rendering handled separately in main.ts
-            wasmAgentSystem.updateSimulation(scaledDeltaTime);
-        }
+        updateWAgentSpawners(gs.wAgentSpawners, scaledDeltaTime, gs);
+        WasmFacade._update_simulation(scaledDeltaTime, gs.wagents.length);
     }
-    // --- Update Agents ---
     for (const agent of gs.agents) {
         updateAgentNavigation(agent, gs, scaledDeltaTime);
     }

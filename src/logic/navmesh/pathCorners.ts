@@ -1,8 +1,7 @@
 import { Navmesh } from "./Navmesh";
 import { Point2, cross, add, subtract, scale, length_sq, normalize, set_, set, normalize_, add_, subtract_, scale_ } from "../core/math";
 import { GameState } from "../GameState";
-// import { arePointsSuspiciouslyClose } from "../debug/AgentDebugUtils";
-// import { ACINDIGO, sceneState } from "../drawing/SceneState";
+import { SpatialIndex } from "./SpatialIndex";
 
 export type Corner = {
     point: Point2;
@@ -71,33 +70,32 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
             const isEndPoint = point.x === endPoint.x && point.y === endPoint.y;
 
             if (!isEndPoint) {
-                reusableSearchBox.minX = point.x - 0.1;
-                reusableSearchBox.minY = point.y - 0.1;
-                reusableSearchBox.maxX = point.x + 0.1;
-                reusableSearchBox.maxY = point.y + 0.1;
-
-                const nearbyBlobs = gs.blobSpatialIndex.search(reusableSearchBox);
+                const nearbyBlobIds = gs.navmesh.blobIndex.query(point.x, point.y);
                 let foundBlob = false;
 
-                for (const blobInfo of nearbyBlobs) {
-                    const blob = gs.blobsById[blobInfo.id];
-                    if (!blob || !blob.geometry || blob.geometry.length === 0) {
-                        continue;
-                    }
+                for (let j = 0; j < nearbyBlobIds.length; j++) {
+                    const blobId = nearbyBlobIds[j];
+                    const { navmesh } = gs;
+                    const polyVertsStart = navmesh.polygons[blobId];
+                    const polyVertsEnd = navmesh.polygons[blobId + 1];
+                    const points_length = polyVertsEnd - polyVertsStart;
 
-                    const points = blob.geometry[0];
-                    for (let i = 0; i < points.length; i++) {
-                        const p: Point2 = { x: points[i][0], y: points[i][1] };
+                    for (let i = 0; i < points_length; i++) {
+                        const vertIndex = navmesh.poly_verts[polyVertsStart + i];
+                        const p_x = navmesh.vertices[vertIndex * 2];
+                        const p_y = navmesh.vertices[vertIndex * 2 + 1];
                         
-                        if (isPointsEqual(p, point, 0.015)) {
+                        if (Math.abs(p_x - point.x) < 0.015 && Math.abs(p_y - point.y) < 0.015) {
                             const B = point;
                             
                             // Find adjacent vertices
-                            let prev_i = (i + points.length - 1) % points.length;
-                            let A: Point2 = { x: points[prev_i][0], y: points[prev_i][1] };
+                            const prev_i = (i + points_length - 1) % points_length;
+                            const prev_vertIndex = navmesh.poly_verts[polyVertsStart + prev_i];
+                            const A: Point2 = { x: navmesh.vertices[prev_vertIndex * 2], y: navmesh.vertices[prev_vertIndex * 2 + 1] };
                             
-                            let next_i = (i + 1) % points.length;
-                            let C: Point2 = { x: points[next_i][0], y: points[next_i][1] };
+                            const next_i = (i + 1) % points_length;
+                            const next_vertIndex = navmesh.poly_verts[polyVertsStart + next_i];
+                            const C: Point2 = { x: navmesh.vertices[next_vertIndex * 2], y: navmesh.vertices[next_vertIndex * 2 + 1] };
 
                             set_(tempV, B);
                             subtract_(tempV, A);
@@ -122,7 +120,7 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
                 }
 
                 if (!foundBlob) {
-                    if (!gs.navmesh.triIndex.isGridCorner(point)) {
+                    if (!isGridCorner(point, gs.navmesh.triangleIndex)) {
                         console.warn("Could not find matching blob for corner, not applying offset.", point);
                     }
                 }
@@ -138,6 +136,10 @@ export function findNextCorner(navmesh: Navmesh, gs: GameState, corridor: number
     // Apply offset to both corners (modifies in place)
     applyOffsetToPoint(result.corner1, result.tri1);
     applyOffsetToPoint(result.corner2, result.tri2);
+}
+
+function isGridCorner(p: Point2, grid : SpatialIndex): boolean {
+    return (p.x === grid.minX || p.x === grid.maxX) && (p.y === grid.minY || p.y === grid.maxY);
 }
 
 function getPortals(navmesh: Navmesh, corridor: number[], startPoint: Point2, endPoint: Point2): { left: Point2, right: Point2 }[] {
@@ -185,14 +187,14 @@ function getPortalPoints(navmesh: Navmesh, tri1Idx: number, tri2Idx: number): { 
         return null;
     }
 
-    const p1 = { x: navmesh.points[sharedVerts[0] * 2], y: navmesh.points[sharedVerts[0] * 2 + 1] };
-    const p2 = { x: navmesh.points[sharedVerts[1] * 2], y: navmesh.points[sharedVerts[1] * 2 + 1] };
+    const p1 = { x: navmesh.vertices[sharedVerts[0] * 2], y: navmesh.vertices[sharedVerts[0] * 2 + 1] };
+    const p2 = { x: navmesh.vertices[sharedVerts[1] * 2], y: navmesh.vertices[sharedVerts[1] * 2 + 1] };
     
     // Get triangle centroids to determine travel direction
-    const c1x = navmesh.centroids[tri1Idx * 2];
-    const c1y = navmesh.centroids[tri1Idx * 2 + 1];
-    const c2x = navmesh.centroids[tri2Idx * 2];
-    const c2y = navmesh.centroids[tri2Idx * 2 + 1];
+    const c1x = navmesh.triangle_centroids[tri1Idx * 2];
+    const c1y = navmesh.triangle_centroids[tri1Idx * 2 + 1];
+    const c2x = navmesh.triangle_centroids[tri2Idx * 2];
+    const c2y = navmesh.triangle_centroids[tri2Idx * 2 + 1];
     
     // Direction vector from tri1 to tri2
     const travelDir = { x: c2x - c1x, y: c2y - c1y };

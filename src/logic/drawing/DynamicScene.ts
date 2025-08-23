@@ -1,6 +1,6 @@
 import { reactive } from "vue";
 import { Avatar, LaserBlast } from "../GameState";
-import { Agent } from "../Agent";
+import { Agent } from "../agents/Agent";
 
 // This is a POD class. No functions allowed.
 export class DynamicScene {

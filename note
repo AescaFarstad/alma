@@ -26,9 +26,17 @@ august 2
     point in triangle bugfix, two corners lookahead, corner crossing, slowing down before corner, intelligence, pooling
 august 6-7
     sprites
+
 august 8-13
     WASM implementation, parity 60 fps at 8000 agents (no render)
     improved pointInTriangle
+august 16-17
+    planning new polygon navmesh, implementing build, starting integration
+august 18-21
+    rewamping wasm initialization
+august 21-22
+    clearing inconsistencies, fixing leftovers, ui. selecting buildings, sync bboxes, buffer spatial indexes
+    ts and wasm parity on tiny navmesh
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -129,3 +137,68 @@ Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite i
 
 properly convert filter_geojson.cjs to filter_geojson.ts to be called in tsnode.
 convert the rest
+
+
+
+Use the same global structure for indexing and mapping
+Make triangulation abstract
+k-opt is just meh
+binary files must coexist with text files for clarity
+
+Proper logs about how many of each do we have
+
+
+pack polygons step
+verify step
+
+copy buildings data from navmesh step
+
+organise triangles in poly for binary search
+
+
+Analyze if the implementation of the new navmesh features is complete. Are all details nailed down? Does it follow the spec in terms of data sources, layouts, outputs?
+Is there anything questionable, ambiguos, suspicuos?
+a left-over? unfinished? a todo?
+There must not be any fallback. Failing fast is key.
+Note: k-opt step should be blank and producde no change, but allow the pipeline to continue.
+However, if it will be implemented, it is goign to change triangle to polygons relationships and completely redo polygons. Will that work fine?
+
+do not edit code.
+
+
+
+
+
+Triangle neighbors are computed but dropped
+future real k-opt would break finalize with current wiring
+
+
+Fake boundary buildings are incompatible with building I/O
+
+
+writeNavmeshText omits poly_centroids and building_meta (okay for debug, but note).
+Boundary validation does not fail the run
+
+add validation that there are no vertices that are too close to each other
+
+
+
+UI - get building by id get building by coordinate
+
+don't include sentinels in indexes
+
+what are we giving to wasm as initi buffer? is it safe to reinterpret it? Are we supplying more bytes than needed?
+
+parse building's meta
+
+
+building id has been changed from string to number
+buildingsById is not longer relevant, 
+
+why does main.cpp allocate. does it ever clear?
+
+bboxes and spatial indexes....
+
+remove obsolete isGridCorner
+
+if can't see next corner, check distance to the line between the corner and the last point from which you saw the corner

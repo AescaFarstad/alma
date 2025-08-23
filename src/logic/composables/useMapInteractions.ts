@@ -4,8 +4,24 @@ import type { GameState } from '../GameState';
 import type { SceneState } from '../drawing/SceneState';
 import { DragPan } from 'ol/interaction';
 import { PixiLayer } from '../Pixie';
+import { getBuildingGeometry } from '../../mapgen/simplification/geometryUtils';
+import { Point2 } from '../core/math';
 
 const DRAG_THRESHOLD = 5; // pixels
+
+function isPointInPolygon(point: { x: number; y: number }, polygon: Point2[]): boolean {
+  let isInside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x,
+      yi = polygon[i].y;
+    const xj = polygon[j].x,
+      yj = polygon[j].y;
+
+    const intersect = yi > point.y !== yj > point.y && point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+    if (intersect) isInside = !isInside;
+  }
+  return isInside;
+}
 
 export function useMapInteractions(
   map: OlMap | null,
@@ -177,13 +193,33 @@ export function useMapInteractions(
     map?.forEachFeatureAtPixel(e.pixel, (feature) => {
       featureClicked = true;
       if (pixieLayer.value && sceneState) {
-        const mapId = feature.get('id');
-        if (mapId && feature.get('type') === 'building' && gameState) {
-          if (sceneState.isBuildingSelected(mapId)) {
-            sceneState.deselectBuilding(mapId);
-          } else {
-            sceneState.selectBuilding(mapId);
+        const mapIdStr = feature.get('id');
+        if (mapIdStr && feature.get('type') === 'building' && gameState) {
+          const mapId = parseInt(mapIdStr, 10);
+          if (!isNaN(mapId)) {
+            if (sceneState.isBuildingSelected(mapId)) {
+              sceneState.deselectBuilding(mapId);
+            } else {
+              sceneState.selectBuilding(mapId);
+            }
           }
+        } else if (feature.get('type') === 'building' && gameState) {
+          // Fallback for features without an ID. We should never actually need this.
+          const clickCoordinate = { x: e.coordinate[0], y: e.coordinate[1] };
+          const candidateIds = gameState.navmesh.buildingIndex.query(clickCoordinate.x, clickCoordinate.y);
+          
+          for (const buildingId of candidateIds) {
+            const polygon = getBuildingGeometry(gameState.navmesh, buildingId);
+            if (polygon && isPointInPolygon(clickCoordinate, polygon)) {
+              if (sceneState.isBuildingSelected(buildingId)) {
+                sceneState.deselectBuilding(buildingId);
+              } else {
+                sceneState.selectBuilding(buildingId);
+              }
+              return; // Stop after finding the first match
+            }
+          }
+           console.warn('[Map] Clicked a building feature without an ID, and could not find a matching building geometry.');
         } else {
           console.warn('[Map] Feature has no id property or is not a building');
         }

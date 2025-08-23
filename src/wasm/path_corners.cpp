@@ -1,10 +1,11 @@
 #include "path_corners.h"
 #include "math_utils.h"
+#include "navmesh.h"
 #include <vector>
 #include <algorithm>
 
 // Global state dependencies
-extern NavmeshData navmesh_data;
+extern Navmesh g_navmesh;
 
 struct Portal {
     Point2 left;
@@ -17,6 +18,7 @@ static float triarea2(const Point2& p1, const Point2& p2, const Point2& p3);
 static bool isPointsEqual(const Point2& p1, const Point2& p2, float epsilon = 1e-6);
 static void funnel_dual(const std::vector<Portal>& portals, const std::vector<int>& corridor, DualCorner& result);
 static void apply_offset_to_point(Point2& point, int tri, const Point2& end_pos, float offset);
+static bool isGridCorner(const Point2& p, const SpatialIndex& triangleIndex);
 
 std::vector<Corner> findCorners(const std::vector<int>& corridor, const Point2& startPoint, const Point2& endPoint) {
     if (corridor.empty()) {
@@ -120,12 +122,10 @@ DualCorner find_next_corner(Point2 pos, const std::vector<int>& corridor, Point2
         return result;
     }
 
-    // Apply offset to corners if needed
-    if (offset > 0) {
+    // Apply offset to corners if needed - only when we have multiple corners
+    if (offset > 0 && result.numValid > 1) {
         apply_offset_to_point(result.corner1, result.tri1, end_pos, offset);
-        if (result.numValid == 2) {
-            apply_offset_to_point(result.corner2, result.tri2, end_pos, offset);
-        }
+        apply_offset_to_point(result.corner2, result.tri2, end_pos, offset);
     }
 
     return result;
@@ -146,8 +146,8 @@ static std::vector<Portal> getPortals(const std::vector<int>& corridor, const Po
 static Portal getPortalPoints(int tri1Idx, int tri2Idx) {
     std::vector<int> tri1Verts, tri2Verts;
     for(int i=0; i<3; ++i) {
-        tri1Verts.push_back(navmesh_data.triangles[tri1Idx * 3 + i]);
-        tri2Verts.push_back(navmesh_data.triangles[tri2Idx * 3 + i]);
+        tri1Verts.push_back(g_navmesh.triangles[tri1Idx * 3 + i]);
+        tri2Verts.push_back(g_navmesh.triangles[tri2Idx * 3 + i]);
     }
     
     std::vector<int> sharedVerts;
@@ -157,11 +157,11 @@ static Portal getPortalPoints(int tri1Idx, int tri2Idx) {
                           tri2Verts.begin(), tri2Verts.end(),
                           std::back_inserter(sharedVerts));
 
-    Point2 p1 = navmesh_data.points[sharedVerts[0]];
-    Point2 p2 = navmesh_data.points[sharedVerts[1]];
+    Point2 p1 = g_navmesh.vertices[sharedVerts[0]];
+    Point2 p2 = g_navmesh.vertices[sharedVerts[1]];
 
-    Point2 c1 = navmesh_data.centroids[tri1Idx];
-    Point2 c2 = navmesh_data.centroids[tri2Idx];
+    Point2 c1 = g_navmesh.triangle_centroids[tri1Idx];
+    Point2 c2 = g_navmesh.triangle_centroids[tri2Idx];
     
     Point2 travelDir = c2 - c1;
     Point2 edgeDir = p2 - p1;
@@ -337,54 +337,38 @@ static void apply_offset_to_point(Point2& point, int tri, const Point2& end_pos,
     bool isEndPoint = isPointsEqual(point, end_pos);
     if (isEndPoint) return;
     
-    // Search for nearby blobs using spatial index
-    BoundingBox searchBox = {
-        point.x - 0.1f,
-        point.y - 0.1f, 
-        point.x + 0.1f,
-        point.y + 0.1f
-    };
-    
-    std::vector<int> nearbyBlobs = blob_spatial_index.search(searchBox);
+    std::vector<int> nearbyBlobs = g_navmesh.blob_index.query(point);
     bool foundBlob = false;
     
-    for (int blobIndex : nearbyBlobs) {
-        const BlobGeometry& blob = blob_spatial_index.blobs[blobIndex];
-        
-        if (blob.points.empty()) continue;
+    for (int blobPolygonId : nearbyBlobs) {
+        int32_t vertStart = g_navmesh.polygons[blobPolygonId];
+        int32_t vertEnd = g_navmesh.polygons[blobPolygonId + 1];
         
         // Find matching vertex in blob geometry
-        for (size_t i = 0; i < blob.points.size(); ++i) {
-            const Point2& p = blob.points[i];
+        for (int32_t i = vertStart; i < vertEnd; ++i) {
+            const Point2& p = g_navmesh.vertices[g_navmesh.poly_verts[i]];
             
             if (isPointsEqual(p, point, 0.015f)) {
                 const Point2& B = point;
                 
-                // Find adjacent vertices
-                size_t prev_i = (i + blob.points.size() - 1) % blob.points.size();
-                Point2 A = blob.points[prev_i];
+                // Find adjacent vertices (wrap around the polygon)
+                int32_t prevIndex = (i == vertStart) ? vertEnd - 1 : i - 1;
+                int32_t nextIndex = (i == vertEnd - 1) ? vertStart : i + 1;
                 
-                size_t next_i = (i + 1) % blob.points.size();
-                Point2 C = blob.points[next_i];
+                Point2 A = g_navmesh.vertices[g_navmesh.poly_verts[prevIndex]];
+                Point2 C = g_navmesh.vertices[g_navmesh.poly_verts[nextIndex]];
 
                 Point2 tempV = B - A;
-                float len = sqrt(tempV.x * tempV.x + tempV.y * tempV.y);
-                if (len > 1e-6f) {
-                    tempV = tempV / len;
-                }
+                math::normalize_inplace(tempV);
                 
                 Point2 vec_CB = B - C;
-                len = sqrt(vec_CB.x * vec_CB.x + vec_CB.y * vec_CB.y);
-                if (len > 1e-6f) {
-                    vec_CB = vec_CB / len;
-                }
+                math::normalize_inplace(vec_CB);
                 
                 tempV = tempV + vec_CB;
 
-                float length_sq = tempV.x * tempV.x + tempV.y * tempV.y;
-                if (length_sq > 1e-6f) {
-                    float length = sqrt(length_sq);
-                    tempV = tempV / length;
+                float lenSq = math::length_sq(tempV);
+                if (lenSq > 1e-6f) {
+                    math::normalize_inplace(tempV);
                     tempV = tempV * offset;
                     point = point + tempV;
                 }
@@ -396,6 +380,17 @@ static void apply_offset_to_point(Point2& point, int tri, const Point2& end_pos,
         if (foundBlob) break;
     }
     
-    // Note: In the original TS, there was a check for gs.navmesh.triIndex.isGridCorner(point)
-    // but we don't have that functionality implemented yet, so we skip the warning
+    // Add grid corner check and warning if blob not found
+    if (!foundBlob) {
+        if (!isGridCorner(point, g_navmesh.triangle_index)) {
+            // Note: In C++, we can't use console.warn, so we use printf for debugging
+            printf("Could not find matching blob for corner, not applying offset. Point: (%.3f, %.3f)\n", 
+                   point.x, point.y);
+        }
+    }
+}
+
+static bool isGridCorner(const Point2& p, const SpatialIndex& triangleIndex) {
+    return (p.x == triangleIndex.minX || p.x == triangleIndex.maxX) && 
+           (p.y == triangleIndex.minY || p.y == triangleIndex.maxY);
 } 

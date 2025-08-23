@@ -2,6 +2,7 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { AREA_DEFINITION, FILTERED_OSM_FILE, RAW_FILTERING_AREA, RAW_OSM_FILE } from './areas/areaConfig.js';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,17 +13,13 @@ const STEPS_TO_RUN = {
     processOsm: false,
     filterGeojson: false,
     deduplication: false,
-    simplify: true,
+    simplify: false,
     buildNavmesh: true,
     generateTiles: false,
     copyData: true,
 } as const;
 
-const AREA_TO_EXTRACT: string = 'city_crop'; // 'city_center', 'city_main', or 'city_full'
-
 const BASE_DATA_DIR = path.resolve(__dirname, '../../data');
-const RAW_OSM_FILE = path.resolve(BASE_DATA_DIR, 'other/kazakhstan-latest.osm.pbf');
-const FILTERED_OSM_FILE = path.resolve(BASE_DATA_DIR, 'almaty_c.pbf');
 const STEP_1_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_1_processed_osm');
 const STEP_2_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_2_filtered_geojson');
 const STEP_3_OUTPUT_DIR = path.resolve(BASE_DATA_DIR, 'step_3_deduplicated_geojson');
@@ -35,7 +32,6 @@ const TILES_OUTPUT_DIR = path.resolve(__dirname, '../../public/tiles');
 const GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED = STEP_4_SIMPLIFY_DIR;
 const GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED = STEP_3_OUTPUT_DIR;
 
-const RAW_FILTERING_AREA: [number, number, number, number] = [76.80, 43.15, 77.05, 43.35];
 
 const FEATURES_TO_EXTRACT = {
     // Built environment
@@ -125,7 +121,7 @@ function stepEnsureFilteredPbf(): void {
 function stepProcessOsm(): void {
     const scriptPath = path.resolve(__dirname, 'process_osm_data.ts');
     const config = JSON.stringify({
-        areaToExtract: AREA_TO_EXTRACT,
+        areaDefinition: AREA_DEFINITION.city_crop,
         featuresToExtract: FEATURES_TO_EXTRACT,
         outputDir: STEP_1_OUTPUT_DIR,
         structureOutputFile: path.resolve(STEP_1_OUTPUT_DIR, 'structure.ts'),
@@ -151,7 +147,9 @@ function stepDeduplicateGeojson(): void {
 // --- Step 4: Simplify GeoJSON ---
 function stepSimplify(): void {
     const scriptPath = path.resolve(__dirname, 'simplify.ts');
-    execSync(`npm run ts-node "${scriptPath}" -- --input="${STEP_3_OUTPUT_DIR}" --output="${STEP_4_SIMPLIFY_DIR}"`, { stdio: 'inherit' });
+    const areaDef = AREA_DEFINITION.city_crop;
+    const splitLinesArg = areaDef.splitLines ? `--split-lines='${JSON.stringify(areaDef.splitLines)}'` : '';
+    execSync(`npm run ts-node "${scriptPath}" -- --input="${STEP_3_OUTPUT_DIR}" --output="${STEP_4_SIMPLIFY_DIR}" ${splitLinesArg}`, { stdio: 'inherit' });
 }
 
 // --- Step 5: Build NavMesh ---
@@ -169,19 +167,23 @@ function stepCopyData(): void {
 
     console.log(`Copying files from ${GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED} and ${GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED} to ${FINAL_DATA_DIR}...`);
     const filesToCopy = [
-        { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_simplified.geojson' },
-        { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_s7.txt' },
-        { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'blobs.txt' },
-        { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'buildings.geojson' },
-        { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'roads.geojson' },
+        // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_simplified.geojson' },
+        // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_s7.txt' },
+        // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'blobs.txt' },
+        // { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'buildings.geojson' },
+        { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'roads.geojson', rename: 'map_render_roads.geojson' },
         { from: STEP_5_NAVMESH_DIR, file: 'navmesh.txt' },
+        { from: STEP_5_NAVMESH_DIR, file: 'navmesh.bin' },
+        { from: STEP_5_NAVMESH_DIR, file: 'building_properties.json' },
+        { from: STEP_5_NAVMESH_DIR, file: 'map_render_buildings.geojson' },
     ];
 
-    for (const { from, file } of filesToCopy) {
+    for (const { from, file, rename } of filesToCopy) {
         const sourcePath = path.join(from, file);
+        const targetFileName = rename || file;
         if (fs.existsSync(sourcePath)) {
-            fs.copyFileSync(sourcePath, path.join(FINAL_DATA_DIR, file));
-            console.log(`  - Copied ${file}`);
+            fs.copyFileSync(sourcePath, path.join(FINAL_DATA_DIR, targetFileName));
+            console.log(`  - Copied ${file} -> ${targetFileName}`);
         } else {
             console.warn(`  - WARNING: File not found, skipped copying: ${file}`);
         }

@@ -3,9 +3,9 @@ import { PrimitiveState } from './PrimitiveState';
 import { PolyStyle, CircleStyle, TextStyle, LineStyle } from './PrimitiveState';
 import { TextStyle as PIXITextStyle } from 'pixi.js';
 import { SceneState } from './SceneState';
-import { getBuildingById } from '../GeoJsonStore';
 import { mapInstance } from '../../map_instance';
 import { cvtExp } from '../core/math';
+import { getBuildingGeometry } from '../../mapgen/simplification/geometryUtils';
 
 const selectedBuildingPolyStyle: PolyStyle = {
     fillStyle: { color: 0x0000FF, alpha: 0.4 },
@@ -90,7 +90,7 @@ const debugAreaStyles: Record<string, PolyStyle> = Object.fromEntries(
 );
 
 export class DrawScene {
-    public static buildPrimitives(primitives: PrimitiveState, sceneState: SceneState, _gameState: GameState) {
+    public static buildPrimitives(primitives: PrimitiveState, sceneState: SceneState, gameState: GameState) {
         primitives.clear();
         let r = 0;
         const zoom = mapInstance.map?.getView().getZoom() || 0;
@@ -98,32 +98,19 @@ export class DrawScene {
         const dynamicRadius = cvtExp(zoom, 3.5, 10, 8, 2, true);
 
         for (const id of Array.from(sceneState.selectedBuildingIds)) {
-            const buildingFeature = getBuildingById(id);
-            if (!buildingFeature || !buildingFeature.geometry) continue;
+            const points = getBuildingGeometry(gameState.navmesh, id);
+            if (!points) continue;
 
-            const processPolygon = (polygonCoords: number[][][]) => {
-                for (const ring of polygonCoords) { // A polygon can have multiple rings (for holes)
-                    const flattenedRing = new Array(ring.length * 2);
-                    for (let i = 0; i < ring.length; i++) {
-                        const point = ring[i];
-                        const x = point[0];
-                        const y = -point[1];
-                        flattenedRing[i * 2] = x;
-                        flattenedRing[i * 2 + 1] = y;
-                        primitives.addCircle(x, y, 0.5, vertexCircleStyle);
-                    }
-                    primitives.addPolygon(flattenedRing, selectedBuildingPolyStyle);
-                }
-            };
-
-            if (buildingFeature.geometry.type === 'Polygon') {
-                processPolygon(buildingFeature.geometry.coordinates as number[][][]);
-            } else if (buildingFeature.geometry.type === 'MultiPolygon') {
-                const multiPoly = buildingFeature.geometry.coordinates as number[][][][];
-                for (const polygon of multiPoly) {
-                    processPolygon(polygon);
-                }
+            const flattenedRing = new Array(points.length * 2);
+            for (let i = 0; i < points.length; i++) {
+                const point = points[i];
+                const x = point.x;
+                const y = -point.y;
+                flattenedRing[i * 2] = x;
+                flattenedRing[i * 2 + 1] = y;
+                primitives.addCircle(x, y, 0.5, vertexCircleStyle);
             }
+            primitives.addPolygon(flattenedRing, selectedBuildingPolyStyle);
         }
         for (const [, simplifiedGeometry] of sceneState.simplifiedGeometries) {
             const n = simplifiedGeometry.length;
@@ -140,8 +127,8 @@ export class DrawScene {
             primitives.addPolygon(flattenedRing, simplifiedBuildingPolyStyle);
         }
 
-        for (let i = 0; i < _gameState.pointMarks.length; i++) {
-            const pointMark = _gameState.pointMarks[i];
+        for (let i = 0; i < gameState.pointMarks.length; i++) {
+            const pointMark = gameState.pointMarks[i];
             const style = sceneState.isPointMarkSelected(pointMark.id)
                 ? selectedPointMarkStyle
                 : pointMarkStyle;
@@ -295,26 +282,26 @@ export class DrawScene {
             if (triangles.length === 0) continue;
 
             const style = debugAreaStyles[color];
-            if (style && _gameState.navmesh) {
+            if (style && gameState.navmesh) {
                 for (const debugTriangle of triangles) {
                     const triIdx = debugTriangle.index;
-                    const navmesh = _gameState.navmesh;
+                    const navmesh = gameState.navmesh;
                     
                     const p1Index = navmesh.triangles[triIdx * 3];
                     const p2Index = navmesh.triangles[triIdx * 3 + 1];
                     const p3Index = navmesh.triangles[triIdx * 3 + 2];
 
-                    const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-                    const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
-                    const p3 = { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] };
+                    const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
+                    const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
+                    const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
 
                     const flattenedTriangle = [p1.x, -p1.y, p2.x, -p2.y, p3.x, -p3.y];
                     primitives.addPolygon(flattenedTriangle, style);
 
                     // Add optional text
                     if (debugTriangle.text) {
-                        const centroidX = navmesh.centroids[triIdx * 2];
-                        const centroidY = navmesh.centroids[triIdx * 2 + 1];
+                                    const centroidX = navmesh.triangle_centroids[triIdx * 2];
+            const centroidY = navmesh.triangle_centroids[triIdx * 2 + 1];
                         primitives.addText(debugTriangle.text, centroidX, -centroidY, vertexTextStyle);
                     }
                 }
@@ -329,16 +316,16 @@ export class DrawScene {
             if (blueStyle) {
                 for (const corridor of corridors) {
                     // Get the navmesh from gameState to render triangle geometry
-                    const navmesh = _gameState.navmesh;
+                    const navmesh = gameState.navmesh;
                     if (navmesh) {
                         for (const triIdx of corridor.triangleIndices) {
                             const p1Index = navmesh.triangles[triIdx * 3];
                             const p2Index = navmesh.triangles[triIdx * 3 + 1];
                             const p3Index = navmesh.triangles[triIdx * 3 + 2];
 
-                            const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-                            const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
-                            const p3 = { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] };
+                            const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
+                            const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
+                            const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
 
                             const flattenedTriangle = [p1.x, -p1.y, p2.x, -p2.y, p3.x, -p3.y];
                             primitives.addPolygon(flattenedTriangle, blueStyle);

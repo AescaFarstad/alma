@@ -35,8 +35,8 @@ function getSharedEdgeMidpoint(navmesh: Navmesh, tri1: number, tri2: number): Po
         if (navmesh.neighbors[tri1 * 3 + i] === tri2) {
             const p1Index = navmesh.triangles[tri1 * 3 + ((i + 1) % 3)];
             const p2Index = navmesh.triangles[tri1 * 3 + ((i + 2) % 3)];
-            const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-            const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
+            const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
+            const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
             return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
         }
     }
@@ -74,7 +74,7 @@ export function findCorridorByEdge(
     // To start the search, we add all edges of the start triangle to the open set
     for (let i = 0; i < 3; i++) {
         const neighbor = navmesh.neighbors[startTri * 3 + i];
-        if (neighbor !== -1) {
+        if (neighbor < navmesh.walkable_triangle_count) {
             const edgeMidpoint = getSharedEdgeMidpoint(navmesh, startTri, neighbor);
             if (!edgeMidpoint) continue;
 
@@ -82,7 +82,7 @@ export function findCorridorByEdge(
             const cost = Math.hypot(edgeMidpoint.x - startPoint.x, edgeMidpoint.y - startPoint.y);
             gScore.set(key, cost);
 
-            const endCentroid = { x: navmesh.centroids[endTri * 2], y: navmesh.centroids[endTri * 2 + 1] };
+            const endCentroid = { x: navmesh.triangle_centroids[endTri * 2], y: navmesh.triangle_centroids[endTri * 2 + 1] };
             const heuristic = Math.hypot(endCentroid.x - edgeMidpoint.x, endCentroid.y - edgeMidpoint.y);
             
             openSet.enqueue(key, cost + heuristic);
@@ -126,7 +126,7 @@ export function findCorridorByEdge(
         for (let i = 0; i < 3; i++) {
             const neighbor = navmesh.neighbors[currentTri * 3 + i];
             // Don't go back to the triangle we just came from
-            if (neighbor === -1 || neighbor === fromTri) {
+            if (neighbor >= navmesh.walkable_triangle_count || neighbor === fromTri) {
                 continue;
             }
 
@@ -142,7 +142,7 @@ export function findCorridorByEdge(
                 gScore.set(neighborKey, tentativeGScore);
                 
                 // Heuristic from the exit edge to the end point for fScore
-                 const endCentroid = { x: navmesh.centroids[endTri * 2], y: navmesh.centroids[endTri * 2 + 1] };
+                 const endCentroid = { x: navmesh.triangle_centroids[endTri * 2], y: navmesh.triangle_centroids[endTri * 2 + 1] };
                 const heuristic = Math.hypot(endCentroid.x - exitMidpoint.x, endCentroid.y - exitMidpoint.y);
 
                 const fScoreValue = tentativeGScore + heuristic;

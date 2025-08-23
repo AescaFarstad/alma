@@ -1,6 +1,6 @@
 #include "agent_navigation.h"
 #include "math_utils.h"
-#include "nav_tri_index.h"
+#include "nav_utils.h"
 #include "path_corridor.h"
 #include "path_corners.h"
 #include "raycasting.h"
@@ -8,16 +8,13 @@
 #include <iostream>
 #include <iomanip> // Required for std::fixed and std::setprecision
 
-extern NavmeshData navmesh_data;
+extern Navmesh g_navmesh;
 extern float g_sim_time;
 
 // Temporary vectors for demarkation line crossing calculations
 Point2 tempLineVec = {0, 0};
 Point2 tempCurrentVec = {0, 0};
 Point2 tempLastVec = {0, 0};
-
-
-
 
 DualCorner find_next_corner_wasm(int agentIndex) {
     // Create a view of the corridor from the current index onwards
@@ -94,28 +91,33 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         }
         if (agent_data.current_tris[agentIndex] == -1) return;
 
-        // Log RNG before using seed (parity with TS)
-        
-
         // Area-limited random selection to match TS
-        int endNode = get_random_triangle_in_area(0.0f, 0.0f, 15, *rng_seed);
+        int endNode = get_random_triangle_in_area({0.0f, 0.0f}, 15, rng_seed);
 
         // Advance seed once, same as TS
         *rng_seed = math::advance_seed_cpp(*rng_seed);
-        if (endNode == -1) endNode = get_random_triangle();
+        if (endNode == -1) endNode = get_random_triangle(rng_seed);
         
-        agent_data.end_targets[agentIndex] = navmesh_data.centroids[endNode];
+        agent_data.end_targets[agentIndex] = g_navmesh.triangle_centroids[endNode];
         agent_data.end_target_tris[agentIndex] = endNode;
         agent_data.predicament_ratings[agentIndex] = 0;
         agent_data.corridors[agentIndex].clear();
         agent_data.corridor_indices[agentIndex] = 0;
 
+        const auto& target = agent_data.end_targets[agentIndex];
+        std::cout << std::fixed << std::setprecision(1)
+                    << "[WA Agent] Standing -> finding path from tri " << agent_data.current_tris[agentIndex]
+                    << " to tri " << endNode << ", target: (" << target.x << ", " << target.y << ")" << std::endl;
         
         
         
         find_path_to_destination_wasm(agentIndex, agent_data.current_tris[agentIndex], endNode);
         if(agent_data.num_valid_corners[agentIndex] > 0){
              agent_data.states[agentIndex] = AgentState::Traveling;
+            const auto& target = agent_data.end_targets[agentIndex];
+            std::cout << std::fixed << std::setprecision(2)
+                        << "[WA Agent] Path found! State changed to Traveling. Corridor length: " << agent_data.corridors[agentIndex].size()
+                        << ". Target: (" << target.x << ", " << target.y << ") tri:" << agent_data.end_target_tris[agentIndex] << std::endl;
         }
     } 
     // State: Traveling - Follow the path, check for deviations.
@@ -257,7 +259,12 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
             agent_data.states[agentIndex] = AgentState::Standing;
             agent_data.corridors[agentIndex].clear();
             agent_data.corridor_indices[agentIndex] = 0;
-            
+            const Point2& pos = agent_data.positions[agentIndex];
+            const Point2& target = agent_data.end_targets[agentIndex];
+            std::cout << std::fixed << std::setprecision(2) 
+                        << "[WA Agent] Arrived at destination. State changed to Standing. Pos: ("
+                        << pos.x << ", " << pos.y << "), Target: ("
+                        << target.x << ", " << target.y << ")" << std::endl;
         } else if (agent_data.num_valid_corners[agentIndex] == 0) {
              std::cerr << "Pathfinding failed to find a corner after the current one for agent " << agentIndex << std::endl;
         }

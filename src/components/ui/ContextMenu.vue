@@ -2,9 +2,11 @@
   <div v-if="visible" class="context-menu" :style="{ top: y + 'px', left: x + 'px' }">
     <ul>
       <li @click="addPointMark">Add Point Mark</li>
+      <li @click="moveNearestPointMark">Move nearest Point mark</li>
       <li @click="copyCoordinates">Copy coords</li>
       <li @click="copyCoordinatesJSON">Copy coords J</li>
       <li @click="copyAgentState">Copy Agent State</li>
+      <li @click="copyWAgentState">Copy WAgent State</li>
       <li @click="toggleAgentDebug">Toggle Agent Debug</li>
       <li @click="drawTriangles">Draw Triangles</li>
     </ul>
@@ -14,6 +16,7 @@
 <script setup lang="ts">
 import { defineProps, defineEmits, inject, ref, reactive, watch } from 'vue';
 import type { GameState } from '../../logic/GameState';
+import { WAgent, serialize_wagent } from '../../logic/WAgent';
 import { SceneState } from '../../logic/drawing/SceneState';
 import { usePointMarks } from '../../logic/composables/usePointMarks';
 import { useNavmeshTrianglesDebug } from '../../logic/composables/useNavmeshTrianglesDebug';
@@ -41,7 +44,7 @@ watch(() => props.coordinate, (newVal) => {
   }
 });
 
-const { addPointMark: addPointMarkComposable } = usePointMarks(
+const { addPointMark: addPointMarkComposable, moveNearestPointMark: moveNearestPointMarkComposable } = usePointMarks(
   gameState!,
   sceneState!,
   localContextMenuState
@@ -50,6 +53,11 @@ const { drawTriangles: drawDebugTriangles } = useNavmeshTrianglesDebug(gameState
 
 const addPointMark = () => {
   addPointMarkComposable();
+  emit('hide');
+};
+
+const moveNearestPointMark = () => {
+  moveNearestPointMarkComposable();
   emit('hide');
 };
 
@@ -109,6 +117,47 @@ const copyAgentState = () => {
     navigator.clipboard.writeText(agentState).catch((err) => {
       console.error('Could not copy agent state: ', err);
     });
+  }
+
+  emit('hide');
+};
+
+const copyWAgentState = () => {
+  if (!gameState || !props.coordinate) return;
+
+  const { lng, lat } = props.coordinate;
+  let nearestAgent: WAgent | null = null;
+  let minDistance = Infinity;
+
+  const wasm_agents = gameState.wasm_agents;
+  if (!wasm_agents.positions) {
+    console.error("WASM agents not initialized");
+    emit('hide');
+    return;
+  }
+
+  // Find nearest WAgent
+  for (const agent of gameState.wagents) {
+    const agentIndex = agent.agentIndex;
+    const agentX = wasm_agents.positions[agentIndex * 2];
+    const agentY = wasm_agents.positions[agentIndex * 2 + 1];
+
+    const distance = Math.sqrt(Math.pow(agentX - lng, 2) + Math.pow(agentY - lat, 2));
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearestAgent = agent;
+    }
+  }
+
+  if (nearestAgent) {
+    const state = serialize_wagent(gameState, nearestAgent.agentIndex);
+
+    if (state) {
+      const agentState = customStringify(state);
+      navigator.clipboard.writeText(agentState).catch((err) => {
+        console.error('Could not copy agent state: ', err);
+      });
+    }
   }
 
   emit('hide');

@@ -1,16 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import minimist from 'minimist';
-import { flatten } from '../logic/simplification/flattening';
-import { unround } from '../logic/simplification/unrounding';
-import { uniteGeometries, type BuildingWithPolygon, type UnitedGroup } from '../logic/simplification/unite';
-import { getPointsFromBuildingFeature, createPolygonFeature, formatCoordsRounded, type BuildingFeature } from '../logic/simplification/geometryUtils';
-import { simplifyWithDilationErosion } from '../logic/simplification/dilationErosion';
-import { cornerize } from '../logic/simplification/cornerize';
+import { flatten } from './simplification/flattening';
+import { unround } from './simplification/unrounding';
+import { uniteGeometries, type BuildingWithPolygon, type UnitedGroup } from './simplification/unite';
+import { getPointsFromBuildingFeature, createPolygonFeature, formatCoordsRounded, type BuildingFeature } from './simplification/geometryUtils';
+import { simplifyWithDilationErosion } from './simplification/dilationErosion';
+import { cornerize } from './simplification/cornerize';
 
 import type { FeatureCollection } from 'geojson';
 import type { Point2 } from '../logic/core/math';
-import { pullAway } from '../logic/simplification/pullAway';
+import { pullAway } from './simplification/pullAway';
+import { createBlobs } from './create_blobs';
 
 const SIMPLIFICATION_INFLATION = 3.6;
 const MERGE_INFLATION = 2;
@@ -20,6 +21,8 @@ const SAFE_TO_SKIP_AREA = 20;
 const RUN_S6 = true;
 const RUN_BLOBS = true;
 const RUN_S7 = true;
+
+type SplitLine = Point2[];
 
 // Helper function to calculate polygon area
 function calculatePolygonArea(points: Point2[]): number {
@@ -37,14 +40,101 @@ function calculatePolygonArea(points: Point2[]): number {
 }
 
 
+function chooseRayDirection(line: SplitLine): Point2 {
+    const directions = [
+        { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
+        { x: 0.707, y: 0.707 }, { x: -0.707, y: 0.707 }, { x: 0.707, y: -0.707 }, { x: -0.707, y: -0.707 }
+    ];
+
+    let bestDirection = directions[0];
+    let minMaxDotProduct = Infinity;
+
+    for (const dir of directions) {
+        let maxDotProduct = -Infinity;
+        for (let i = 0; i < line.length - 1; i++) {
+            const segStart = line[i];
+            const segEnd = line[i + 1];
+            let segVec = { x: segEnd.x - segStart.x, y: segEnd.y - segStart.y };
+            const len = Math.sqrt(segVec.x * segVec.x + segVec.y * segVec.y);
+            if (len > 0) {
+                segVec.x /= len;
+                segVec.y /= len;
+            }
+
+            let dotProduct = Math.abs(dir.x * segVec.x + dir.y * segVec.y);
+            if (i === 0 || i === line.length - 2) {
+                dotProduct /= 2;
+            }
+
+            if (dotProduct > maxDotProduct) {
+                maxDotProduct = dotProduct;
+            }
+        }
+        if (maxDotProduct < minMaxDotProduct) {
+            minMaxDotProduct = maxDotProduct;
+            bestDirection = dir;
+        }
+    }
+
+    return bestDirection;
+}
+
+function isIntersecting(p1: Point2, p2: Point2, p3: Point2, p4: Point2): boolean {
+    const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
+    if (d === 0) return false;
+    const t = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / d;
+    const u = -((p2.y - p1.y) * (p1.x - p3.x) - (p2.x - p1.x) * (p1.y - p3.y)) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+}
+
+function getSideOfLine(point: Point2, line: SplitLine, rayDir: Point2): number {
+    let intersections = 0;
+    const rayEnd = { x: point.x + rayDir.x * 1e9, y: point.y + rayDir.y * 1e9 }; 
+
+    for (let i = 0; i < line.length - 1; i++) {
+        const segStart = line[i];
+        const segEnd = line[i + 1];
+        if (isIntersecting(point, rayEnd, segStart, segEnd)) {
+            intersections++;
+        }
+    }
+    
+    const firstSeg = line[0];
+    const firstSegDir = { x: line[1].x - firstSeg.x, y: line[1].y - firstSeg.y };
+    const rayStart = { x: firstSeg.x - firstSegDir.x * 1e9, y: firstSeg.y - firstSegDir.y * 1e9 };
+    if (isIntersecting(point, rayEnd, rayStart, firstSeg)) {
+        intersections++;
+    }
+
+    const lastSegEnd = line[line.length - 1];
+    const lastSegDir = { x: lastSegEnd.x - line[line.length - 2].x, y: lastSegEnd.y - line[line.length - 2].y };
+    const rayEndSeg = { x: lastSegEnd.x + lastSegDir.x * 1e9, y: lastSegEnd.y + lastSegDir.y * 1e9 };
+    if (isIntersecting(point, rayEnd, lastSegEnd, rayEndSeg)) {
+        intersections++;
+    }
+
+    return intersections % 2;
+}
+
 
 async function main() {
     const args = minimist(process.argv.slice(2));
     const inputDir = args.input;
     const outputDir = args.output;
+    const splitLinesArg = args['split-lines'];
+
+    let splitLines: SplitLine[] = [];
+    if (splitLinesArg) {
+        try {
+            splitLines = JSON.parse(splitLinesArg);
+            console.log(`Loaded ${splitLines.length} split lines for partitioning.`);
+        } catch (e) {
+            console.error('Error parsing split-lines argument:', e);
+        }
+    }
 
     if (!inputDir || !outputDir) {
-        console.error('Usage: ts-node simplify.ts --input <input_dir> --output <output_dir>');
+        console.error('Usage: ts-node simplify.ts --input <input_dir> --output <output_dir> [--split-lines <json_string>]');
         process.exit(1);
     }
 
@@ -186,59 +276,7 @@ async function main() {
 
     // 5. Unite all buildings into blobs
     if (RUN_BLOBS) {
-        console.log('Uniting all buildings into blobs...');
-        const buildingsForUnite: BuildingWithPolygon[] = correctedBuildings.map(b => {
-            let points = getPointsFromBuildingFeature(b);
-            if (!points) {
-                throw new Error(`Cannot extract points from building ${b.id} for blob generation`);
-            }
-            
-            points = unround(points, 10, 0.45);
-            points = flatten(points, 3);
-
-            return {
-                id: b.id!,
-                polygon: points
-            };
-        });
-        
-        let allPoints = buildingsForUnite.flatMap(g => g.polygon);
-        
-        let unitedBlobs: UnitedGroup[] = [];
-        const startedAt = Date.now();
-        unitedBlobs = await uniteGeometries(buildingsForUnite, MERGE_INFLATION);
-        console.log(`uniteGeometries finished. Found ${unitedBlobs.length} blobs in ${Date.now() - startedAt}ms`);
-
-        let blobOutput = '';
-        let totalBlobVertices = 0;
-        let blobsSkippedCount = 0;
-        unitedBlobs.forEach((group, index) => {
-            let simplified = pullAway(group.geom, 1, 5);
-            simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
-            simplified = unround(simplified, 10, 0.45);
-            simplified = flatten(simplified, 3);
-            simplified = unround(simplified, 10, 0.5);
-            simplified = flatten(simplified, 5);
-            simplified = unround(simplified, 5, 0.55);
-            simplified = flatten(simplified, 7);
-            simplified = unround(simplified, 5, 0.55);
-            
-            if (simplified.length < 3 && calculatePolygonArea(simplified) < SAFE_TO_SKIP_AREA) {
-                blobsSkippedCount++;
-                return;
-            }
-            totalBlobVertices += simplified.length;
-            
-            const blobBuildings = group.buildings.join(',');
-            const coordsStr = formatCoordsRounded(simplified, 2);
-            blobOutput += `${index};[${blobBuildings}];[${coordsStr}]\n`;
-        });
-        
-        console.log(`Blobs: Skipped ${blobsSkippedCount} blobs with < 3 vertices and area < ${SAFE_TO_SKIP_AREA}.`);
-        console.log(`Blob vertices: ${totalBlobVertices}`);
-        
-        fs.writeFileSync(path.join(outputDir, 'blobs.txt'), blobOutput);
-        console.log('Blobs saved to blobs.txt');
+        await createBlobs(correctedBuildings, splitLines, outputDir, MERGE_INFLATION, SAFE_TO_SKIP_AREA);
     }
 
     // 6. Simplify with S7 logic

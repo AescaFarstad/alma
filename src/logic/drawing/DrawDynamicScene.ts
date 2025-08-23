@@ -2,7 +2,7 @@ import { PrimitiveState, PolyStyle, LineStyle } from './PrimitiveState';
 import { DynamicScene } from './DynamicScene';
 import { GameState } from '../GameState';
 import { Map as OlMap } from 'ol';
-import { AgentState } from '../Agent';
+import { AgentState } from '../agents/Agent';
 
 const laserBlastLineStyle: LineStyle = {
     width: 2,
@@ -41,9 +41,9 @@ export class DrawDynamicScene {
                     const p2Index = gameState.navmesh.triangles[triIdx * 3 + 1];
                     const p3Index = gameState.navmesh.triangles[triIdx * 3 + 2];
 
-                    const p1 = { x: gameState.navmesh.points[p1Index * 2], y: gameState.navmesh.points[p1Index * 2 + 1] };
-                    const p2 = { x: gameState.navmesh.points[p2Index * 2], y: gameState.navmesh.points[p2Index * 2 + 1] };
-                    const p3 = { x: gameState.navmesh.points[p3Index * 2], y: gameState.navmesh.points[p3Index * 2 + 1] };
+                    const p1 = { x: gameState.navmesh.vertices[p1Index * 2], y: gameState.navmesh.vertices[p1Index * 2 + 1] };
+                    const p2 = { x: gameState.navmesh.vertices[p2Index * 2], y: gameState.navmesh.vertices[p2Index * 2 + 1] };
+                    const p3 = { x: gameState.navmesh.vertices[p3Index * 2], y: gameState.navmesh.vertices[p3Index * 2 + 1] };
 
                     const flattenedTriangle = [p1.x, -p1.y, p2.x, -p2.y, p3.x, -p3.y];
                     primitives.addPolygon(flattenedTriangle, laserCorridorPolyStyle);

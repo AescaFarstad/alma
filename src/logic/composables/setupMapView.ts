@@ -6,10 +6,11 @@ import { defaults as defaultInteractions } from 'ol/interaction';
 import { createStaticLayers } from '../../map/staticLayers';
 import { createDynamicLayers } from '../../map/dynamicLayers';
 import { createDynamicCombinedLayers } from '../../map/dynamicCombinedLayers';
+import { ensureDataLoaded } from '../GeoJsonStore';
 
 type TileMode = 'static' | 'dynamic_separate' | 'dynamic_combined';
 
-export function setupMapView(
+export async function setupMapView(
   target: HTMLDivElement,
   tileMode: TileMode,
   layerVisibility: Record<string, boolean>
@@ -73,6 +74,11 @@ export function setupMapView(
       resolution: map.getView().getResolution(),
       resolutions: map.getView().getResolutions(),
     });
+  }
+
+  // Ensure GeoJSON data is loaded for dynamic modes
+  if (tileMode === 'dynamic_separate' || tileMode === 'dynamic_combined') {
+    await ensureDataLoaded();
   }
 
   switch (tileMode) {

@@ -25,7 +25,7 @@ interface FeaturesToExtract {
 }
 
 interface ProcessOSMConfig {
-    areaToExtract: string;
+    areaDefinition: AreaDefinition;
     featuresToExtract: FeaturesToExtract;
     outputDir: string;
     structureOutputFile: string;
@@ -35,25 +35,6 @@ interface ProcessOSMConfig {
 
 
 // Area definitions
-const AREA_DEFINITIONS: Record<string, AreaDefinition> = {
-    city_center: {
-        bounds: [76.88, 43.22, 76.98, 43.27],
-        description: 'Downtown Almaty (~25 km²)'
-    },
-    city_crop: {
-        bounds: [76.91, 43.21, 76.99, 43.28],
-        description: 'Downtown Almaty squareish (~35 km²)'
-    },
-    city_main: {
-        bounds: [76.85, 43.20, 77.00, 43.30],
-        description: 'Main urban area (~100 km²)'
-    },
-    city_full: {
-        bounds: [76.80, 43.18, 77.05, 43.35],
-        description: 'Full city limits (~320 km²)'
-    }
-};
-
 class OSMProcessor {
     private config: ProcessOSMConfig;
     private outputDir: string;
@@ -71,13 +52,9 @@ class OSMProcessor {
         this.outputDir = config.outputDir;
         this.tempDir = config.tempDir;
         this.sourceFile = config.sourceFile;
-        this.selectedArea = AREA_DEFINITIONS[config.areaToExtract];
+        this.selectedArea = config.areaDefinition;
         this.featuresToExtract = config.featuresToExtract;
         this.structureOutputFile = config.structureOutputFile;
-
-        if (!this.selectedArea) {
-            throw new Error(`Unknown area: ${config.areaToExtract}. Available areas: ${Object.keys(AREA_DEFINITIONS).join(', ')}`);
-        }
 
         this.outputFilenames = Object.keys(this.featuresToExtract).reduce((acc, key) => {
             acc[key] = `${key}.geojson`;
@@ -87,7 +64,7 @@ class OSMProcessor {
 
     async init(): Promise<void> {
         console.log('=== Initializing OSM Data Processor ===');
-        console.log(`Area: ${this.config.areaToExtract} - ${this.selectedArea.description}`);
+        console.log(`Area: ${this.selectedArea.description}`);
         console.log(`Features: ${Object.keys(this.featuresToExtract).join(', ')}`);
         
         await this.ensureDir(this.outputDir);

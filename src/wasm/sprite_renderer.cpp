@@ -11,7 +11,6 @@
 #include "data_structures.h"
 
 // Pull SoA and counters from main TU (C++ linkage)
-extern int active_agents;
 extern AgentSoA agent_data;
 
 namespace {
@@ -177,7 +176,7 @@ void ensureTexture() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
-void renderInstances(const float* m3x3) {
+void renderInstances(const float* m3x3, int active_agents) {
     const float scaleWorld = 2.5f;
 
     int aliveCount = 0;
@@ -304,7 +303,7 @@ EMSCRIPTEN_KEEPALIVE void set_renderer_debug(int enable) {
     g_debugOverlay = (enable != 0);
 }
 
-EMSCRIPTEN_KEEPALIVE void update_rt(float dt, const float* m3x3, int widthPx, int heightPx, float dpr) {
+EMSCRIPTEN_KEEPALIVE void render(float dt, int active_agents, const float* m3x3, int widthPx, int heightPx, float dpr) {
     (void)dt;
     if (!g_ctx) return;
     emscripten_webgl_make_context_current(g_ctx);
@@ -334,7 +333,7 @@ EMSCRIPTEN_KEEPALIVE void update_rt(float dt, const float* m3x3, int widthPx, in
     ensurePipeline();
     ensureTexture();
 
-    renderInstances(m3x3);
+    renderInstances(m3x3, active_agents);
 }
 
 EMSCRIPTEN_KEEPALIVE void sprite_renderer_clear() {

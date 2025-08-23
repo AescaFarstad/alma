@@ -4,25 +4,22 @@
 #include "data_structures.h"
 #include "agent_init.h"
 #include "math_utils.h"
-#include "nav_tri_index.h"
 #include "agent_move_phys.h"
 #include "agent_navigation.h"
 #include "agent_grid.h"
 #include "agent_collision.h"
 #include "agent_statistic.h"
-#include "blob_spatial_index.h"
 #include "constants_layout.h"
+#include "init_navmesh.h"
+#include "navmesh.h"
+#include "nav_utils.h"
 #include <vector>
 #include "sprite_renderer.h"
+#include "model.h"
 
 // Global state for our agent simulation
 AgentSoA agent_data;
-NavmeshData navmesh_data;
-NavmeshBBox navmesh_bbox;
-int active_agents = 0;
-uint64_t g_rng_seed = 12345;
-// Global sim time for logging
-float g_sim_time = 0.0f;
+Model g_model;
 // Transient per-agent flags (not shared with JS)
 std::vector<uint8_t> g_wall_contact; // 0 = no contact, 1 = in contact
 
@@ -33,12 +30,11 @@ extern "C" {
 
 // Simple persistent allocators for JS to request linear memory blocks
 EMSCRIPTEN_KEEPALIVE uint8_t* wasm_alloc(int size) {
-    if (size <= 0) return nullptr;
-    return new (std::nothrow) uint8_t[size];
+    return (uint8_t*)malloc(size);
 }
 
 EMSCRIPTEN_KEEPALIVE void wasm_free(uint8_t* ptr) {
-    delete[] ptr;
+    free(ptr);
 }
 
 // Allow JS to set RNG seed deterministically
@@ -49,29 +45,46 @@ EMSCRIPTEN_KEEPALIVE void set_rng_seed(uint32_t seed) {
 // Register constants buffer provided by JS/TS
 EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf) {
     g_constants_buffer = buf;
+
+    printf("--- C++ NavConst Values ---\n");
+    printf("STUCK_PASSIVE_X1: %f\n", STUCK_PASSIVE_X1);
+    printf("STUCK_DST_X2: %f\n", STUCK_DST_X2);
+    printf("STUCK_CORRIDOR_X3: %f\n", STUCK_CORRIDOR_X3);
+    printf("STUCK_DECAY: %f\n", STUCK_DECAY);
+    printf("STUCK_DANGER_1: %f\n", STUCK_DANGER_1);
+    printf("STUCK_DANGER_2: %f\n", STUCK_DANGER_2);
+    printf("STUCK_DANGER_3: %f\n", STUCK_DANGER_3);
+    printf("PATH_LOG_RATE: %d\n", PATH_LOG_RATE);
+    printf("LOOK_ROT_SPEED_RAD_S: %f\n", LOOK_ROT_SPEED_RAD_S);
+    printf("ARRIVAL_THRESHOLD_SQ_DEFAULT: %f\n", ARRIVAL_THRESHOLD_SQ_DEFAULT);
+    printf("ARRIVAL_DESIRED_SPEED_DEFAULT: %f\n", ARRIVAL_DESIRED_SPEED_DEFAULT);
+    printf("MAX_SPEED_DEFAULT: %f\n", MAX_SPEED_DEFAULT);
+    printf("ACCEL_DEFAULT: %f\n", ACCEL_DEFAULT);
+    printf("RESISTANCE_DEFAULT: %f\n", RESISTANCE_DEFAULT);
+    printf("MAX_FRUSTRATION_DEFAULT: %f\n", MAX_FRUSTRATION_DEFAULT);
+    printf("CORNER_OFFSET: %f\n", CORNER_OFFSET);
+    printf("CORNER_OFFSET_SQ: %f\n", CORNER_OFFSET_SQ);
+    printf("---------------------------\n");
 }
 
 /**
- * @brief Initializes the WASM module with shared memory buffers.
- * 
+ * @brief Initialize the agent system with shared buffer.
  * @param sharedBuffer A pointer to the SharedArrayBuffer for agent SoA data.
- * @param navmeshBuffer A pointer to the ArrayBuffer with navmesh data.
  * @param maxAgents The maximum number of agents the sharedBuffer can hold.
  * @param seed Seed to initialize deterministic RNG.
  */
-EMSCRIPTEN_KEEPALIVE void init(uint8_t* sharedBuffer, uint8_t* navmeshBuffer, int maxAgents, uint32_t seed) {
+EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint32_t seed) {
     agent_data.capacity = maxAgents;
-    active_agents = 0;
-    g_rng_seed = seed;
+    g_model.rng_seed = seed;
     math::set_rng_seed(static_cast<uint64_t>(seed));
-    g_sim_time = 0.0f;
+    g_model.sim_time = 0.0f;
 
-        // If constants buffer was not set by TS, log and continue (undefined behavior until fixed)
+    // If constants buffer was not set by TS, log and continue (undefined behavior until fixed)
     if (!g_constants_buffer) {
-        std::cerr << "[WASM] constants buffer is not set. Call set_constants_buffer() before init." << std::endl;
+        std::cerr << "[WASM] constants buffer is not set. Call set_constants_buffer() before init_agents." << std::endl;
     }
 
-    // 1. Initialize AgentSoA from the shared buffer
+    // Initialize AgentSoA from the shared buffer
     initialize_shared_buffer_layout(sharedBuffer, maxAgents);
     
     // Allocate dynamic data arrays
@@ -79,221 +92,31 @@ EMSCRIPTEN_KEEPALIVE void init(uint8_t* sharedBuffer, uint8_t* navmeshBuffer, in
     agent_data.corridor_indices = new int[maxAgents];
     // Initialize transient flags
     g_wall_contact.assign(maxAgents, 0);
- 
-    // 2. Initialize NavmeshData from the navmesh buffer
-    // The layout of navmeshBuffer must be:
-    // [bbox(4*float32), numPoints(int32), numTriangles(int32), points_data, triangles_data, neighbors_data, centroids_data]
-    if (navmeshBuffer == nullptr) {
-        return;
-    }
-
-    float* bbox_ptr = reinterpret_cast<float*>(navmeshBuffer);
-    navmesh_bbox.minX = bbox_ptr[0];
-    navmesh_bbox.minY = bbox_ptr[1];
-    navmesh_bbox.maxX = bbox_ptr[2];
-    navmesh_bbox.maxY = bbox_ptr[3];
-
-    int32_t* header = reinterpret_cast<int32_t*>(navmeshBuffer + 4 * sizeof(float));
-    navmesh_data.numPoints = header[0];
-    navmesh_data.numTriangles = header[1];
-    
-    size_t nav_offset = 4 * sizeof(float) + 2 * sizeof(int32_t);
-
-    navmesh_data.points = reinterpret_cast<Point2*>(navmeshBuffer + nav_offset);
-    nav_offset += sizeof(Point2) * navmesh_data.numPoints;
-
-    navmesh_data.triangles = reinterpret_cast<int32_t*>(navmeshBuffer + nav_offset);
-    nav_offset += sizeof(int32_t) * navmesh_data.numTriangles * 3;
-
-    navmesh_data.neighbors = reinterpret_cast<int32_t*>(navmeshBuffer + nav_offset);
-    nav_offset += sizeof(int32_t) * navmesh_data.numTriangles * 3;
-
-    navmesh_data.centroids = reinterpret_cast<Point2*>(navmeshBuffer + nav_offset);
-
-    build_nav_tri_index();
 
     initialize_agent_grid(maxAgents);
-
-    blob_spatial_index.initialize();
 }
+
+/**
+ * @brief Complete the initialization after all data is prepared.
+ * Must be called after init_agents and init_navmesh_from_bin.
+ */
+EMSCRIPTEN_KEEPALIVE void finalize_init() {
+    // Initialize the navmesh structure
+    initialize_navmesh_structure();
+    
+    std::cout << "[WASM] Finalization complete." << std::endl;
+}
+
+
+
+
 
 /**
  * @brief Simulation-only update for agents (no rendering).
  * @param dt Delta time for this frame.
  */
-EMSCRIPTEN_KEEPALIVE void update_simulation(float dt) {
-    g_sim_time += dt;
-    // Basic log with throttling to avoid spamming
-    static int frameCount = 0;
-    
-    // 1. Update agents
-    for (int i = 0; i < active_agents; ++i) {
-        if (agent_data.is_alive[i]) {
-            update_agent_navigation(i, dt, &g_rng_seed);
-            update_agent_phys(i, dt);
-            update_agent_statistic(i, dt);
-        }
-    }
-
-    // 2. Re-index the spatial grid
-    clear_and_reindex_grid(active_agents);
-
-    // 3. Update collisions
-    update_agent_collisions(active_agents);
-}
-
-/**
- * @brief Main update loop for the agent simulation + rendering.
- * All real-time data for rendering is passed here to keep a single WASM call per frame.
- * @param dt Delta time for this frame.
- * @param m3x3 Row-major 3x3 world->NDC matrix
- * @param widthPx Viewport width in device pixels
- * @param heightPx Viewport height in device pixels
- * @param dpr Device pixel ratio
- */
-EMSCRIPTEN_KEEPALIVE void update(float dt, const float* m3x3, int widthPx, int heightPx, float dpr) {
-    // Do simulation
-    update_simulation(dt);
-    
-    // Then render
-    update_rt(dt, m3x3, widthPx, heightPx, dpr);
-}
-
-EMSCRIPTEN_KEEPALIVE void update_navigation(float dt) {
-    for (int i = 0; i < active_agents; ++i) {
-        if (agent_data.is_alive[i]) {
-            update_agent_navigation(i, dt, &g_rng_seed);
-        }
-    }
-}
-
-EMSCRIPTEN_KEEPALIVE void update_movement(float dt) {
-    for (int i = 0; i < active_agents; ++i) {
-        if (agent_data.is_alive[i]) {
-            update_agent_phys(i, dt);
-        }
-    }
-}
-
-EMSCRIPTEN_KEEPALIVE void update_statistics(float dt) {
-    for (int i = 0; i < active_agents; ++i) {
-        if (agent_data.is_alive[i]) {
-            update_agent_statistic(i, dt);
-        }
-    }
-}
-
-EMSCRIPTEN_KEEPALIVE void update_collisions() {
-    clear_and_reindex_grid(active_agents);
-    update_agent_collisions(active_agents);
-}
-
-EMSCRIPTEN_KEEPALIVE void update_agent_navigation_by_id(int agent_id, float dt) {
-    update_agent_navigation(agent_id, dt, &g_rng_seed);
-}
-
-EMSCRIPTEN_KEEPALIVE void update_agent_movement(int agent_id, float dt) {
-    update_agent_phys(agent_id, dt);
-}
-
-EMSCRIPTEN_KEEPALIVE void update_agent_statistic_by_id(int agent_id, float dt) {
-    update_agent_statistic(agent_id, dt);
-}
-
-/**
- * @brief Adds a new agent to the simulation.
- * 
- * @param x The initial x-coordinate.
- * @param y The initial y-coordinate.
- * @return The index of the new agent, or -1 if capacity is full.
- */
-EMSCRIPTEN_KEEPALIVE int add_agent(float x, float y) {
-    if (active_agents >= agent_data.capacity) {
-        return -1; // No more space for new agents
-    }
-
-    int agentIndex = active_agents;
-    initialize_agent_defaults(agentIndex, x, y);
-    if (agentIndex >= 0 && agentIndex < (int)g_wall_contact.size()) g_wall_contact[agentIndex] = 0;
-    
-    active_agents++;
-    return agentIndex;
-}
-
-/**
- * @brief Loads blob geometry data into the spatial index.
- * 
- * @param blobBuffer A pointer to the blob data buffer.
- * @param bufferSize The size of the buffer in bytes.
- * 
- * Buffer format:
- * [numBlobs(int32)] + [blob1_data] + [blob2_data] + ...
- * 
- * Each blob_data:
- * [blobId(int32)] + [numPoints(int32)] + [point1_x(float32)] + [point1_y(float32)] + ...
- */
-EMSCRIPTEN_KEEPALIVE void load_blob_data(uint8_t* blobBuffer, int bufferSize) {
-    if (!blobBuffer || bufferSize < sizeof(int32_t)) {
-        return;
-    }
-    
-    size_t offset = 0;
-    int32_t numBlobs = *reinterpret_cast<int32_t*>(blobBuffer + offset);
-    offset += sizeof(int32_t);
-    
-    for (int i = 0; i < numBlobs; ++i) {
-        if (offset + 2 * sizeof(int32_t) > bufferSize) {
-            return;
-        }
-        
-        int32_t blobId = *reinterpret_cast<int32_t*>(blobBuffer + offset);
-        offset += sizeof(int32_t);
-        
-        int32_t numPoints = *reinterpret_cast<int32_t*>(blobBuffer + offset);
-        offset += sizeof(int32_t);
-        
-        if (offset + numPoints * 2 * sizeof(float) > bufferSize) {
-            return;
-        }
-        
-        BlobGeometry blob;
-        blob.id = blobId;
-        blob.points.reserve(numPoints);
-        
-        for (int j = 0; j < numPoints; ++j) {
-            float x = *reinterpret_cast<float*>(blobBuffer + offset);
-            offset += sizeof(float);
-            float y = *reinterpret_cast<float*>(blobBuffer + offset);
-            offset += sizeof(float);
-            
-            blob.points.push_back({x, y});
-        }
-        
-        blob_spatial_index.add_blob(blob);
-    }
-}
-
-/**
- * @brief Clears all blob data from the spatial index.
- */
-EMSCRIPTEN_KEEPALIVE void clear_blob_data() {
-    blob_spatial_index.initialize(); // Re-initialize clears all data
-}
-
-/**
- * @brief Gets the number of blobs currently loaded.
- * @return The number of loaded blobs.
- */
-EMSCRIPTEN_KEEPALIVE int get_blob_count() {
-    return static_cast<int>(blob_spatial_index.blobs.size());
-}
-
-/**
- * @brief Gets the number of active agents.
- * @return The number of active agents.
- */
-EMSCRIPTEN_KEEPALIVE int get_active_agent_count() {
-    return active_agents;
+EMSCRIPTEN_KEEPALIVE void update_simulation(float dt, int active_agents) {
+    g_model.update_simulation(dt, active_agents);
 }
 
 /**
@@ -301,8 +124,167 @@ EMSCRIPTEN_KEEPALIVE int get_active_agent_count() {
  * @param seed The seed value to use.
  */
 EMSCRIPTEN_KEEPALIVE void set_rng_seed_js(uint32_t seed) {
-    g_rng_seed = seed;
+    g_model.rng_seed = seed;
     math::set_rng_seed(static_cast<uint64_t>(seed));
+}
+
+/**
+ * @brief Initialize navmesh from binary data at specified WASM memory offset.
+ * @param offset The offset in WASM memory where navmesh binary data is located.
+ * @param size The size of the navmesh binary data in bytes.
+ * @return Size of data consumed, or 0 on failure.
+ */
+EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize) {
+    uint8_t* memoryStart = reinterpret_cast<uint8_t*>(offset);
+    
+    if (memoryStart == nullptr) {
+        std::cerr << "[WASM] Invalid memory offset: " << offset << std::endl;
+        return 0;
+    }
+    
+    // Initialize navmesh from the buffer - C++ will figure out auxiliary memory layout
+    uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize);
+    
+    // Return the total memory used
+    return static_cast<int>(usedMemory);
+}
+
+
+
+/**
+ * @brief Get pointer to navmesh data structure for TypeScript access.
+ * This creates a temporary structure in memory that TypeScript can read to get
+ * pointers and metadata for creating typed array views.
+ * @return Pointer to NavmeshData structure, or 0 on failure.
+ */
+EMSCRIPTEN_KEEPALIVE uint32_t get_g_navmesh_ptr() {
+    // Allocate memory for the data structure TypeScript expects to read
+    // Layout matches the reading pattern in NavmeshInit.ts:
+    // 11 pointers + 6 counts + 2 auxiliary pointers + 1 triangle_centroids pointer = 20 uint32_t values
+    static uint32_t* navmeshData = nullptr;
+    if (!navmeshData) {
+        navmeshData = static_cast<uint32_t*>(malloc(20 * sizeof(uint32_t)));
+    }
+    
+    // Fill in the pointers as WASM heap offsets (pointers converted to uint32_t)
+    navmeshData[0] = reinterpret_cast<uintptr_t>(g_navmesh.vertices);
+    navmeshData[1] = reinterpret_cast<uintptr_t>(g_navmesh.triangles);
+    navmeshData[2] = reinterpret_cast<uintptr_t>(g_navmesh.neighbors);
+    navmeshData[3] = reinterpret_cast<uintptr_t>(g_navmesh.polygons);
+    navmeshData[4] = reinterpret_cast<uintptr_t>(g_navmesh.poly_centroids);
+    navmeshData[5] = reinterpret_cast<uintptr_t>(g_navmesh.poly_verts);
+    navmeshData[6] = reinterpret_cast<uintptr_t>(g_navmesh.poly_tris);
+    navmeshData[7] = reinterpret_cast<uintptr_t>(g_navmesh.poly_neighbors);
+    navmeshData[8] = reinterpret_cast<uintptr_t>(g_navmesh.buildings);
+    navmeshData[9] = reinterpret_cast<uintptr_t>(g_navmesh.building_verts);
+    navmeshData[10] = reinterpret_cast<uintptr_t>(g_navmesh.blob_buildings);
+    
+    // Fill in the counts (using signed int32_t values)
+    navmeshData[11] = static_cast<uint32_t>(g_navmesh.walkable_triangle_count);
+    navmeshData[12] = static_cast<uint32_t>(g_navmesh.walkable_polygon_count);
+    navmeshData[13] = static_cast<uint32_t>(g_navmesh.vertices_count / 2); // totalVertices (Point2 count)
+    navmeshData[14] = static_cast<uint32_t>(g_navmesh.triangles_count / 3); // totalTriangles 
+    navmeshData[15] = static_cast<uint32_t>(g_navmesh.polygons_count > 0 ? g_navmesh.polygons_count - 1 : 0); // totalPolygons (minus sentinel)
+    navmeshData[16] = static_cast<uint32_t>(g_navmesh.buildings_count > 0 ? g_navmesh.buildings_count - 1 : 0); // totalBuildings (minus sentinel)
+    
+    // Fill in auxiliary pointers
+    navmeshData[17] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_to_polygon);
+    navmeshData[18] = reinterpret_cast<uintptr_t>(g_navmesh.building_to_blob);
+    
+    // Fill in triangle_centroids pointer
+    navmeshData[19] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_centroids);
+    
+    uint32_t result = reinterpret_cast<uintptr_t>(navmeshData);
+    std::cout << "[WASM] get_g_navmesh_ptr returning: " << result << " (offset in uint32: " << (result/4) << ")" << std::endl;
+    
+    return result;
+}
+
+/**
+ * @brief Get pointer to navmesh bounding box data.
+ * @return Pointer to bbox arrays (8 floats: real minX, minY, maxX, maxY, buffered minX, minY, maxX, maxY), or 0 on failure.
+ */
+EMSCRIPTEN_KEEPALIVE uint32_t get_navmesh_bbox_ptr() {
+    // Allocate memory for both bboxes (8 floats total)
+    static float* bboxData = nullptr;
+    if (!bboxData) {
+        bboxData = static_cast<float*>(malloc(8 * sizeof(float)));
+    }
+    
+    // Copy both bboxes to the allocated memory
+    bboxData[0] = g_navmesh.bbox[0];        // Real minX
+    bboxData[1] = g_navmesh.bbox[1];        // Real minY
+    bboxData[2] = g_navmesh.bbox[2];        // Real maxX
+    bboxData[3] = g_navmesh.bbox[3];        // Real maxY
+    bboxData[4] = g_navmesh.buffered_bbox[0]; // Buffered minX
+    bboxData[5] = g_navmesh.buffered_bbox[1]; // Buffered minY
+    bboxData[6] = g_navmesh.buffered_bbox[2]; // Buffered maxX
+    bboxData[7] = g_navmesh.buffered_bbox[3]; // Buffered maxY
+    
+    return reinterpret_cast<uintptr_t>(bboxData);
+}
+
+/**
+ * @brief Get pointer to spatial index data structure for TypeScript access.
+ * This creates a temporary structure in memory that TypeScript can read to get
+ * pointers and metadata for all spatial indices.
+ * @return Pointer to SpatialIndexData structure, or 0 on failure.
+ */
+EMSCRIPTEN_KEEPALIVE uint32_t get_spatial_index_data() {
+    // Allocate memory for the data structure TypeScript expects to read
+    // Layout matches the reading pattern in NavmeshInit.ts initializeSpatialIndices:
+    // Triangle index: 2 ptrs + 5 grid params + 2 counts = 9 values
+    // Skip auxiliary: 4 values  
+    // Polygon index: 2 ptrs + 2 counts = 4 values
+    // Blob index: 2 ptrs + 2 counts = 4 values  
+    // Building index: 2 ptrs + 2 counts = 4 values
+    // Total: 23 uint32_t values
+    static uint32_t* spatialIndexData = nullptr;
+    if (!spatialIndexData) {
+        spatialIndexData = static_cast<uint32_t*>(malloc(23 * sizeof(uint32_t)));
+    }
+    
+    int offset = 0;
+    
+    // Triangle spatial index
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_index.cellOffsets);
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_index.cellItems);
+    spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.triangle_index.gridWidth);
+    spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.triangle_index.gridHeight);
+    // cellSize as float - need to reinterpret as uint32_t for storage
+    spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.cellSize);
+    spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.minX);
+    spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.minY);
+    spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.maxX);
+    spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.maxY);
+    spatialIndexData[offset++] = g_navmesh.triangle_index.cellOffsetsCount;
+    spatialIndexData[offset++] = g_navmesh.triangle_index.cellItemsCount;
+    
+    // Skip auxiliary lookup maps (TypeScript expects to skip 4 values)
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_to_polygon);
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_to_blob);
+    spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.triangles_count / 3); // total_triangles
+    spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.buildings_count > 0 ? g_navmesh.buildings_count - 1 : 0); // total_buildings
+    
+    // Polygon spatial index
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.polygon_index.cellOffsets);
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.polygon_index.cellItems);
+    spatialIndexData[offset++] = g_navmesh.polygon_index.cellOffsetsCount;
+    spatialIndexData[offset++] = g_navmesh.polygon_index.cellItemsCount;
+    
+    // Blob spatial index
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.blob_index.cellOffsets);
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.blob_index.cellItems);
+    spatialIndexData[offset++] = g_navmesh.blob_index.cellOffsetsCount;
+    spatialIndexData[offset++] = g_navmesh.blob_index.cellItemsCount;
+    
+    // Building spatial index
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_index.cellOffsets);
+    spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_index.cellItems);
+    spatialIndexData[offset++] = g_navmesh.building_index.cellOffsetsCount;
+    spatialIndexData[offset++] = g_navmesh.building_index.cellItemsCount;
+    
+    return reinterpret_cast<uintptr_t>(spatialIndexData);
 }
 
 } 

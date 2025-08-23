@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { Agent } from '../Agent';
+import { Agent } from '../agents/Agent';
 import { Point2 } from '../core/math';
 import { BaseAgentSpritePool, AgentSpriteElements } from './BaseAgentSpritePool';
 

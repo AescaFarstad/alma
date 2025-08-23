@@ -17,7 +17,7 @@ void sprite_upload_frame_table(const float* uv4_array, int frameCount);
 
 // Single per-frame call that updates simulation timing/camera and renders
 // m3x3 is a 3x3 row-major matrix for world->NDC mapping
-void update_rt(float dt, const float* m3x3, int widthPx, int heightPx, float dpr);
+void render(float dt, int active_agents, const float* m3x3, int widthPx, int heightPx, float dpr);
 
 #ifdef __cplusplus
 }

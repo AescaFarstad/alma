@@ -117,21 +117,27 @@ class PriorityQueue {
 const sharedOpenSet = new PriorityQueue();
 
 export function getTriangleFromPoint(navmesh: Navmesh, point: Point2): number {
-    const possibleTris = navmesh.triIndex.query(point.x, point.y);
+    const possibleTris = navmesh.triangleIndex.query(point.x, point.y);
     
     for (let i = 0; i < possibleTris.length; i++) {
         const triIdx = possibleTris[i];
+        
+        // Skip non-walkable triangles
+        if (triIdx >= navmesh.walkable_triangle_count) {
+            continue;
+        }
+        
         const triVertexStartIndex = triIdx * 3;
         const p1Index = navmesh.triangles[triVertexStartIndex];
         const p2Index = navmesh.triangles[triVertexStartIndex + 1];
         const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
-        const p1x = navmesh.points[p1Index * 2];
-        const p1y = navmesh.points[p1Index * 2 + 1];
-        const p2x = navmesh.points[p2Index * 2];
-        const p2y = navmesh.points[p2Index * 2 + 1];
-        const p3x = navmesh.points[p3Index * 2];
-        const p3y = navmesh.points[p3Index * 2 + 1];
+        const p1x = navmesh.vertices[p1Index * 2];
+        const p1y = navmesh.vertices[p1Index * 2 + 1];
+        const p2x = navmesh.vertices[p2Index * 2];
+        const p2y = navmesh.vertices[p2Index * 2 + 1];
+        const p3x = navmesh.vertices[p3Index * 2];
+        const p3y = navmesh.vertices[p3Index * 2 + 1];
 
         if (isPointInTriangle(point.x, point.y, p1x, p1y, p2x, p2y, p3x, p3y)) {
             return triIdx;
@@ -170,8 +176,8 @@ export function findCorridor(
     gScore.set(startTri, 0);
     
     // Inline heuristic calculation for start triangle
-    const startHeuristicDx = navmesh.centroids[startTri * 2] - navmesh.centroids[endTri * 2];
-    const startHeuristicDy = navmesh.centroids[startTri * 2 + 1] - navmesh.centroids[endTri * 2 + 1];
+    const startHeuristicDx = navmesh.triangle_centroids[startTri * 2] - navmesh.triangle_centroids[endTri * 2];
+    const startHeuristicDy = navmesh.triangle_centroids[startTri * 2 + 1] - navmesh.triangle_centroids[endTri * 2 + 1];
     const startHeuristic = Math.sqrt(startHeuristicDx * startHeuristicDx + startHeuristicDy * startHeuristicDy);
     fScore.set(startTri, startHeuristic);
 
@@ -217,13 +223,13 @@ export function findCorridor(
         // Inline getNeighbors calculation
         for (let i = 0; i < 3; i++) {
             const neighbor = navmesh.neighbors[current * 3 + i];
-            if (neighbor === -1) {
+            if (neighbor >= navmesh.walkable_triangle_count) {
                 continue;
             }
 
             // Inline getCost calculation
-            const costDx = navmesh.centroids[current * 2] - navmesh.centroids[neighbor * 2];
-            const costDy = navmesh.centroids[current * 2 + 1] - navmesh.centroids[neighbor * 2 + 1];
+            const costDx = navmesh.triangle_centroids[current * 2] - navmesh.triangle_centroids[neighbor * 2];
+            const costDy = navmesh.triangle_centroids[current * 2 + 1] - navmesh.triangle_centroids[neighbor * 2 + 1];
             const cost = Math.sqrt(costDx * costDx + costDy * costDy);
             
             const tentativeGScore = gScore.get(current)! + cost;
@@ -233,8 +239,8 @@ export function findCorridor(
                 gScore.set(neighbor, tentativeGScore);
                 
                 // Inline heuristic calculation
-                const heuristicDx = navmesh.centroids[neighbor * 2] - navmesh.centroids[endTri * 2];
-                const heuristicDy = navmesh.centroids[neighbor * 2 + 1] - navmesh.centroids[endTri * 2 + 1];
+                const heuristicDx = navmesh.triangle_centroids[neighbor * 2] - navmesh.triangle_centroids[endTri * 2];
+                const heuristicDy = navmesh.triangle_centroids[neighbor * 2 + 1] - navmesh.triangle_centroids[endTri * 2 + 1];
                 const heuristic = Math.sqrt(heuristicDx * heuristicDx + heuristicDy * heuristicDy);
                 
                 const fScoreValue = tentativeGScore + heuristic;

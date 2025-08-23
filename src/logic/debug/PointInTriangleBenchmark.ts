@@ -4,7 +4,7 @@ import { seededRandom } from "../core/mathUtils";
 
 export function runPointInTriangleBenchmark(gameState: GameState): void {
     const navmesh = gameState.navmesh;
-    if (!navmesh || !navmesh.triIndex) {
+    if (!navmesh || !navmesh.triangleIndex) {
         console.warn("Navmesh or triIndex not available");
         return;
     }
@@ -17,7 +17,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
         maxX = navmesh.bbox[2];
         maxY = navmesh.bbox[3];
     } else {
-        const gi = navmesh.triIndex.getGridInfo();
+        const gi = navmesh.triangleIndex;
         minX = gi.minX;
         minY = gi.minY;
         maxX = gi.minX + gi.gridWidth * gi.cellSize;
@@ -41,7 +41,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
     const counts = new Uint32Array(NUM_POINTS);
     let totalCandidates = 0;
     for (let i = 0; i < NUM_POINTS; i++) {
-        const candidates = navmesh.triIndex.query(pxs[i], pys[i]);
+        const candidates = navmesh.triangleIndex.query(pxs[i], pys[i]);
         const len = candidates.length;
         counts[i] = len;
         totalCandidates += len;
@@ -64,9 +64,9 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
 
     // Pass 2: fill coordinates
     const triIndices = navmesh.triangles;
-    const points = navmesh.points;
+    const points = navmesh.vertices;
     for (let i = 0; i < NUM_POINTS; i++) {
-        const candidates = navmesh.triIndex.query(pxs[i], pys[i]);
+        const candidates = navmesh.triangleIndex.query(pxs[i], pys[i]);
         const start = offsets[i];
         for (let k = 0; k < candidates.length; k++) {
             const idx = start + k;

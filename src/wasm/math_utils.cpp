@@ -263,7 +263,148 @@ bool triangleAABBIntersectionWithBounds(const std::vector<Point2>& triPoints, co
         return false;
     }
     
+    // If bounding boxes overlap, we need detailed intersection tests
     return triangleAABBIntersectionDetailed(triPoints, cellMin, cellMax);
 }
+
+// Check if point is inside polygon using winding number algorithm
+static bool isPointInPolygon(const Point2& point, const std::vector<Point2>& polygon) {
+    int wn = 0; // winding number
+    int n = polygon.size();
+    
+    for (int i = 0; i < n; i++) {
+        int j = (i + 1) % n;
+        if (polygon[i].y <= point.y) {
+            if (polygon[j].y > point.y) { // upward crossing
+                if (cross(polygon[j] - polygon[i], point - polygon[i]) > 0) {
+                    ++wn;
+                }
+            }
+        } else {
+            if (polygon[j].y <= point.y) { // downward crossing
+                if (cross(polygon[j] - polygon[i], point - polygon[i]) < 0) {
+                    --wn;
+                }
+            }
+        }
+    }
+    return wn != 0;
+}
+
+// Detailed polygon-AABB intersection test
+static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoints, const Point2& cellMin, const Point2& cellMax) {
+    // Check 1: Any polygon vertex inside the rectangle
+    for (const Point2& p : polyPoints) {
+        if (p.x >= cellMin.x && p.x <= cellMax.x && p.y >= cellMin.y && p.y <= cellMax.y) {
+            return true;
+        }
+    }
+
+    // Check 2: Any rectangle corner inside the polygon
+    std::vector<Point2> cellCorners = {
+        cellMin,
+        {cellMax.x, cellMin.y},
+        cellMax,
+        {cellMin.x, cellMax.y}
+    };
+    
+    for (const Point2& corner : cellCorners) {
+        if (isPointInPolygon(corner, polyPoints)) {
+            return true;
+        }
+    }
+
+    // Check 3: Polygon edges intersecting rectangle edges
+    int n = polyPoints.size();
+    std::vector<std::pair<Point2, Point2>> polyEdges;
+    for (int i = 0; i < n; i++) {
+        polyEdges.push_back({polyPoints[i], polyPoints[(i + 1) % n]});
+    }
+    
+    std::vector<std::pair<Point2, Point2>> cellEdges = {
+        {cellCorners[0], cellCorners[1]}, // bottom edge
+        {cellCorners[1], cellCorners[2]}, // right edge
+        {cellCorners[2], cellCorners[3]}, // top edge
+        {cellCorners[3], cellCorners[0]}  // left edge
+    };
+
+    for (const auto& polyEdge : polyEdges) {
+        for (const auto& cellEdge : cellEdges) {
+            if (lineSegmentIntersectionTest(polyEdge.first, polyEdge.second, cellEdge.first, cellEdge.second)) {
+                return true;
+            }
+        }
+    }
+
+    // Check 4: Separating Axis Theorem (SAT) test
+    // Test separation along polygon edge normals
+    for (int i = 0; i < n; i++) {
+        Point2 edge = polyPoints[(i + 1) % n] - polyPoints[i];
+        Point2 normal = {-edge.y, edge.x}; // perpendicular to edge
+        
+        // Project polygon onto this axis
+        float polyMin = std::numeric_limits<float>::max();
+        float polyMax = std::numeric_limits<float>::lowest();
+        for (const Point2& p : polyPoints) {
+            float proj = p.x * normal.x + p.y * normal.y;
+            polyMin = std::min(polyMin, proj);
+            polyMax = std::max(polyMax, proj);
+        }
+        
+        // Project rectangle onto this axis
+        float rectMin = std::numeric_limits<float>::max();
+        float rectMax = std::numeric_limits<float>::lowest();
+        for (const Point2& corner : cellCorners) {
+            float proj = corner.x * normal.x + corner.y * normal.y;
+            rectMin = std::min(rectMin, proj);
+            rectMax = std::max(rectMax, proj);
+        }
+        
+        // Check for separation on this axis
+        if (polyMax < rectMin || rectMax < polyMin) {
+            return false; // Separated on this axis
+        }
+    }
+
+    return true;
+}
+
+bool polygonAABBIntersection(const std::vector<Point2>& polyPoints, const Point2& cellMin, const Point2& cellMax) {
+    if (polyPoints.size() < 3) return false;
+    
+    // Calculate polygon bounding box
+    float polyMinX = polyPoints[0].x, polyMinY = polyPoints[0].y;
+    float polyMaxX = polyPoints[0].x, polyMaxY = polyPoints[0].y;
+    
+    for (size_t i = 1; i < polyPoints.size(); i++) {
+        const Point2& p = polyPoints[i];
+        if (p.x < polyMinX) polyMinX = p.x;
+        if (p.y < polyMinY) polyMinY = p.y;
+        if (p.x > polyMaxX) polyMaxX = p.x;
+        if (p.y > polyMaxY) polyMaxY = p.y;
+    }
+    
+    // Quick rejection: if bounding boxes don't overlap
+    if (!aabbIntersection({polyMinX, polyMinY}, {polyMaxX, polyMaxY}, cellMin, cellMax)) {
+        return false;
+    }
+    
+    return polygonAABBIntersectionDetailed(polyPoints, cellMin, cellMax);
+}
+
+bool polygonAABBIntersectionWithBounds(const std::vector<Point2>& polyPoints, const Point2& polyMin, const Point2& polyMax, const Point2& cellMin, const Point2& cellMax) {
+    // Broad phase: Quick AABB vs AABB test using pre-calculated bounds
+    if (!aabbIntersection(polyMin, polyMax, cellMin, cellMax)) {
+        return false;
+    }
+    
+    // If bounding boxes overlap, we need detailed intersection tests
+    return polygonAABBIntersectionDetailed(polyPoints, cellMin, cellMax);
+}
+
+
+// A simplified version of SAT for AABB vs Triangle intersection
+// This is not a full SAT implementation but is sufficient for the purpose of grid indexing.
+// The logic is based on checking for a separating axis between the triangle's AABB and the cell's AABB.
 
 } // namespace math 

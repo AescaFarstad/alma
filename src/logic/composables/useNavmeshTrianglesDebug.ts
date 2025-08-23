@@ -13,7 +13,7 @@ export function useNavmeshTrianglesDebug(gameState: GameState | undefined, scene
             return;
         }
 
-        const triangleIds = navmesh.triIndex.query(point.x, point.y);
+        const triangleIds = navmesh.triangleIndex.query(point.x, point.y);
 
         for (const triId of triangleIds) {
             const triVertexStartIndex = triId * 3;
@@ -22,14 +22,14 @@ export function useNavmeshTrianglesDebug(gameState: GameState | undefined, scene
             const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
             const triPoints: Point2[] = [
-                { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] },
-                { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] },
-                { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] },
+                { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] },
+                { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] },
+                { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] },
             ];
 
             sceneState.addDebugArea(triPoints, ACBLUE);
-            const centerX = navmesh.centroids[triId * 2];
-            const centerY = navmesh.centroids[triId * 2 + 1];
+            const centerX = navmesh.triangle_centroids[triId * 2];
+            const centerY = navmesh.triangle_centroids[triId * 2 + 1];
             sceneState.addDebugText({ x: centerX, y: centerY }, triId.toString(), ACBLUE);
         }
     };

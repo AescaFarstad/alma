@@ -31,7 +31,7 @@ namespace math {
 
     inline Point2 normalize(const Point2& p) {
         float len = length(p);
-        if (len > 1e-6) {
+        if (len > 0) {
             return p / len;
         }
         return {0, 0};
@@ -57,7 +57,7 @@ namespace math {
 
     inline void normalize_inplace(Point2& p) {
         float len = length(p);
-        if (len > 1e-6) {
+        if (len > 0) {
             p /= len;
         } else {
             p.x = 0;
@@ -189,6 +189,10 @@ namespace math {
     // Triangle-AABB intersection functions
     bool triangleAABBIntersection(const std::vector<Point2>& triPoints, const Point2& cellMin, const Point2& cellMax);
     bool triangleAABBIntersectionWithBounds(const std::vector<Point2>& triPoints, const Point2& triMin, const Point2& triMax, const Point2& cellMin, const Point2& cellMax);
+
+    // Polygon-AABB intersection functions
+    bool polygonAABBIntersection(const std::vector<Point2>& polyPoints, const Point2& cellMin, const Point2& cellMax);
+    bool polygonAABBIntersectionWithBounds(const std::vector<Point2>& polyPoints, const Point2& polyMin, const Point2& polyMax, const Point2& cellMin, const Point2& cellMax);
 
 } // namespace math
 

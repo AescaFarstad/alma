@@ -1,13 +1,14 @@
 #include "agent_move_phys.h"
 #include "math_utils.h"
 #include "raycasting.h"
-#include "nav_tri_index.h"
+#include "nav_utils.h"
 #include "data_structures.h" // brings in constants_layout.h macros
 #include <cmath>
 #include <iostream>
 #include <iomanip>
+#include <cstdio>
 
-extern NavmeshData navmesh_data;
+extern Navmesh g_navmesh;
 extern float g_sim_time;
 extern std::vector<uint8_t> g_wall_contact;
 
@@ -104,6 +105,7 @@ void update_agent_phys(int agentIndex, float deltaTime) {
         if (moveLnSq >= distanceToTargetSq) {
             agent_data.positions[agentIndex] = agent_data.last_valid_positions[agentIndex];
             agent_data.velocities[agentIndex] = {0.0f, 0.0f};
+            agent_data.current_tris[agentIndex] = agent_data.last_valid_tris[agentIndex];
         } else {
             agent_data.positions[agentIndex] += moveVector;
         }
@@ -128,8 +130,8 @@ void update_agent_phys(int agentIndex, float deltaTime) {
                 }
 
                 const float normalVelocityComponent = math::dot(agent_data.velocities[agentIndex], wallNormal);
-                agent_data.velocities[agentIndex].x -= normalVelocityComponent * wallNormal.x * 1.45f;
-                agent_data.velocities[agentIndex].y -= normalVelocityComponent * wallNormal.y * 1.45f;
+                agent_data.velocities[agentIndex].x -= normalVelocityComponent * wallNormal.x * 1.45;
+                agent_data.velocities[agentIndex].y -= normalVelocityComponent * wallNormal.y * 1.45;
                 moveVector = agent_data.velocities[agentIndex] * deltaTime;
                 agent_data.positions[agentIndex] += moveVector;
             } else {
@@ -141,7 +143,13 @@ void update_agent_phys(int agentIndex, float deltaTime) {
         }
     }
     
+    int oldTri = agent_data.current_tris[agentIndex];
     int newTri = is_point_in_navmesh(agent_data.positions[agentIndex], agent_data.current_tris[agentIndex]);
+    if (oldTri != newTri && newTri != -1) {
+        if (newTri >= g_navmesh.walkable_triangle_count) {
+            printf("WA agent %d changed to unwalkable triangle from %d to %d. Walkable limit: %d\n", agentIndex, oldTri, newTri, g_navmesh.walkable_triangle_count);
+        }
+    }
     if (newTri != -1) {
         agent_data.current_tris[agentIndex] = newTri;
         agent_data.last_valid_positions[agentIndex] = agent_data.positions[agentIndex];

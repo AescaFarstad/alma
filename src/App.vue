@@ -19,16 +19,13 @@
       :coordinate="contextMenu.coordinate"
       @hide="hideContextMenu"
     />
-    <SelectedPointMarks
-      :selected-point-marks="selectedPointMarks"
-      @delete-selected-point-marks="deleteSelectedPointMarks"
-    />
+    <SelectedPointMarks />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, provide, inject, reactive, type Ref } from 'vue';
-import Map from './components/map/Map.vue';
+import Map from './components/ui/Map.vue';
 import Overlay from './components/ui/Overlay.vue';
 import ContextMenu from './components/ui/ContextMenu.vue';
 import SelectedPointMarks from './components/ui/SelectedPointMarks.vue';
@@ -49,7 +46,7 @@ import { useMeasurement } from './logic/composables/useMeasurement';
 import { usePointMarks } from './logic/composables/usePointMarks';
 import { useAvatarState } from './logic/composables/useAvatarState';
 import { useNavmeshTrianglesDebug } from './logic/composables/useNavmeshTrianglesDebug';
-import type { WasmAgentSystem } from './logic/WasmAgentSystem';
+import { WasmFacade } from './logic/WasmFacade.ts';
 
 const agentCount = inject<Ref<number>>('agentCount');
 const gameState = inject<GameState>('gameState');
@@ -57,7 +54,6 @@ const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 const sceneState = inject<SceneState>('sceneState');
 
 const wasmRenderEnabled = inject<Ref<boolean>>('wasmRenderEnabled');
-const wasmAgentSystem = inject<WasmAgentSystem>('wasmAgentSystem');
 
 const contextMenu = reactive({
   visible: false,
@@ -87,7 +83,7 @@ const { findCorridors, buildPath } = usePathfinding(gameState, sceneState);
 const { drawNavmesh } = useNavmeshDebug(gameState, sceneState);
 const { drawNavGrid } = useNavmeshGridDebug(gameState, sceneState);
 const { measurementDistance, updateMeasurementLine } = useMeasurement(sceneState, mouseCoordinates);
-const { deleteSelectedPointMarks, selectedPointMarks } = usePointMarks(gameState, sceneState, contextMenu);
+usePointMarks(gameState, sceneState, contextMenu);
 const { avatar } = useAvatarState();
 const { drawTriangles: drawDebugTriangles } = useNavmeshTrianglesDebug(gameState, sceneState);
 
@@ -180,8 +176,8 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
         if (wasmRenderEnabled) {
           wasmRenderEnabled.value = payload.enabled;
         }
-        if (!payload.enabled && wasmAgentSystem) {
-          wasmAgentSystem.clearRenderer();
+        if (!payload.enabled && WasmFacade._sprite_renderer_clear) {
+          WasmFacade._sprite_renderer_clear();
         }
     }
   };
@@ -196,6 +192,7 @@ provide('gameState', gameState);
 provide('fpsMetrics', fpsMetrics);
 provide('pixieLayer', mapComponent.value?.pixieLayer);
 if (wasmRenderEnabled) provide('wasmRenderEnabled', wasmRenderEnabled);
+provide('sceneState', sceneState);
 </script>
 
 <style>

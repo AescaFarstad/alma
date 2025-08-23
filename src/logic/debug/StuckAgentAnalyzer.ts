@@ -1,4 +1,4 @@
-import { Agent } from '../Agent';
+import { Agent } from '../agents/Agent';
 import { Point2, distance_sq } from '../core/math';
 import { analyzeAgentCornerProgression } from './LogAnalyzer';
 import { checkReferenceCorruption } from './ReferenceTracker';

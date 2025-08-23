@@ -25,7 +25,7 @@ function generateStructure({ inputDir, outputFile }) {
 
     const fileSuffix = '.geojson';
     
-    let output = `// Generated from ${path.basename(inputDir)} at ${new Date().toISOString()}\n\n`;
+    let output = `// Generated from ${path.basename(inputDir)}\n\n`;
 
     try {
         const files = fs.readdirSync(inputDir);

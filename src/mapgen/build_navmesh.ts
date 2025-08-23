@@ -1,24 +1,61 @@
 import fs from 'fs';
 import path from 'path';
 import minimist from 'minimist';
-import { Point, SweepContext } from 'poly2tri';
+import { loadBlobs, loadBuildings } from './nav_data_io';
+import { triangulate } from './triangulate';
+import { hertelMehlhorn } from './hertel_mehlhorn';
+import { kOptOptimize } from './k_opt';
+import { MyPolygon, MyPoint, NavmeshData } from './navmesh_struct';
+import { printFinalSummary, finalizeNavmeshData } from './nav_summary';
+import { writeNavmeshOutput } from './nav_data_io';
+import { populateTriangulationData, populatePolygonData, populateBuildingData, populatePolygonCentroids } from './populate_navmesh';
+import { finalizeNavmesh, buildFinalTriangleToPolygonMap } from './finalize_navmesh';
+import { drawNavmesh } from './navmesh_visualization';
+import { generateBoundary, validateBoundaryTriangulation } from './navmesh_boundary';
+import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping } from './navmesh_validation';
+import { execSync } from 'child_process';
+import { fileURLToPath } from 'url';
 
-type MyPoint = [number, number];
-type MyPolygon = MyPoint[];
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Simple bounding box check for a single point
-function isPointInBbox(point: MyPoint, bbox: number[]): boolean {
-    return point[0] >= bbox[0] && point[0] <= bbox[2] && point[1] >= bbox[1] && point[1] <= bbox[3];
-}
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-500, -500, 500, 500];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, -120, 120, 120];
+const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
+const BOUNDARY_INFLATION = 100;
+
+const POLYGONIZATION_SETTINGS = {
+    enableConvexityChecks: true,
+    maxMergeAttempts: 1000
+} as const;
+
+const OPTIMIZATION_SETTINGS = {
+    walkable: {
+        maxIterations: 50,
+        kMax: 3,
+        randomRestarts: 3,
+        earlyStopMaxIterations: 20
+    }
+} as const;
+
+const MEMORY_SETTINGS = {
+    initialVertexCapacity: 150000,
+    initialTriangleCapacity: 120000,
+    initialPolygonCapacity: 20000,
+    growthFactor: 1.5
+} as const;
+
+const OUTPUT_SETTINGS = {
+    generateBinaryFile: true,
+    generateInspectableText: true,
+    generateVisualization: true
+} as const;
+
 
 function main() {
     const args = minimist(process.argv.slice(2));
     const inputDir = args.input;
     const outputDir = args.output;
-    
-    // To speed up testing, you can process a smaller area.
-    // Set this to `null` to process all data.
-    const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
 
     if (!inputDir || !outputDir) {
         console.error('Usage: ts-node build_navmesh.ts --input <input_dir> --output <output_dir>');
@@ -29,210 +66,324 @@ function main() {
         fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    console.log(`Running navmesh build step with poly2tri`);
+    console.log(`Running navmesh build step`);
     console.log(`Input directory: ${inputDir}`);
     console.log(`Output directory: ${outputDir}`);
-    if (DEBUG_BBOX) {
-        console.log(`Processing with BBOX: [${DEBUG_BBOX.join(', ')}]`);
-    } else {
-        console.log(`Processing all data (no BBOX).`);
-    }
 
+    // Step 1: Load and process input data
     const blobsFilePath = path.join(inputDir, 'blobs.txt');
-    if (!fs.existsSync(blobsFilePath)) {
-        console.error(`Input file not found: ${blobsFilePath}`);
+    const { simplified_vertices: rawHolePolygons, blobToBuildings } = loadBlobs(blobsFilePath, DEBUG_BBOX);
+    const buildingsFilePath = path.join(inputDir, 'buildings_s7.txt');
+    const buildings = loadBuildings(buildingsFilePath);
+    
+    // === DEBUG LOGGING: Initial building data ===
+    console.log(`\n=== BUILDING DATA TRACKING ===`);
+    console.log(`Initial buildings loaded: ${buildings.length}`);
+    console.log(`Sample building IDs: ${buildings.slice(0, 5).map(b => b.properties.osm_id).join(', ')}`);
+    console.log(`Blob-to-building mappings: ${blobToBuildings.length}`);
+    console.log(`Sample blob mappings:`, blobToBuildings.slice(0, 3));
+    
+    // Count total building references in blobs
+    const totalBuildingRefs = blobToBuildings.flat().length;
+    const uniqueBuildingRefs = new Set(blobToBuildings.flat()).size;
+    console.log(`Total building references in blobs: ${totalBuildingRefs}`);
+    console.log(`Unique building references in blobs: ${uniqueBuildingRefs}`);
+    
+    // Step 1.1: Snap all coordinates to 2 decimal precision for consistency
+    const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
+    const snapPolygon = (poly: MyPolygon): MyPolygon => poly.map(([x, y]) => [snapTo2Decimals(x), snapTo2Decimals(y)]);
+    const holePolygons = rawHolePolygons.map(snapPolygon);
+    console.log(`Loaded and processed ${holePolygons.length} hole polygons`);
+    
+    const processingBbox = calculateProcessingBounds(holePolygons);
+    
+    // Calculate the inflated bbox used for triangulation
+    const inflatedBbox: readonly [number, number, number, number] = [
+        processingBbox[0] - BOUNDARY_INFLATION,  // minX - 100
+        processingBbox[1] - BOUNDARY_INFLATION,  // minY - 100
+        processingBbox[2] + BOUNDARY_INFLATION,  // maxX + 100
+        processingBbox[3] + BOUNDARY_INFLATION   // maxY + 100
+    ];
+    
+    console.log(`Real bbox: [${processingBbox.join(', ')}]`);
+    console.log(`Inflated bbox for triangulation: [${inflatedBbox.join(', ')}]`);
+    
+    // Step 1.5: Generate boundary data and snap coordinates
+    console.log('\n=== BOUNDARY GENERATION ===');
+    const rawBoundaryData = generateBoundary(processingBbox, BOUNDARY_INFLATION);
+    
+    // Snap boundary coordinates to 2-decimal precision
+    const boundaryData = {
+        ...rawBoundaryData,
+        outerBoundary: snapPolygon(rawBoundaryData.outerBoundary),
+        boundaryBlobs: rawBoundaryData.boundaryBlobs.map(snapPolygon),
+        boundaryTriangles: rawBoundaryData.boundaryTriangles.map(tri => tri.map(([x, y]): MyPoint => [snapTo2Decimals(x), snapTo2Decimals(y)]))
+    };
+
+    const isValidBoundary = validateBoundaryTriangulation(boundaryData);
+    if (!isValidBoundary) {
+        console.error('Boundary triangulation validation failed. Aborting navmesh generation.');
         process.exit(1);
     }
 
-    const fileContent = fs.readFileSync(blobsFilePath, 'utf-8');
-    const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+    // Step 2: Initialize the final navmesh data structure
+    console.log('\n=== INITIALIZING NAVMESH DATA STRUCTURE ===');
+    const navmeshData = initializeNavmeshData();
+
+    // Step 3: Triangulation phase
+    console.log('\n=== TRIANGULATION PHASE ===');
+    const triangulationResult = triangulate(boundaryData.outerBoundary, holePolygons, boundaryData);
+    populateTriangulationData(navmeshData, triangulationResult, MEMORY_SETTINGS);
+
+    // Step 4: Polygonization phase  
+    console.log('\n=== WALKABLE POLYGONIZATION PHASE ===');
+    const { polygons: rawWalkablePolygons, triangleToPolygonMap: walkableT2P } = hertelMehlhorn({
+        navmeshData,
+        settings: POLYGONIZATION_SETTINGS,
+    });
     
-    let holePolygons: MyPolygon[] = [];
+    validateIntermediateTrianglePolygonMapping(walkableT2P, navmeshData.walkable_triangle_count, rawWalkablePolygons.length, "Polygonization");
 
-    // This regex now assumes the coordinate array is valid JSON.
-    const lineRegex = /\[[-?\d\.,\s]+\]$/;
-
-    for (const line of lines) {
-        const match = line.match(lineRegex);
-        if (!match) continue;
-
-        const coords: number[] = JSON.parse(match[0]);
-        const polygon: MyPolygon = [];
-        for (let i = 0; i < coords.length; i += 2) {
-            const p: MyPoint = [coords[i], coords[i + 1]];
-            polygon.push(p);
-        }
-
-        holePolygons.push(polygon);
-    }
+    // Step 4.1: Snap walkable polygon coordinates to 2-decimal precision
+    // (hertel-mehlhorn reads from navmeshData.vertices which has Float32Array precision loss)
+    const walkablePolygons = rawWalkablePolygons.map(snapPolygon);
+    const impassablePolygons = [...holePolygons, ...boundaryData.boundaryBlobs];
     
-    if (DEBUG_BBOX) {
-        holePolygons = holePolygons.filter(poly => 
-            poly.every(p => isPointInBbox(p, DEBUG_BBOX as any))
-        );
-    }
-
-    console.log(`Found ${holePolygons.length} blobs within the bounding box to use as holes.`);
-
-    // Determine the bounding box for processing
-    let processingBbox: readonly [number, number, number, number];
-    if (DEBUG_BBOX) {
-        processingBbox = DEBUG_BBOX;
-    } else {
-        // If not debugging, calculate bbox from all hole polygons
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const poly of holePolygons) {
-            for (const p of poly) {
-                if (p[0] < minX) minX = p[0];
-                if (p[1] < minY) minY = p[1];
-                if (p[0] > maxX) maxX = p[0];
-                if (p[1] > maxY) maxY = p[1];
-            }
-        }
-        processingBbox = [minX, minY, maxX, maxY];
-    }
-
-    // Debug: Check actual bbox of filtered holes
-    if (holePolygons.length > 0) {
-        let actualMinX = Infinity, actualMinY = Infinity, actualMaxX = -Infinity, actualMaxY = -Infinity;
-        for (const poly of holePolygons) {
-            for (const p of poly) {
-                if (p[0] < actualMinX) actualMinX = p[0];
-                if (p[1] < actualMinY) actualMinY = p[1];
-                if (p[0] > actualMaxX) actualMaxX = p[0];
-                if (p[1] > actualMaxY) actualMaxY = p[1];
-            }
-        }
-        console.log(`Actual bbox of filtered holes: [${actualMinX}, ${actualMinY}, ${actualMaxX}, ${actualMaxY}]`);
-    }
-
-    // Define the outer boundary, inflated.
-    const inflation = 100;
-    const minX = processingBbox[0] - inflation;
-    const minY = processingBbox[1] - inflation;
-    const maxX = processingBbox[2] + inflation;
-    const maxY = processingBbox[3] + inflation;
-
-    console.log(`Outer boundary: [${minX}, ${minY}, ${maxX}, ${maxY}]`);
-
-    // The outer boundary polygon must have a clockwise winding order for poly2tri.
-    const outerBoundary: MyPoint[] = [
-        [minX, minY],
-        [maxX, minY],
-        [maxX, maxY],
-        [minX, maxY]
-    ];
+    // Create a mapping from the global triangle index to the new global polygon index.
+    const impassableT2P = new Map<number, number>();
+    const walkableTriangleCount = navmeshData.walkable_triangle_count;
+    const walkablePolygonCount = walkablePolygons.length;
     
-    // Create the sweep context with the outer boundary.
-    const sweepContext = new SweepContext(outerBoundary.map(p => new Point(p[0], p[1])));
-    
-    // Add each blob as a hole in the sweep context.
-    holePolygons.forEach(poly => {
-        const holePoints = poly.map(p => new Point(p[0], p[1]));
-        sweepContext.addHole(holePoints);
+    // Map all impassable triangles to their blobs (includes boundary triangles now)
+    triangulationResult.impassableTriangleToBlobIndex.forEach((blobIndex, triangleIndexInBlob) => {
+        const globalTriangleIndex = walkableTriangleCount + triangleIndexInBlob;
+        const globalPolygonIndex = walkablePolygonCount + blobIndex;
+        impassableT2P.set(globalTriangleIndex, globalPolygonIndex);
     });
 
-    console.log(`Triangulating the area...`);
-    // Perform the Constrained Delaunay Triangulation.
-    sweepContext.triangulate();
-    
-    // Get the results.
-    const triangles = sweepContext.getTriangles();
-    console.log(`Generated ${triangles.length} triangles in the navmesh.`);
-
-    // --- Format the output ---
-
-    // poly2tri may introduce new Steiner points. We need to collect all unique points
-    // from the triangulation result to build our final vertex list.
-    const pointMap = new Map<string, number>();
-    const finalPoints: MyPoint[] = [];
-
-    const getPointIndex = (p: { x: number; y: number }): number => {
-        const key = `${p.x};${p.y}`;
-        let idx = pointMap.get(key);
-        if (idx === undefined) {
-            idx = finalPoints.length;
-            finalPoints.push([p.x, p.y]);
-            pointMap.set(key, idx);
+    const bestSeedPath = path.join(outputDir, 'best_seed.txt');
+    let initialSeed: number | undefined;
+    if (fs.existsSync(bestSeedPath)) {
+        try {
+            initialSeed = parseInt(fs.readFileSync(bestSeedPath, 'utf-8'), 10);
+            console.log(`Found best seed from previous run: ${initialSeed}`);
+        } catch (e) {
+            console.warn('Could not read best_seed.txt');
         }
-        return idx;
+    }
+
+    // Step 5: Optimization phase
+    console.log('\n=== OPTIMIZATION PHASE ===');
+    console.log('Optimizing walkable polygons...');
+    const optimizedWalkable = kOptOptimize(walkablePolygons, { ...OPTIMIZATION_SETTINGS.walkable, initialSeed });
+
+    console.log('Skipping optimization for impassable polygons...');
+    const optimizedImpassable = {
+        polygons: impassablePolygons,
+        originalCount: impassablePolygons.length,
+        optimizedCount: impassablePolygons.length,
+        improvementPercent: 0,
+        iterations: 0,
     };
+
+    const optimizedT2P = buildFinalTriangleToPolygonMap(navmeshData, navmeshData.walkable_triangle_count, optimizedWalkable.polygons, walkableT2P, new Map());
+    validateIntermediateTrianglePolygonMapping(optimizedT2P, navmeshData.walkable_triangle_count, optimizedWalkable.polygons.length, "Optimization");
+
+    try {
+        fs.writeFileSync(bestSeedPath, optimizedWalkable.bestSeed.toString(), 'utf-8');
+        console.log(`Wrote new best seed to ${bestSeedPath}: ${optimizedWalkable.bestSeed}`);
+    } catch (e) {
+        console.error('Could not write best_seed.txt');
+    }
+
+    // Step 6: Populate and finalize navmesh data structure
+    console.log('\n=== POPULATING AND FINALIZING NAVMESH DATA ===');
     
-    const finalTriangles: number[] = [];
-    for (const t of triangles) {
-        // Triangle indices store vertex indices (logical indices), not coordinate indices.
-        // To get coordinates of vertex `vertex_idx`: x = points[vertex_idx * 2], y = points[vertex_idx * 2 + 1]
-        const p1_idx = getPointIndex(t.getPoint(0));
-        const p2_idx = getPointIndex(t.getPoint(1));
-        const p3_idx = getPointIndex(t.getPoint(2));
-        finalTriangles.push(p1_idx, p2_idx, p3_idx);
+    // DEBUG: Log polygon sources
+    console.log(`Walkable polygons: ${optimizedWalkable.polygons.length} (from hertelMehlhorn + k-opt)`);
+    console.log(`Impassable polygons: ${optimizedImpassable.polygons.length} (original holes + boundary blobs)`);
+    console.log(`  - Original hole polygons: ${holePolygons.length}`);
+    console.log(`  - Boundary blobs: ${boundaryData.boundaryBlobs.length}`);
+    
+    populatePolygonData(navmeshData, optimizedWalkable.polygons, optimizedImpassable.polygons);
+    const allBuildings = [...buildings, ...boundaryData.fakeBuildingsData];
+
+    const extendedBlobToBuildings = [...blobToBuildings];
+    // Map boundary blobs to their fake buildings (add entries for the two boundary blobs)
+    extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[0].properties.osm_id]); // First boundary blob
+    extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[1].properties.osm_id]); // Second boundary blob
+    
+    // === DEBUG LOGGING: Before populateBuildingData ===
+    console.log(`\n=== BEFORE POPULATE BUILDING DATA ===`);
+    console.log(`Total buildings (including fake): ${allBuildings.length}`);
+    console.log(`Original buildings: ${buildings.length}`);
+    console.log(`Fake buildings: ${boundaryData.fakeBuildingsData.length}`);
+    console.log(`Extended blob-to-building mappings: ${extendedBlobToBuildings.length}`);
+    console.log(`Sample fake building IDs: ${boundaryData.fakeBuildingsData.map(b => b.properties.osm_id).join(', ')}`);
+    console.log(`Last two blob mappings (should be fake buildings):`, extendedBlobToBuildings.slice(-2));
+    
+    const { reorderedBuildings, buildingVertexStats } = populateBuildingData(navmeshData, allBuildings, extendedBlobToBuildings);
+    
+    // === DEBUG LOGGING: After populateBuildingData ===
+    console.log(`\n=== AFTER POPULATE BUILDING DATA ===`);
+    console.log(`Returned reorderedBuildings count: ${reorderedBuildings.length}`);
+    console.log(`Sample returned building IDs: ${reorderedBuildings.slice(0, 5).map(b => `${b.id}(osm:${b.properties.osm_id})`).join(', ')}`);
+    
+    const triangleToPolygonMap = finalizeNavmesh(
+        navmeshData,
+        triangulationResult.walkableTriangles.length,
+        optimizedWalkable.polygons,
+        walkableT2P,
+        impassableT2P
+    );
+    
+    // Calculate polygon centroids (must be after finalization for poly_tris to be available)
+    populatePolygonCentroids(navmeshData);
+
+    finalizeNavmeshData(navmeshData, {
+        walkablePolygons: optimizedWalkable.polygons,
+        impassablePolygons: optimizedImpassable.polygons,
+        triangulationResult,
+        optimizationStats: {
+            walkable: optimizedWalkable,
+            impassable: optimizedImpassable
+        },
+        processingBbox,
+        inflatedBbox
+    });
+
+    // Step 7: Write output
+    console.log('\n=== WRITING OUTPUT ===');
+    
+    // === DEBUG LOGGING: Before writeNavmeshOutput ===
+    console.log(`\n=== BEFORE WRITE OUTPUT ===`);
+    console.log(`Buildings being passed to writeNavmeshOutput: ${reorderedBuildings.length}`);
+    console.log(`Sample building IDs being written: ${reorderedBuildings.slice(0, 5).map(b => `${b.id}(osm:${b.properties.osm_id})`).join(', ')}`);
+    
+    const { createdFiles } = writeNavmeshOutput(outputDir, navmeshData, reorderedBuildings, OUTPUT_SETTINGS);
+    
+    if (OUTPUT_SETTINGS.generateVisualization) {
+        const visualizationPath = path.join(outputDir, 'navmesh_visualization.png');
+        const visualizationFile = drawNavmesh(navmeshData, visualizationPath);
+        createdFiles.push(visualizationFile);
+    }
+
+    // Report file sizes
+    console.log('\nCreated files:');
+    let totalSize = 0;
+    for (const file of createdFiles) {
+        const sizeKB = (file.sizeBytes / 1024).toFixed(2);
+        const sizeMB = (file.sizeBytes / 1024 / 1024).toFixed(2);
+        const fileName = path.basename(file.path);
+        
+        if (file.sizeBytes >= 1024 * 1024) {
+            console.log(`  ${fileName}: ${sizeMB} MB`);
+        } else {
+            console.log(`  ${fileName}: ${sizeKB} KB`);
+        }
+        totalSize += file.sizeBytes;
     }
     
-    console.log(`Final vertex count: ${finalPoints.length}`);
-
-    // --- Calculate stats ---
-    const numVertices = finalPoints.length;
-    const numTriangles = triangles.length;
-
-    let resultBboxMinX = Infinity, resultBboxMinY = Infinity, resultBboxMaxX = -Infinity, resultBboxMaxY = -Infinity;
-    if (finalPoints.length > 0) {
-        for (const p of finalPoints) {
-            if (p[0] < resultBboxMinX) resultBboxMinX = p[0];
-            if (p[1] < resultBboxMinY) resultBboxMinY = p[1];
-            if (p[0] > resultBboxMaxX) resultBboxMaxX = p[0];
-            if (p[1] > resultBboxMaxY) resultBboxMaxY = p[1];
-        }
+    const totalSizeKB = (totalSize / 1024).toFixed(2);
+    const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
+    if (totalSize >= 1024 * 1024) {
+        console.log(`Total size: ${totalSizeMB} MB`);
     } else {
-        resultBboxMinX = 0;
-        resultBboxMinY = 0;
-        resultBboxMaxX = 0;
-        resultBboxMaxY = 0;
-    }
-    const resultingBbox = [resultBboxMinX, resultBboxMinY, resultBboxMaxX, resultBboxMaxY];
-
-    let maxTriangleBboxArea = 0;
-    let largestTriangleBbox: number[] = [0, 0, 0, 0];
-    let totalTriangleArea = 0;
-
-    for (const t of triangles) {
-        const p0 = t.getPoint(0);
-        const p1 = t.getPoint(1);
-        const p2 = t.getPoint(2);
-
-        // Bbox for this triangle
-        const minX = Math.min(p0.x, p1.x, p2.x);
-        const minY = Math.min(p0.y, p1.y, p2.y);
-        const maxX = Math.max(p0.x, p1.x, p2.x);
-        const maxY = Math.max(p0.y, p1.y, p2.y);
-        const area = (maxX - minX) * (maxY - minY);
-        if (area > maxTriangleBboxArea) {
-            maxTriangleBboxArea = area;
-            largestTriangleBbox = [minX, minY, maxX, maxY];
-        }
-
-        // Area of this triangle
-        const triArea = Math.abs(p0.x * (p1.y - p2.y) + p1.x * (p2.y - p0.y) + p2.x * (p0.y - p1.y)) / 2;
-        totalTriangleArea += triArea;
+        console.log(`Total size: ${totalSizeKB} KB`);
     }
 
-    const avgTriangleArea = numTriangles > 0 ? totalTriangleArea / numTriangles : 0;
+    // Step 8: Validate navmesh data
+    validateVertexDistance(navmeshData);
+    // validateTrianglePolygonMapping(navmeshData);
+
+    printFinalSummary(navmeshData, optimizedWalkable, optimizedImpassable, triangleToPolygonMap, buildingVertexStats);
     
-    // Prepare output file content
-    const stats = {
-        vertices: numVertices,
-        triangles: numTriangles,
-        bbox: resultingBbox,
-        largestTriangleBbox: largestTriangleBbox,
-        avgTriangleArea: avgTriangleArea
+    // Step 9: Generate structure files
+    console.log('\n=== GENERATING STRUCTURE FILES ===');
+    try {
+        const generateScriptPath = path.resolve(__dirname, 'generate-structure.cjs');
+        const generatedTypesFile = path.join(outputDir, 'map_render_buildings_structure.ts');
+        console.log(`Running generate-structure script on ${outputDir}...`);
+        execSync(`node "${generateScriptPath}" --input=${outputDir} --output=${generatedTypesFile}`, { stdio: 'inherit' });
+    } catch (error) {
+        console.error(`Failed to run generate-structure.cjs: ${(error as Error).message}`);
+        // Do not exit, as this is a post-processing step
+    }
+
+    try {
+        const generatePropsScriptPath = path.resolve(__dirname, 'generate-building-props-structure.cjs');
+        const buildingPropertiesPath = path.join(outputDir, 'building_properties.json');
+        const generatedPropsFile = path.join(outputDir, 'building_properties_structure.ts');
+        console.log(`Running generate-building-props-structure script on ${buildingPropertiesPath}...`);
+        execSync(`node "${generatePropsScriptPath}" --input=${buildingPropertiesPath} --output=${generatedPropsFile}`, { stdio: 'inherit' });
+    } catch (error) {
+        console.error(`Failed to run generate-building-props-structure.cjs: ${(error as Error).message}`);
+        // Do not exit, as this is a post-processing step
+    }
+}
+
+// ================================
+// HELPER FUNCTIONS
+// ================================
+
+
+function calculateProcessingBounds(holePolygons: MyPolygon[]): readonly [number, number, number, number] {
+    if (DEBUG_BBOX) {
+        return DEBUG_BBOX;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const poly of holePolygons) {
+        for (const p of poly) {
+            if (p[0] < minX) minX = p[0];
+            if (p[1] < minY) minY = p[1];
+            if (p[0] > maxX) maxX = p[0];
+            if (p[1] > maxY) maxY = p[1];
+        }
+    }
+    return [minX, minY, maxX, maxY];
+}
+
+
+
+function initializeNavmeshData(): NavmeshData {
+    console.log(`Pre-allocating data structures with capacities:`);
+    console.log(`  Vertices: ${MEMORY_SETTINGS.initialVertexCapacity}`);
+    console.log(`  Triangles: ${MEMORY_SETTINGS.initialTriangleCapacity}`);
+    console.log(`  Polygons: ${MEMORY_SETTINGS.initialPolygonCapacity}`);
+
+    return {
+        vertices: new Float32Array(MEMORY_SETTINGS.initialVertexCapacity * 2),
+        triangles: new Int32Array(MEMORY_SETTINGS.initialTriangleCapacity * 3),
+        neighbors: new Int32Array(MEMORY_SETTINGS.initialTriangleCapacity * 3),
+        polygons: new Int32Array(MEMORY_SETTINGS.initialPolygonCapacity),
+        poly_centroids: new Float32Array(MEMORY_SETTINGS.initialPolygonCapacity * 2),
+        poly_verts: new Int32Array(MEMORY_SETTINGS.initialPolygonCapacity * 10),
+        poly_tris: new Int32Array(MEMORY_SETTINGS.initialPolygonCapacity),
+        poly_neighbors: new Int32Array(MEMORY_SETTINGS.initialPolygonCapacity * 10),
+        buildings: new Int32Array(0),
+        building_verts: new Int32Array(0),
+        blob_buildings: new Int32Array(0),
+        building_meta: [],
+        walkable_triangle_count: 0,
+        walkable_polygon_count: 0,
+        bbox: [0, 0, 0, 0],
+        buffered_bbox: [0, 0, 0, 0],
+        stats: {
+            vertices: 0,
+            triangles: 0,
+            walkable_triangles: 0,
+            impassable_triangles: 0,
+            polygons: 0,
+            walkable_polygons: 0,
+            impassable_polygons: 0,
+            buildings: 0,
+            blobs: 0,
+            bbox: [0, 0, 0, 0],
+            avg_triangle_area: 0,
+            avg_polygon_area: 0
+        }
     };
-    const statsStr = `stats:${JSON.stringify(stats)}`;
-    const pointsStr = `points:[${finalPoints.flat().join(',')}]`;
-    const trianglesStr = `triangles:[${finalTriangles.join(',')}]`;
-
-    const outputPath = path.join(outputDir, 'navmesh.txt');
-    fs.writeFileSync(outputPath, `${statsStr}\n${pointsStr}\n${trianglesStr}`);
-
-    console.log(`Navmesh successfully generated at: ${outputPath}`);
 }
 
 main(); 

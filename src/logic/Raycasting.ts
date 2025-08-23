@@ -122,6 +122,11 @@ function traceStraightCorridor(
     if (currentTriIdx === -1) {
         return null; // Start point is not on navmesh
     }
+    
+    // Don't allow raycast from non-walkable areas
+    if (currentTriIdx >= navmesh.walkable_triangle_count) {
+        return null;
+    }
 
     const corridor: number[] = [currentTriIdx];
     const MAX_ITERATIONS = 5000; // Safety break
@@ -167,7 +172,7 @@ function traceStraightCorridor(
             
             nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
             
-            if (nextTriIdx === -1) {
+            if (nextTriIdx >= navmesh.walkable_triangle_count) {
                 hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
                 return corridor; // Hit a wall
             }
@@ -193,17 +198,17 @@ function traceStraightCorridor(
                     // Ray crosses the edge between p_entry2 and p_apex.
                     exitEdgeIdx = (entryEdgeIdx + 1) % 3;
                 } else {
-                    // Otherwise, it crosses the other edge (between p_apex and p_entry1).
-                    exitEdgeIdx = (entryEdgeIdx + 2) % 3;
-                }
-                nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-
-                if (nextTriIdx === -1) {
-                    hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
-                    return corridor; // Hit a wall
-                }
+                                    // Otherwise, it crosses the other edge (between p_apex and p_entry1).
+                exitEdgeIdx = (entryEdgeIdx + 2) % 3;
             }
-            // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
+            nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+
+            if (nextTriIdx >= navmesh.walkable_triangle_count) {
+                hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
+                return corridor; // Hit a wall
+            }
+        }
+        // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
         }
 
         if (nextTriIdx !== -1) {
@@ -233,6 +238,11 @@ function traceStraightCorridorHitOnly(
 
     if (currentTriIdx === -1) {
         return null; // Start point is not on navmesh
+    }
+    
+    // Don't allow raycast from non-walkable areas
+    if (currentTriIdx >= navmesh.walkable_triangle_count) {
+        return null;
     }
 
     const MAX_ITERATIONS = 5000; // Safety break
@@ -278,7 +288,7 @@ function traceStraightCorridorHitOnly(
             
             nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
             
-            if (nextTriIdx === -1) {
+            if (nextTriIdx >= navmesh.walkable_triangle_count) {
                 hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
                 return currentTriIdx; // Hit a wall
             }
@@ -304,17 +314,17 @@ function traceStraightCorridorHitOnly(
                     // Ray crosses the edge between p_entry2 and p_apex.
                     exitEdgeIdx = (entryEdgeIdx + 1) % 3;
                 } else {
-                    // Otherwise, it crosses the other edge (between p_apex and p_entry1).
-                    exitEdgeIdx = (entryEdgeIdx + 2) % 3;
-                }
-                nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-
-                if (nextTriIdx === -1) {
-                    hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
-                    return currentTriIdx; // Hit a wall
-                }
+                                    // Otherwise, it crosses the other edge (between p_apex and p_entry1).
+                exitEdgeIdx = (entryEdgeIdx + 2) % 3;
             }
-            // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
+            nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+
+            if (nextTriIdx >= navmesh.walkable_triangle_count) {
+                hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
+                return currentTriIdx; // Hit a wall
+            }
+        }
+        // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
         }
 
         if (nextTriIdx !== -1) {
@@ -336,10 +346,10 @@ function getTrianglePoints(navmesh: Navmesh, triIdx: number, outPoints: [Point2,
     const p2Index = navmesh.triangles[triVertexStartIndex + 1];
     const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
-    outPoints[0].x = navmesh.points[p1Index * 2];
-    outPoints[0].y = navmesh.points[p1Index * 2 + 1];
-    outPoints[1].x = navmesh.points[p2Index * 2];
-    outPoints[1].y = navmesh.points[p2Index * 2 + 1];
-    outPoints[2].x = navmesh.points[p3Index * 2];
-    outPoints[2].y = navmesh.points[p3Index * 2 + 1];
+    outPoints[0].x = navmesh.vertices[p1Index * 2];
+    outPoints[0].y = navmesh.vertices[p1Index * 2 + 1];
+    outPoints[1].x = navmesh.vertices[p2Index * 2];
+    outPoints[1].y = navmesh.vertices[p2Index * 2 + 1];
+    outPoints[2].x = navmesh.vertices[p3Index * 2];
+    outPoints[2].y = navmesh.vertices[p3Index * 2 + 1];
 } 

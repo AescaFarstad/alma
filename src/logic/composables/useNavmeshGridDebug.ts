@@ -2,6 +2,7 @@ import { GameState } from '../GameState';
 import { SceneState } from '../drawing/SceneState';
 import { Point2 } from '../core/math';
 import { ACBLUE, ACYELLOW, ACBLACK } from '../drawing/SceneState';
+import { getTrianglesInCell } from '../navmesh/NavUtils';
 
 export function useNavmeshGridDebug(gameState?: GameState, sceneState?: SceneState) {
     if (!gameState || !sceneState) {
@@ -20,8 +21,7 @@ export function useNavmeshGridDebug(gameState?: GameState, sceneState?: SceneSta
             return;
         }
 
-        const gridInfo = navmesh.triIndex.getGridInfo();
-        const { gridWidth, gridHeight, cellSize, minX, minY } = gridInfo;
+        const { gridWidth, gridHeight, cellSize, minX, minY } = navmesh.triangleIndex;
 
         for (let cy = 0; cy < gridHeight; cy++) {
             for (let cx = 0; cx < gridWidth; cx++) {
@@ -53,7 +53,7 @@ export function useNavmeshGridDebug(gameState?: GameState, sceneState?: SceneSta
 
                 if (!color) continue;
 
-                const cellTriangles = navmesh.triIndex.getTrianglesInCell(cx, cy);
+                const cellTriangles = getTrianglesInCell(navmesh, cx, cy);
                 for (const triIdx of cellTriangles) {
                     const triVertexStartIndex = triIdx * 3;
                     const p1Index = navmesh.triangles[triVertexStartIndex];
@@ -61,9 +61,9 @@ export function useNavmeshGridDebug(gameState?: GameState, sceneState?: SceneSta
                     const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
                     const triPoints: Point2[] = [
-                        { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] },
-                        { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] },
-                        { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] },
+                        { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] },
+                        { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] },
+                        { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] },
                     ];
                     sceneState.addDebugArea(triPoints, color);
                 }

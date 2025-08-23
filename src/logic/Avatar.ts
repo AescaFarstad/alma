@@ -3,6 +3,7 @@ import { raycastPoint } from "./Raycasting";
 import { dot, length_sq, Point2, copy, subtract, scale, add, normalize } from "./core/math";
 import { Navmesh } from "./navmesh/Navmesh";
 import type { Avatar } from "./GameState";
+import { isPointInNavmesh } from "./navmesh/NavUtils";
 
 
 export function updateAvatar(avatar: Avatar, deltaTime: number, navmesh: Navmesh) {
@@ -135,7 +136,7 @@ export function updateAvatar(avatar: Avatar, deltaTime: number, navmesh: Navmesh
             let newCoordinate = add({x: startPoint.x, y: startPoint.y}, scale(avatar.velocity, deltaTime));
             
             // Validate the calculated position is within navmesh
-            const newTriangle = navmesh.triIndex.isPointInNavmesh(newCoordinate, navmesh, avatar.lastTriangle);
+            const newTriangle = isPointInNavmesh(newCoordinate, navmesh, avatar.lastTriangle);
             if (newTriangle !== -1) {
                 avatar.lastTriangle = newTriangle;
                 avatar.coordinate.x = newCoordinate.x;
@@ -151,7 +152,7 @@ export function updateAvatar(avatar: Avatar, deltaTime: number, navmesh: Navmesh
             avatar.coordinate.y = endPoint.y;
             
             // Check if the new position is within navmesh (only for non-raycasted movements)
-            const newTriangle = navmesh.triIndex.isPointInNavmesh(avatar.coordinate, navmesh, avatar.lastTriangle);
+            const newTriangle = isPointInNavmesh(avatar.coordinate, navmesh, avatar.lastTriangle);
             if (newTriangle !== -1) {
                 avatar.lastTriangle = newTriangle;
             } else {
@@ -163,7 +164,7 @@ export function updateAvatar(avatar: Avatar, deltaTime: number, navmesh: Navmesh
         }
     }
 
-    const newTriangle = navmesh.triIndex.isPointInNavmesh(avatar.coordinate, navmesh, avatar.lastTriangle);
+    const newTriangle = isPointInNavmesh(avatar.coordinate, navmesh, avatar.lastTriangle);
     avatar.isOutsideNavmesh = newTriangle === -1;
 
     if (avatar.wallContact) {

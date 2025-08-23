@@ -24,9 +24,9 @@ export const ACPINK = 'pink';
 
 
 export class SceneState {
-    public selectedBuildingIds: Set<string> = new Set();
+    public selectedBuildingIds: Set<number> = new Set();
     public selectedPointMarkIds: Set<number> = new Set();
-    public simplifiedGeometries: Map<string, Point2[]> = new Map();
+    public simplifiedGeometries: Map<number, Point2[]> = new Map();
     public measurementLine: { start: MouseCoordinates, end: MouseCoordinates } | null = null;
     public corridors: Map<string, Corridor> = new Map();
     public paths: Map<string, Path> = new Map();
@@ -54,22 +54,22 @@ export class SceneState {
         }
     }
 
-    public selectBuilding(mapId: string) {
-        if (!this.selectedBuildingIds.has(mapId)) {
-            this.selectedBuildingIds.add(mapId);
+    public selectBuilding(id: number) {
+        if (!this.selectedBuildingIds.has(id)) {
+            this.selectedBuildingIds.add(id);
             this.isDirty = true;
         }
     }
 
-    public deselectBuilding(mapId: string) {
-        if (this.selectedBuildingIds.delete(mapId)) {
-            this.simplifiedGeometries.delete(mapId);
+    public deselectBuilding(id: number) {
+        if (this.selectedBuildingIds.delete(id)) {
+            this.simplifiedGeometries.delete(id);
             this.isDirty = true;
         }
     }
 
-    public isBuildingSelected(mapId: string): boolean {
-        return this.selectedBuildingIds.has(mapId);
+    public isBuildingSelected(id: number): boolean {
+        return this.selectedBuildingIds.has(id);
     }
 
     public selectPointMark(id: number) {
@@ -105,18 +105,18 @@ export class SceneState {
         this.clearSelectedPointMarks();
     }
 
-    public setSelectedBuildings(mapIds: string[]) {
+    public setSelectedBuildings(ids: number[]) {
         this.selectedBuildingIds.clear();
         this.simplifiedGeometries.clear();
-        for (const mapId of mapIds) {
-            this.selectedBuildingIds.add(mapId);
+        for (const id of ids) {
+            this.selectedBuildingIds.add(id);
         }
         this.isDirty = true;
     }
 
-    public addSimplifiedBuilding(mapId: string, geometry: Point2[]) {
+    public addSimplifiedBuilding(id: number, geometry: Point2[]) {
         if (!geometry || !Array.isArray(geometry)) {
-            console.warn(`[SceneState] Attempted to add simplified building ${mapId} with invalid geometry (not an array).`, geometry);
+            console.warn(`[SceneState] Attempted to add simplified building ${id} with invalid geometry (not an array).`, geometry);
             return;
         }
 
@@ -129,7 +129,7 @@ export class SceneState {
         );
 
         if (hasInvalidPoint) {
-            console.warn(`[SceneState] Attempted to add simplified building ${mapId} with invalid points. Original geometry:`, JSON.parse(JSON.stringify(geometry)));
+            console.warn(`[SceneState] Attempted to add simplified building ${id} with invalid points. Original geometry:`, JSON.parse(JSON.stringify(geometry)));
             const validGeometry = geometry.filter(p => 
                 p && 
                 typeof p.x === 'number' && 
@@ -137,9 +137,9 @@ export class SceneState {
                 !isNaN(p.x) && 
                 !isNaN(p.y)
             );
-            this.simplifiedGeometries.set(mapId, validGeometry);
+            this.simplifiedGeometries.set(id, validGeometry);
         } else {
-            this.simplifiedGeometries.set(mapId, geometry);
+            this.simplifiedGeometries.set(id, geometry);
         }
         this.isDirty = true;
     }

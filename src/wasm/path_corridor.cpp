@@ -1,15 +1,15 @@
 #include "path_corridor.h"
-#include "path_utils.h"
 #include "math_utils.h"
+#include "nav_utils.h"
 #include "fast_priority_queue.h"
 #include "flat_maps.h"
 #include <algorithm>
 
 // Global state dependencies
-extern NavmeshData navmesh_data;
+extern Navmesh g_navmesh;
 
 inline float heuristic(int from, int to) {
-    return math::distance(navmesh_data.centroids[from], navmesh_data.centroids[to]);
+    return math::distance(g_navmesh.triangle_centroids[from], g_navmesh.triangle_centroids[to]);
 }
 
 std::vector<int> findCorridor(
@@ -25,7 +25,7 @@ std::vector<int> findCorridor(
         return {};
     }
 
-    const int numTris = navmesh_data.numTriangles;
+    const int numTris = g_navmesh.triangles_count;
 
     FastPriorityQueue openSet;
     openSet.reserve(64); // small default; heap grows as needed
@@ -52,8 +52,8 @@ std::vector<int> findCorridor(
 
         const int base = current * 3;
         for (int i = 0; i < 3; ++i) {
-            const int neighbor = navmesh_data.neighbors[base + i];
-            if (neighbor == -1) {
+            const int neighbor = g_navmesh.neighbors[base + i];
+            if (neighbor == -1 || neighbor >= g_navmesh.walkable_triangle_count) {
                 continue;
             }
 

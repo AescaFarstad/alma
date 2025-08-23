@@ -8,7 +8,7 @@
 <script setup lang="ts">
 import { ref, inject } from 'vue';
 import type { GameState } from '../../logic/GameState';
-import { Agent } from '../../logic/Agent';
+import { Agent } from '../../logic/agents/Agent';
 
 const agentJson = ref('');
 const gameState = inject<GameState>('gameState');

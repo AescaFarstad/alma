@@ -1,5 +1,5 @@
 import * as PIXI from 'pixi.js';
-import { Agent, AgentState } from '../Agent';
+import { Agent, AgentState } from '../agents/Agent';
 import { Map as OlMap } from 'ol';
 import {length} from '../core/math.ts'
 

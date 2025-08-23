@@ -8,7 +8,6 @@ import { SceneState } from './drawing/SceneState';
 import { DynamicScene } from './drawing/DynamicScene';
 import { DrawDynamicScene } from './drawing/DrawDynamicScene';
 import { AgentRenderer, AgentRenderingMode } from './drawing/AgentRenderer';
-import { WasmAgentSystem } from './WasmAgentSystem';
 
 export class PixiLayer {
     private app: PIXI.Application;
@@ -27,17 +26,15 @@ export class PixiLayer {
     private sceneState: SceneState;
     private dynamicScene: DynamicScene;
     private agentRenderer: AgentRenderer;
-    private wasmAgentSystem: WasmAgentSystem;
     private stopped = false;
 
     private wasmCanvas: HTMLCanvasElement | null = null;
 
-    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState, dynamicScene: DynamicScene, wasmAgentSystem: WasmAgentSystem) {
+    constructor(olMap: OlMap, gameState: GameState, sceneState: SceneState, dynamicScene: DynamicScene) {
         this.olMap = olMap;
         this.gameState = gameState;
         this.sceneState = sceneState;
         this.dynamicScene = dynamicScene;
-        this.wasmAgentSystem = wasmAgentSystem;
         this.app = new PIXI.Application();
         this.boundSync = this.sync.bind(this);
         this.staticPrimitives = new PrimitiveState();
@@ -99,10 +96,8 @@ export class PixiLayer {
         this.agentTextContainer = new PIXI.Container();
         this.app.stage.addChild(this.agentTextContainer);
 
-        // Initialize WASM GL renderer resources unconditionally
+        // Resize WASM canvas - renderer initialization is handled by WasmInit -> RenderInit
         this.resizeWasmCanvas();
-        this.wasmAgentSystem.initRenderer('#wasm-agents-canvas');
-        this.wasmAgentSystem.uploadAtlasFromUrl('/img/base.webp').catch(() => {});
 
         const view = this.olMap.getView();
         view.on('change:center', this.boundSync);
@@ -136,14 +131,9 @@ export class PixiLayer {
         const renderMode = this.agentRenderer.getRenderingMode();
         
         if (agentsEnabled && renderMode === 'sprite') {
-            const wasmPositions = this.wasmAgentSystem.agentDataViews.positions;
-            const wasmLooks = this.wasmAgentSystem.agentDataViews.looks;
-            const wasmFrameIds = this.wasmAgentSystem.agentDataViews.frame_ids;
             this.agentRenderer.wasmSpritePool.syncWithWasmData(
-                wasmPositions,
-                wasmLooks,
-                wasmFrameIds,
-                this.wasmAgentSystem.agents,
+                this.gameState.wasm_agents,
+                this.gameState.wagents.length,
                 this.agentGraphicsContainer,
                 agentsEnabled,
                 renderMode
@@ -151,10 +141,8 @@ export class PixiLayer {
         } else {
             // Clear sprites when disabled - minimal processing
             this.agentRenderer.wasmSpritePool.syncWithWasmData(
-                new Float32Array(0),
-                new Float32Array(0),
-                new Uint16Array(0),
-                [],
+                this.gameState.wasm_agents,
+                0,
                 this.agentGraphicsContainer,
                 agentsEnabled,
                 renderMode

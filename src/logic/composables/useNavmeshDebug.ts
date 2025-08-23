@@ -10,7 +10,7 @@ export function useNavmeshDebug(
     if (!gameState || !sceneState) return;
 
     const navmesh = gameState.navmesh;
-    const points = navmesh.points;
+    const points = navmesh.vertices;
     const triangles = navmesh.triangles;
     const map = mapInstance.map;
     if (!map) return;
