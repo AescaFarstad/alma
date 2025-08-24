@@ -46,8 +46,8 @@ export type LaserBlast = {
     corridor: number[] | null;
 };
 const spawnersCooldown = 0.02;
-export const wagentsLimit = 12000;
-export const agentsLimit = 10;
+export const wagentsLimit = 1;
+export const agentsLimit = 1;
 export class GameState { // This is a POD class. No functions allowed.
     public lib : Lib;
     public invoker: Invoker;
@@ -108,7 +108,7 @@ export class GameState { // This is a POD class. No functions allowed.
         // Comment out regular spawners and use WAgent spawners instead
         this.spawners = [
             
-            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
+            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
@@ -129,21 +129,21 @@ export class GameState { // This is a POD class. No functions allowed.
         // Initialize WAgent spawners
         this.wAgentSpawners = [
             { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
-            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
-            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
-            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
-            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.5, spawnCount: 0 },
-            { coordinate: { x: 100, y: -50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
-            { coordinate: { x: -581.8, y: 662.6 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
-            { coordinate: { x: 485.5, y: -47.1 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
-            { coordinate: { x: -401, y: -245.6 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.5, spawnCount: 0 },
-            { coordinate: { x: -108, y: 532 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.6, spawnCount: 0 },
-            { coordinate: { x: 589, y: 282 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.7, spawnCount: 0 },
-            { coordinate: { x: 49, y: 347 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.8, spawnCount: 0 },
-            { coordinate: { x: 327, y: 216 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.9, spawnCount: 0 },
-            { coordinate: { x: 346, y: 116 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
+            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
+            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
+            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
+            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.5, spawnCount: 0 },
+            // { coordinate: { x: 100, y: -50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
+            // { coordinate: { x: -581.8, y: 662.6 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
+            // { coordinate: { x: 485.5, y: -47.1 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
+            // { coordinate: { x: -401, y: -245.6 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.5, spawnCount: 0 },
+            // { coordinate: { x: -108, y: 532 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.6, spawnCount: 0 },
+            // { coordinate: { x: 589, y: 282 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.7, spawnCount: 0 },
+            // { coordinate: { x: 49, y: 347 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.8, spawnCount: 0 },
+            // { coordinate: { x: 327, y: 216 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.9, spawnCount: 0 },
+            // { coordinate: { x: 346, y: 116 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
 
-            { coordinate: { x: 469, y: 551 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
+            // { coordinate: { x: 469, y: 551 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
         ];
         this.agentGrid = new AgentGrid();
         this.timeScale = { current: 1.0, previous: 1.0 };

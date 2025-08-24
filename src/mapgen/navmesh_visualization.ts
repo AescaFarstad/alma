@@ -2,12 +2,12 @@ import { NavmeshData } from './navmesh_struct';
 import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 import fs from 'fs';
 
-const IMAGE_SIZE = 4000;
+const IMAGE_SIZE = 2000;
 const CANVAS_CENTER = IMAGE_SIZE / 2;
 
 const availableColors: string[] = [
-    '#FF0000', '#9ACD32', '#3399FF', '#FFFF00', '#FF00FF', '#00FFFF',
-    '#FFA500', '#A52A2A', '#808080', '#50C878', '#4B0082', '#FFC0CB'
+    '#9ACD32', '#3399FF', '#FFFF00', '#FF00FF', '#00FFFF',
+    '#FFA500', '#A52A2A', '#808080', '#50C878', '#4B0082', '#FFC0CB', '#FF0000'
 ];
 
 function assignPolygonColors(navmeshData: NavmeshData): string[] {
@@ -48,9 +48,14 @@ function buildAdjacencyList(navmeshData: NavmeshData): number[][] {
             const neighbor = navmeshData.poly_neighbors[j];
             if (neighbor !== -1) {
                 adjacency[i].push(neighbor);
+                adjacency[neighbor].push(i);
             }
         }
         polyVertsIndex = nextPolyVertsIndex;
+    }
+
+    for (let i = 0; i < adjacency.length; i++) {
+        adjacency[i] = [...new Set(adjacency[i])];
     }
     return adjacency;
 }

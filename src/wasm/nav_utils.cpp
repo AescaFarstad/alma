@@ -1,5 +1,6 @@
 #include "nav_utils.h"
 #include "math_utils.h"
+#include "navmesh.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -8,35 +9,12 @@
 // External reference to global navmesh
 extern Navmesh g_navmesh;
 
-bool is_point_in_triangle(Point2 point, Point2 v1, Point2 v2, Point2 v3) {
-    // Use barycentric coordinates to check if point is inside triangle
-    float denom = (v2.y - v3.y) * (v1.x - v3.x) + (v3.x - v2.x) * (v1.y - v3.y);
-    if (std::abs(denom) < 1e-10f) {
-        return false; // Degenerate triangle
-    }
-    
-    float a = ((v2.y - v3.y) * (point.x - v3.x) + (v3.x - v2.x) * (point.y - v3.y)) / denom;
-    float b = ((v3.y - v1.y) * (point.x - v3.x) + (v1.x - v3.x) * (point.y - v3.y)) / denom;
-    float c = 1.0f - a - b;
-    
-    return (a >= 0.0f && b >= 0.0f && c >= 0.0f);
-}
-
 static bool check_triangle(int32_t triIdx, const Point2& point) {
     if (triIdx < 0 || triIdx >= g_navmesh.walkable_triangle_count) {
         return false;
     }
     
-    const int32_t triVertexStartIndex = triIdx * 3;
-    const int32_t p1Index = g_navmesh.triangles[triVertexStartIndex];
-    const int32_t p2Index = g_navmesh.triangles[triVertexStartIndex + 1];
-    const int32_t p3Index = g_navmesh.triangles[triVertexStartIndex + 2];
-    
-    const Point2& p1 = g_navmesh.vertices[p1Index];
-    const Point2& p2 = g_navmesh.vertices[p2Index];
-    const Point2& p3 = g_navmesh.vertices[p3Index];
-    
-    return is_point_in_triangle(point, p1, p2, p3);
+    return test_point_inside_triangle(point, triIdx);
 }
 
 int32_t is_point_in_navmesh(Point2 p, int32_t lastTriangle) {
@@ -149,16 +127,7 @@ int getTriangleFromPoint(const Point2& point) {
     std::vector<int> possibleTris = g_navmesh.triangle_index.query(point);
 
     for (int triIdx : possibleTris) {
-        const int triVertexStartIndex = triIdx * 3;
-        const int p1Index = g_navmesh.triangles[triVertexStartIndex];
-        const int p2Index = g_navmesh.triangles[triVertexStartIndex + 1];
-        const int p3Index = g_navmesh.triangles[triVertexStartIndex + 2];
-
-        const Point2& p1 = g_navmesh.vertices[p1Index];
-        const Point2& p2 = g_navmesh.vertices[p2Index];
-        const Point2& p3 = g_navmesh.vertices[p3Index];
-
-        if (math::isPointInTriangle(point, p1, p2, p3)) {
+        if (test_point_inside_triangle(point, triIdx)) {
             return triIdx;
         }
     }

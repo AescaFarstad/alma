@@ -1,3 +1,6 @@
+import { Wasm } from "./Wasm";
+import { WasmImpulse } from "./wasm_impulse_codes";
+
 export interface WasmFacade {
     _init_agents: (sharedBuffer: number, maxAgents: number, seed: number) => void;
     _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number) => number;
@@ -16,6 +19,7 @@ export interface WasmFacade {
     _get_g_navmesh_ptr?: () => number;
     _get_navmesh_bbox_ptr?: () => number;
     _get_spatial_index_data?: () => number;
+    _wasm_impulse: (code: number) => void;
     
     ccall: (fname: string, returnType: string | null, argTypes: string[], args: any[]) => any;
     cwrap: (fname: string, returnType: string | null, argTypes: string[]) => Function;
@@ -34,6 +38,8 @@ export interface WasmFacade {
     _render?: (dt: number, active_agents: number, mPtr: number, w: number, h: number, dpr: number) => void;
     _set_renderer_debug?: (enable: number) => void;
     _sprite_renderer_clear?: () => void;
+    triggerPointInTriangleBench: () => void;
+    triggerPointInPolygonBench: () => void;
 }
 
 declare global {
@@ -55,6 +61,14 @@ export async function createWasmModule(): Promise<WasmFacade> {
   }
   const createWasmModule = window.__createWasmModule as () => Promise<WasmFacade>;
   wasmModule = await createWasmModule();
+
+  wasmModule.triggerPointInTriangleBench = function(){
+    this._wasm_impulse(WasmImpulse.POINT_IN_TRIANGLE_BENCH);
+  }
+
+  wasmModule.triggerPointInPolygonBench = function(){
+    this._wasm_impulse(WasmImpulse.POINT_IN_POLYGON_BENCH);
+  }
 
   return wasmModule;
 }

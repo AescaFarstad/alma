@@ -26,12 +26,10 @@ export function populateTriangulationData(navmeshData: NavmeshData, triangulatio
 
 export function populatePolygonData(
     navmeshData: NavmeshData, 
-    walkablePolygons: MyPolygon[], 
     impassablePolygons: MyPolygon[]
 ): void {
     console.log('Populating polygon data using countless-sentinel structure...');
 
-    const allPolygons = [...walkablePolygons, ...impassablePolygons];
     // Helper to snap coordinates back to 2-decimal precision (Float32Array causes precision loss)
     const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
     
@@ -46,44 +44,74 @@ export function populatePolygonData(
 
     console.log(`Vertex lookup: ${vertexMap.size} triangulated vertices available`);
 
-    const polyVertsData: number[] = [];
-    const polygonsIndexArray: number[] = [];
+    const impassablePolyVerts: number[] = [];
+    const impassablePolygonsIndexArray: number[] = [];
     let missingVertexCount = 0;
-    let walkablePolygonCount = walkablePolygons.length;
 
-    for (let polyIndex = 0; polyIndex < allPolygons.length; polyIndex++) {
-        const poly = allPolygons[polyIndex];
-        const isWalkable = polyIndex < walkablePolygonCount;
-        polygonsIndexArray.push(polyVertsData.length);
-        
+    for (const poly of impassablePolygons) {
+        impassablePolygonsIndexArray.push(impassablePolyVerts.length);
         for (const p of poly) {
             const key = `${p[0]};${p[1]}`;
             const vertIndex = vertexMap.get(key);
             if (vertIndex !== undefined) {
-                polyVertsData.push(vertIndex);
+                impassablePolyVerts.push(vertIndex);
             } else {
                 missingVertexCount++;
                 if (missingVertexCount <= 3) { // Show first 3 only
-                    console.error(`Missing vertex ${key} from ${isWalkable ? 'walkable' : 'impassable'} polygon ${polyIndex}`);
+                    console.error(`Missing vertex ${key} from impassable polygon`);
                 }
             }
         }
     }
     
-    console.log(`Vertex matching: ${missingVertexCount} missing out of ${allPolygons.reduce((sum, poly) => sum + poly.length, 0)} polygon vertices`);
+    console.log(`Vertex matching: ${missingVertexCount} missing out of ${impassablePolygons.reduce((sum, poly) => sum + poly.length, 0)} polygon vertices`);
     
     // Add sentinel
-    polygonsIndexArray.push(polyVertsData.length);
-    polyVertsData.push(-1); 
+    impassablePolygonsIndexArray.push(impassablePolyVerts.length);
+    impassablePolyVerts.push(-1);
 
-    navmeshData.polygons = new Int32Array(polygonsIndexArray);
-    navmeshData.poly_verts = new Int32Array(polyVertsData);
-    navmeshData.walkable_polygon_count = walkablePolygons.length;
-    navmeshData.stats.polygons = allPolygons.length;
-    navmeshData.stats.walkable_polygons = walkablePolygons.length;
+    const finalPolygons = new Int32Array(navmeshData.walkable_polygon_count + impassablePolygons.length + 1);
+    finalPolygons.set(navmeshData.polygons.subarray(0, navmeshData.walkable_polygon_count + 1));
+    let offset = navmeshData.polygons[navmeshData.walkable_polygon_count];
+    for(let i=0; i < impassablePolygonsIndexArray.length; ++i) {
+        finalPolygons[navmeshData.walkable_polygon_count + i] = impassablePolygonsIndexArray[i] + offset;
+    }
+
+    const finalPolyVerts = new Int32Array(offset + impassablePolyVerts.length);
+    finalPolyVerts.set(navmeshData.poly_verts.subarray(0, offset));
+    finalPolyVerts.set(impassablePolyVerts, offset);
+
+
+    navmeshData.polygons = finalPolygons;
+    navmeshData.poly_verts = finalPolyVerts;
+    navmeshData.stats.polygons = navmeshData.walkable_polygon_count + impassablePolygons.length;
     navmeshData.stats.impassable_polygons = impassablePolygons.length;
 
-    console.log(`Populated ${allPolygons.length} polygons.`);
+    // Resize poly_tris to the correct length for all polygons (walkable + impassable)
+    const totalPolygonCount = navmeshData.stats.polygons;
+    const requiredPolyTrisLength = totalPolygonCount + 1; // +1 for sentinel
+    if (navmeshData.poly_tris.length !== requiredPolyTrisLength) {
+        const newPolyTris = new Int32Array(requiredPolyTrisLength);
+        // Copy existing walkable polygon triangle mappings
+        const walkableCopyLength = Math.min(navmeshData.walkable_polygon_count + 1, navmeshData.poly_tris.length);
+        newPolyTris.set(navmeshData.poly_tris.subarray(0, walkableCopyLength));
+        
+        // For impassable polygons, we need to set placeholder ranges that will be properly
+        // populated later in finalizeNavmesh when the impassableT2P mapping is available
+        // For now, just set consecutive ranges starting after walkable triangles
+        const walkableTriangleCount = navmeshData.walkable_triangle_count;
+        let currentTriangleIndex = walkableTriangleCount;
+        
+        for (let i = navmeshData.walkable_polygon_count + 1; i <= totalPolygonCount; i++) {
+            newPolyTris[i] = currentTriangleIndex;
+            // Note: This will be updated in finalizeNavmesh with actual triangle counts per blob
+        }
+        
+        navmeshData.poly_tris = newPolyTris;
+        console.log(`Resized poly_tris from ${navmeshData.poly_tris.length} to ${requiredPolyTrisLength} elements (${navmeshData.walkable_polygon_count} walkable + ${impassablePolygons.length} impassable + 1 sentinel)`);
+    }
+
+    console.log(`Populated ${navmeshData.stats.polygons} polygons.`);
 }
 
 export function populateBuildingData(
@@ -106,9 +134,11 @@ export function populateBuildingData(
     let notFoundCount = 0;
     const notFoundIds: string[] = [];
 
+    const buildingsById = new Map(buildings.map(b => [b.properties.osm_id, b]));
+
     for (const buildingIdsInBlob of blobToBuildings) {
         for (const oldId of buildingIdsInBlob) {
-            const building = buildings.find(b => b.properties.osm_id === oldId); // String comparison now
+            const building = buildingsById.get(oldId);
             if (building) {
                 const newBuilding = { ...building, id: newBuildingId };
                 buildingIdMap.set(oldId, newBuildingId);

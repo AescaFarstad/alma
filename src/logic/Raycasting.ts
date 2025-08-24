@@ -1,6 +1,8 @@
 import type { Navmesh } from './navmesh/Navmesh';
-import { Point2, isPointInTriangle, isToRight } from './core/math';
+import { Point2, isToRight } from './core/math';
 import { getTriangleFromPoint } from './navmesh/pathCorridor';
+import { testPointInsideTriangle } from './navmesh/NavUtils';
+import { GameState } from './GameState';
 
 export type RaycastWithCorridorResult = {
     hitP1: Point2 | null;
@@ -46,8 +48,7 @@ export function raycastCorridor(
         }
     } else {
         // Fallback to point-in-triangle check when endTriIdx is not provided
-        getTrianglePoints(navmesh, lastTriIdx, triPoints);
-        if(isPointInTriangle(endPoint.x, endPoint.y, triPoints[0].x, triPoints[0].y, triPoints[1].x, triPoints[1].y, triPoints[2].x, triPoints[2].y)) {
+        if(testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, lastTriIdx)) {
             return { hitP1: null, hitP2: null, corridor };
         }
     }
@@ -90,8 +91,7 @@ export function raycastPoint(
         }
     } else {
         // Fallback to point-in-triangle check when endTriIdx is not provided
-        getTrianglePoints(navmesh, lastTriIdx, triPoints);
-        if(isPointInTriangle(endPoint.x, endPoint.y, triPoints[0].x, triPoints[0].y, triPoints[1].x, triPoints[1].y, triPoints[2].x, triPoints[2].y)) {
+        if(testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, lastTriIdx)) {
             return { hitP1: null, hitP2: null };
         }
     }
@@ -141,7 +141,7 @@ function traceStraightCorridor(
         getTrianglePoints(navmesh, currentTriIdx, triPoints);
 
         // Fallback to point-in-triangle check if endTriIdx is not provided
-        if (endTriIdx === undefined && isPointInTriangle(endPoint.x, endPoint.y, triPoints[0].x, triPoints[0].y, triPoints[1].x, triPoints[1].y, triPoints[2].x, triPoints[2].y)) {
+        if (endTriIdx === undefined && testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, currentTriIdx)) {
             return corridor; // Success
         }
 
@@ -257,7 +257,7 @@ function traceStraightCorridorHitOnly(
         getTrianglePoints(navmesh, currentTriIdx, triPoints);
 
         // Fallback to point-in-triangle check if endTriIdx is not provided
-        if (endTriIdx === undefined && isPointInTriangle(endPoint.x, endPoint.y, triPoints[0].x, triPoints[0].y, triPoints[1].x, triPoints[1].y, triPoints[2].x, triPoints[2].y)) {
+        if (endTriIdx === undefined && testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, currentTriIdx)) {
             return currentTriIdx; // Success
         }
 

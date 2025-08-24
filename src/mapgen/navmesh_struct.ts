@@ -30,6 +30,7 @@ export interface NavmeshData {
   bbox: [number, number, number, number];          // Real/original bounding box
   buffered_bbox: [number, number, number, number]; // Enlarged bounding box used for triangulation
   stats: NavmeshStats;
+  debug_output_dir?: string;
 }
 
 export interface NavmeshStats {

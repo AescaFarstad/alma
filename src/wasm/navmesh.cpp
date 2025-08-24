@@ -1,4 +1,5 @@
 #include "navmesh.h"
+#include "math_utils.h"
 #include <cstring>
 #include <iostream>
 

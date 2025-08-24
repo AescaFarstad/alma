@@ -9,6 +9,7 @@
       <button @click="handleButtonClick($event, clearSimplified)" title="Clear Simplified">💥</button>
       <button @click="handleButtonClick($event, clearDebug)" title="Clear Debug">🐞</button>
       <button @click="handleButtonClick($event, uniteAndSimplifySelectedBuildings)" title="Unite and Simplify Selected">US Sel</button>
+      <button @click="handleButtonClick($event, debugBlobMapping)" title="Debug Blob Mapping">🔍</button>
     </div>
     <ul class="building-list">
       <li v-for="building in buildings" :key="building.id" 
@@ -383,13 +384,30 @@ const drawBlobs = (id: number) => {
     return;
   }
 
-  const blobId = gameState.navmesh.building_to_blob[id];
-  if (blobId === undefined || blobId < 0) {
+  console.log(`Drawing blob for building ${id}`);
+  
+  const blobIndex = gameState.navmesh.building_to_blob[id];
+  console.log(`Building ${id} -> Blob Index: ${blobIndex}`);
+  
+  if (blobIndex === undefined || blobIndex < 0) {
       console.warn(`Building ${id} does not belong to a blob.`);
       return;
   }
   
-  const blobPolygon = getPolygonVertices(gameState.navmesh, blobId);
+  // Convert blob index to polygon ID
+  // Blobs are impassable polygons with IDs >= walkable_polygon_count
+  const blobPolygonId = gameState.navmesh.walkable_polygon_count + blobIndex;
+  console.log(`Blob index ${blobIndex} -> Polygon ID: ${blobPolygonId}`);
+  console.log(`Walkable polygon count: ${gameState.navmesh.walkable_polygon_count}`);
+  console.log(`Total polygons: ${gameState.navmesh.polygons.length - 1}`);
+  
+  if (blobPolygonId >= gameState.navmesh.polygons.length - 1) {
+    console.warn(`Blob polygon ID ${blobPolygonId} is out of range for polygons array (length: ${gameState.navmesh.polygons.length - 1})`);
+    return;
+  }
+  
+  const blobPolygon = getPolygonVertices(gameState.navmesh, blobPolygonId);
+  console.log(`Retrieved ${blobPolygon.length} vertices for blob polygon ${blobPolygonId}`);
 
   if (blobPolygon.length > 0) {
     sceneState.addDebugPolygon(blobPolygon);
@@ -399,8 +417,9 @@ const drawBlobs = (id: number) => {
     blobPolygon.forEach((point, index) => {
       sceneState.addDebugText(point, index.toString(), "white");
     });
+    console.log(`Successfully drew blob ${blobIndex} (polygon ${blobPolygonId}) with ${blobPolygon.length} vertices`);
   } else {
-    console.warn(`No vertices found for blob ${blobId}.`);
+    console.warn(`No vertices found for blob polygon ${blobPolygonId}.`);
   }
 };
 
@@ -465,6 +484,32 @@ const clearSimplified = () => {
 const clearDebug = () => {
   if (!sceneState) return;
   sceneState.clearDebugVisuals();
+};
+
+const debugBlobMapping = () => {
+  if (!gameState || !sceneState) return;
+  console.log("=== Building to Blob Mapping Debug ===");
+  console.log(`building_to_blob array length: ${gameState.navmesh.building_to_blob.length}`);
+  console.log(`building_properties length: ${gameState.navmesh.building_properties.length}`);
+  console.log(`walkable_polygon_count: ${gameState.navmesh.walkable_polygon_count}`);
+  console.log(`total polygons: ${gameState.navmesh.polygons.length - 1}`);
+  
+  // Show first 20 mappings
+  const limit = Math.min(20, gameState.navmesh.building_to_blob.length);
+  for (let i = 0; i < limit; i++) {
+    const blobIndex = gameState.navmesh.building_to_blob[i];
+    const blobPolygonId = blobIndex >= 0 ? gameState.navmesh.walkable_polygon_count + blobIndex : -1;
+    console.log(`Building ID: ${i}, Blob Index: ${blobIndex}, Blob Polygon ID: ${blobPolygonId}`);
+  }
+  
+  // Count how many buildings have valid blob mappings
+  let validMappings = 0;
+  for (let i = 0; i < gameState.navmesh.building_to_blob.length; i++) {
+    if (gameState.navmesh.building_to_blob[i] >= 0) {
+      validMappings++;
+    }
+  }
+  console.log(`Valid blob mappings: ${validMappings} out of ${gameState.navmesh.building_to_blob.length}`);
 };
 
 const showTooltip = (building: BuildingDisplayData, event: MouseEvent) => {

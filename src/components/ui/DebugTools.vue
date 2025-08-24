@@ -12,6 +12,12 @@
       <button @click="logTriangle">Log</button>
       <button @click="drawTriangle">Draw</button>
     </div>
+    <div class="debug-section">
+      <input type="text" v-model="polygonIndex" placeholder="Polygon Index" />
+      <button @click="flyToPolygon">Fly</button>
+      <button @click="logPolygon">Log</button>
+      <button @click="drawPolygon">Draw</button>
+    </div>
   </div>
 </template>
 
@@ -27,6 +33,7 @@ const sceneState = inject<SceneState>('sceneState');
 
 const coordinates = ref('');
 const triangleIndex = ref('');
+const polygonIndex = ref('');
 
 const parseCoordinatesFromString = (input: string): { x: number, y: number } | null => {
   const trimmedInput = input.trim();
@@ -94,8 +101,8 @@ const flyToTriangle = () => {
   if (isNaN(triIndex) || !gameState?.navmesh || !mapInstance.map) {
     return;
   }
-  const centroidX = gameState.navmesh.centroids[triIndex * 2];
-  const centroidY = gameState.navmesh.centroids[triIndex * 2 + 1];
+  const centroidX = gameState.navmesh.triangle_centroids[triIndex * 2];
+  const centroidY = gameState.navmesh.triangle_centroids[triIndex * 2 + 1];
 
   if (centroidX && centroidY) {
     const view = mapInstance.map.getView();
@@ -115,9 +122,9 @@ const logTriangle = () => {
   const p2Index = navmesh.triangles[triVertexStartIndex + 1];
   const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
-  const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-  const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
-  const p3 = { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] };
+  const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
+  const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
+  const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
   
   const neighbors = [
     navmesh.neighbors[triIndex * 3],
@@ -141,14 +148,89 @@ const drawTriangle = () => {
   const p2Index = navmesh.triangles[triVertexStartIndex + 1];
   const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
-  const p1 = { x: navmesh.points[p1Index * 2], y: navmesh.points[p1Index * 2 + 1] };
-  const p2 = { x: navmesh.points[p2Index * 2], y: navmesh.points[p2Index * 2 + 1] };
-  const p3 = { x: navmesh.points[p3Index * 2], y: navmesh.points[p3Index * 2 + 1] };
+  const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
+  const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
+  const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
 
   sceneState.addDebugArea([p1, p2, p3], ACGREEN);
   sceneState.addDebugText(p1, 'v1', ACGREEN)
   sceneState.addDebugText(p2, 'v2', ACGREEN)
   sceneState.addDebugText(p3, 'v3', ACGREEN)
+};
+
+const flyToPolygon = () => {
+  const polyIndex = parseInt(polygonIndex.value, 10);
+  if (isNaN(polyIndex) || !gameState?.navmesh || !mapInstance.map) {
+    return;
+  }
+  const centroidX = gameState.navmesh.poly_centroids[polyIndex * 2];
+  const centroidY = gameState.navmesh.poly_centroids[polyIndex * 2 + 1];
+
+  if (centroidX !== undefined && centroidY !== undefined) {
+    const view = mapInstance.map.getView();
+    view.setCenter([centroidX, centroidY]);
+    view.setZoom(9);
+  }
+};
+
+const logPolygon = () => {
+  const polyIndex = parseInt(polygonIndex.value, 10);
+  if (isNaN(polyIndex) || !gameState?.navmesh) {
+    return;
+  }
+  const navmesh = gameState.navmesh;
+  if (polyIndex >= navmesh.polygons.length - 1) {
+    console.error(`Polygon index ${polyIndex} is out of bounds.`);
+    return;
+  }
+
+  const polyVertStart = navmesh.polygons[polyIndex];
+  const polyVertEnd = navmesh.polygons[polyIndex + 1];
+
+  const vertexIndices = [];
+  for (let i = polyVertStart; i < polyVertEnd; i++) {
+    vertexIndices.push(navmesh.poly_verts[i]);
+  }
+
+  const vertices = vertexIndices.map(index => ({
+    x: navmesh.vertices[index * 2],
+    y: navmesh.vertices[index * 2 + 1]
+  }));
+
+  const neighbors = [];
+  for (let i = polyVertStart; i < polyVertEnd; i++) {
+    neighbors.push(navmesh.poly_neighbors[i]);
+  }
+
+  console.log(`Polygon ${polyIndex} vertices:`, vertices);
+  console.log(`Polygon ${polyIndex} vertex indices:`, vertexIndices);
+  console.log(`Polygon ${polyIndex} neighbors:`, neighbors);
+};
+
+const drawPolygon = () => {
+  const polyIndex = parseInt(polygonIndex.value, 10);
+  if (isNaN(polyIndex) || !gameState?.navmesh || !sceneState) {
+    return;
+  }
+  const navmesh = gameState.navmesh;
+  if (polyIndex >= navmesh.polygons.length - 1) {
+    console.error(`Polygon index ${polyIndex} is out of bounds.`);
+    return;
+  }
+
+  const polyVertStart = navmesh.polygons[polyIndex];
+  const polyVertEnd = navmesh.polygons[polyIndex + 1];
+
+  const vertices = [];
+  for (let i = polyVertStart; i < polyVertEnd; i++) {
+    const vertIndex = navmesh.poly_verts[i];
+    vertices.push({
+      x: navmesh.vertices[vertIndex * 2],
+      y: navmesh.vertices[vertIndex * 2 + 1]
+    });
+  }
+
+  sceneState.addDebugArea(vertices, ACGREEN);
 };
 
 </script>

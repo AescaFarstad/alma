@@ -2,6 +2,23 @@ import { NavmeshData, MyPolygon } from './navmesh_struct';
 
 export function printFinalSummary(navmeshData: NavmeshData, walkableOpt: any, impassableOpt: any, triangleToPolygonMap?: Map<number, number>, buildingVertexStats?: { addedForBuildings: number, totalBuildingVerts: number }): void {
     console.log('\n=== NAVMESH GENERATION SUMMARY ===');
+
+
+    console.log(`BUILDINGS count: ${navmeshData.stats.buildings}`);
+    
+    // Building vertex statistics
+    if (buildingVertexStats) {
+        console.log(`Building vertices added specifically for buildings: ${buildingVertexStats.addedForBuildings}`);
+        console.log(`Total building vertices: ${buildingVertexStats.totalBuildingVerts}`);
+    }
+
+    // Building-to-blob statistics
+    const buildingBlobStats = calculateBuildingBlobStats(navmeshData);
+    console.log(`Average buildings per blob: ${buildingBlobStats.avgBuildingsPerBlob.toFixed(1)}`);
+    console.log(`Single building blobs: ${buildingBlobStats.singleBuildingBlobs}`);
+    console.log(`Total blobs: ${buildingBlobStats.totalBlobs}`);
+
+    console.log(``);
     console.log(`Total vertices: ${navmeshData.stats.vertices}`);
     console.log(`Total triangles: ${navmeshData.stats.triangles}`);
     console.log(`  - Walkable triangles: ${navmeshData.stats.walkable_triangles}`);
@@ -25,22 +42,6 @@ export function printFinalSummary(navmeshData: NavmeshData, walkableOpt: any, im
 
     console.log(`Average triangle area: ${navmeshData.stats.avg_triangle_area.toFixed(2)}`);
     console.log(`Average polygon area: ${navmeshData.stats.avg_polygon_area.toFixed(2)}`);
-
-    // Enhanced BUILDINGS section
-    console.log('\n--- BUILDINGS ---');
-    console.log(`BUILDINGS count: ${navmeshData.stats.buildings}`);
-    
-    // Building vertex statistics
-    if (buildingVertexStats) {
-        console.log(`Building vertices added specifically for buildings: ${buildingVertexStats.addedForBuildings}`);
-        console.log(`Total building vertices: ${buildingVertexStats.totalBuildingVerts}`);
-    }
-
-    // Building-to-blob statistics
-    const buildingBlobStats = calculateBuildingBlobStats(navmeshData);
-    console.log(`Average buildings per blob: ${buildingBlobStats.avgBuildingsPerBlob.toFixed(1)}`);
-    console.log(`Single building blobs: ${buildingBlobStats.singleBuildingBlobs}`);
-    console.log(`Total blobs: ${buildingBlobStats.totalBlobs}`);
 }
 
 export function finalizeNavmeshData(navmeshData: NavmeshData, data: any): void {
@@ -52,6 +53,7 @@ export function finalizeNavmeshData(navmeshData: NavmeshData, data: any): void {
 
     // Preserve existing building count that was populated earlier
     const existingBuildingCount = navmeshData.stats.buildings;
+    const impassablePolygonCount = navmeshData.stats.impassable_polygons;
 
     // Update statistics
     navmeshData.stats = {
@@ -59,14 +61,14 @@ export function finalizeNavmeshData(navmeshData: NavmeshData, data: any): void {
         triangles: data.triangulationResult.allTriangles.length,
         walkable_triangles: navmeshData.walkable_triangle_count,
         impassable_triangles: data.triangulationResult.allTriangles.length - navmeshData.walkable_triangle_count,
-        polygons: data.walkablePolygons.length + data.impassablePolygons.length,
-        walkable_polygons: data.walkablePolygons.length,
-        impassable_polygons: data.impassablePolygons.length,
+        polygons: navmeshData.walkable_polygon_count + impassablePolygonCount,
+        walkable_polygons: navmeshData.walkable_polygon_count,
+        impassable_polygons: impassablePolygonCount,
         buildings: existingBuildingCount, // Preserve the count from populateBuildingData
-        blobs: data.impassablePolygons.length,
+        blobs: impassablePolygonCount,
         bbox: navmeshData.bbox,
         avg_triangle_area: calculateAverageTriangleArea(data.triangulationResult.allTriangles),
-        avg_polygon_area: calculateAveragePolygonArea([...data.walkablePolygons, ...data.impassablePolygons])
+        avg_polygon_area: 0
     };
 
     console.log('Navmesh data structure finalized');

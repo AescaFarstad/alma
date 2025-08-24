@@ -8,6 +8,8 @@ import { sceneState } from './logic/drawing/SceneState';
 import { dynamicScene } from './logic/drawing/DynamicScene';
 import { WasmInit } from './logic/initializers/WasmInit';
 import { Wasm } from './logic/Wasm';
+import { runPointInTriangleBenchmark } from './logic/debug/PointInTriangleBenchmark';
+import { WasmFacade } from './logic/WasmFacade';
 
 async function initializeGame() {
     const gameState = new GameState();
@@ -39,6 +41,10 @@ async function initializeGame() {
     // Initialize WASM after Vue app mounts (so canvas element exists)
     const wasmInit = new WasmInit();
     await wasmInit.initializeWasm(gameState);
+
+    (window as any).runPointInTriangleBenchmark = () => runPointInTriangleBenchmark(gameState);
+    (window as any).runPointInTriangleBenchmarkWasm = () => WasmFacade.triggerPointInTriangleBench();
+    (window as any).runPointInPolygonBenchmarkWasm = () => WasmFacade.triggerPointInPolygonBench();
 
     // --- Game Loop ---
     let lastTimestamp = 0;

@@ -16,13 +16,6 @@ export function loadBlobs(filePath: string, bbox: readonly [number, number, numb
     let polygons: MyPolygon[] = [];
     const blobToBuildings: string[][] = [];
 
-    // === DEBUG LOGGING: Sample raw lines ===
-    console.log(`\n=== LOAD BLOBS DEBUG ===`);
-    console.log(`Total blob lines to process: ${lines.length}`);
-    if (lines.length > 0) {
-        console.log(`Sample blob line: "${lines[0]}"`);
-    }
-
     // Format: index;[buildingId1,buildingId2];[x1,y1,x2,y2,...]
     for (const line of lines) {
         const parts = line.split(';');
@@ -74,13 +67,6 @@ export function loadBuildings(buildingsFilePath: string): any[] {
     const buildings: any[] = [];
     let newId = 0;
 
-    // === DEBUG LOGGING: Sample raw lines ===
-    console.log(`\n=== LOAD BUILDINGS DEBUG ===`);
-    console.log(`Total lines to process: ${lines.length}`);
-    if (lines.length > 0) {
-        console.log(`Sample building line: "${lines[0]}"`);
-    }
-
     // Format: id;{properties}[x1,y1,x2,y2,...]
     for (const line of lines) {
         try {
@@ -89,11 +75,6 @@ export function loadBuildings(buildingsFilePath: string): any[] {
 
             const idStr = line.substring(0, semicolonIndex);
             const originalId = idStr; // Keep as string instead of parseInt
-            
-            // === DEBUG LOGGING: ID parsing ===
-            if (newId < 2) { // Only log first 2 for verification
-                console.log(`Building ${newId}: osm_id="${originalId}"`);
-            }
             
             const remainder = line.substring(semicolonIndex + 1);
 
@@ -173,9 +154,6 @@ export function writeNavmeshOutput(outputDir: string, navmeshData: NavmeshData, 
 }
 
 function writeBuildingsGeoJSON(outputPath: string, buildings: any[]): void {
-    // === DEBUG LOGGING: Buildings being written ===
-    console.log(`\n=== WRITE BUILDINGS GEOJSON DEBUG ===`);
-    console.log(`Input buildings count: ${buildings.length}`);
 
     const features = buildings.map(b => ({
         type: "Feature",
@@ -183,9 +161,6 @@ function writeBuildingsGeoJSON(outputPath: string, buildings: any[]): void {
         geometry: b.geometry,
         properties: {} // Empty properties as per new spec
     }));
-
-    console.log(`Generated features count: ${features.length}`);
-
     // Build valid GeoJSON FeatureCollection with line breaks after each feature
     const formattedFeatures = features.map(feature => JSON.stringify(feature)).join(',\n');
     const geojsonContent = `{
@@ -285,8 +260,6 @@ function writeNavmeshBinary(outputPath: string, navmeshData: NavmeshData): void 
 }
 
 function writeBuildingProperties(outputPath: string, buildingMeta: string[]): void {
-    console.log(`\n=== WRITE BUILDING PROPERTIES DEBUG ===`);
-    console.log(`Building meta entries count: ${buildingMeta.length}`);
     
     const content = `[${buildingMeta.join(',\n')}]`;
     fs.writeFileSync(outputPath, content);

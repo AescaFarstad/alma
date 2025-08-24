@@ -37,90 +37,12 @@ august 18-21
 august 21-22
     clearing inconsistencies, fixing leftovers, ui. selecting buildings, sync bboxes, buffer spatial indexes
     ts and wasm parity on tiny navmesh
+august 24
+    fix concave polygons, point in poly, point in triangle optimisations, benchmarks, fixes, new polygonalization
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
 
-
-
-There is a 2d map of a city many square kilometers in size. ~100k vertices, 30k buildings.
-Buildings are impassible obstacles. They are polygons without holes.
-
-I combine buildings that are too close to each other to walk between them into blobs.
-Blobs keep info about which buildings became part fo them.
-Blobs are further simplified to decrease the amount of vertices.
-
-Then I triangulate everything - walkable area and blobs.
-Triangles inside blobs are stored after passable triangles. The max passible index is stored for comparisons later.
-8 fake triangles are added around the map as impassible walls.
-walkable convex polygons are combined using various NP-crunching methods
-blobs are a single polygon even though it might not be convex. They are not meant to be navigatable.
-
-since the building's original verticies may be lost during blob siplification, these are stored too.
-
-Grid-based spatial index is created for triangles and polygons. Each cell contains all that overlap even a part of it.
-
-in the game units may want to get to building N. We get blobs in the area, find which one contains that building, find neighbouring polygons, find which one of these are close enough to the real building's coordinates and these become the goal for pathfinding.
-
-pathfinding finds poly corridor which is then translated into corners. The unit keeps track of polies and if its pushed away from the path it can still safely continue if it's in the same poly or if the corner is directly visible.
-
-visibility is checked by following a chain of triangles. if all of them are < max passable triangle index -> visibility = true
-
-
-ids for triangles, polygons, buildings are simply their index.
-
-vertices float {x, y} [walkable area vertices][building vertices that are not present in walkable triangles]
-triangles int32 {v1, v2, v3} [passable][impassable][fake outer edge]
-neighbours int32 {tri1, tri2, tri3}
-polygons int32 {count, meta_info, verts_start, triangles_start, neighbours_start} [passable][impassable concave blobs]
-poly_centroids float {x, y}
-poly_verts int32 {v1, v2, v3, v4, v5 ... 'count' of them} [polygons, ]
-poly_tris int32 {tri1, tri2, tri3 ... 'count' - 2 of them}
-poly_neighbors int32 {tri1, tri2, tri3 ... 'count' of them}
-buildings int 32 {id, count, verts_start}
-building_verts int32 {v1, v2, v3, v4 ... 'count' of them}
-blob_buildings int32 {id | count, id1, id2 ...}
-building_meta JSON_STRING {data1\ndata2\n} // line number is the building id
-
-
-
-meta_info:
-    is negative for passable polygons. Can server as traversing speed indicator.
-    for blobs this indexes blob_buildings start. One bit is used to indicate whether it is a single id (as most of the buildings are 1:1 with blobs) or a series
-
-Constructed at runtime in a worker thread:
-
-triangle_to_polygon int32 {poly_id}
-building_to_polygon int32 {poly_id} //blob
-spatial_index_for triangles
-spatial_index_for polygons
-spatial_index_for blobs //separate one
-
-Blobs and polygons are separate because pathfinding doesn't want to deal with filtering out blobs.
-
-typical structure of a spatial index:
-private cellOffsets: Uint32Array = new Uint32Array(0);
-private cellTriangles: Int32Array = new Int32Array(0);
-private cellSize: number = 128; // Default grid cell size
-private gridWidth: number = 0;
-private gridHeight: number = 0;
-private minX: number = 0;
-private minY: number = 0;
-private maxX: number = 0;
-private maxY: number = 0;
-
-
-
-
-
-Plan:
-    WASM benchmark
-    navmesh generation
-
-Navigation
-    geometry pre-processing
-    triangularization
-    city-block clusterization
 
 
 manual edits to data processing - a106560244 = roof or sub polygon hole
@@ -138,62 +60,7 @@ Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite i
 properly convert filter_geojson.cjs to filter_geojson.ts to be called in tsnode.
 convert the rest
 
-
-
-Use the same global structure for indexing and mapping
-Make triangulation abstract
-k-opt is just meh
-binary files must coexist with text files for clarity
-
-Proper logs about how many of each do we have
-
-
-pack polygons step
-verify step
-
-copy buildings data from navmesh step
-
-organise triangles in poly for binary search
-
-
-Analyze if the implementation of the new navmesh features is complete. Are all details nailed down? Does it follow the spec in terms of data sources, layouts, outputs?
-Is there anything questionable, ambiguos, suspicuos?
-a left-over? unfinished? a todo?
-There must not be any fallback. Failing fast is key.
-Note: k-opt step should be blank and producde no change, but allow the pipeline to continue.
-However, if it will be implemented, it is goign to change triangle to polygons relationships and completely redo polygons. Will that work fine?
-
-do not edit code.
-
-
-
-
-
-Triangle neighbors are computed but dropped
-future real k-opt would break finalize with current wiring
-
-
-Fake boundary buildings are incompatible with building I/O
-
-
-writeNavmeshText omits poly_centroids and building_meta (okay for debug, but note).
-Boundary validation does not fail the run
-
-add validation that there are no vertices that are too close to each other
-
-
-
-UI - get building by id get building by coordinate
-
 don't include sentinels in indexes
-
-what are we giving to wasm as initi buffer? is it safe to reinterpret it? Are we supplying more bytes than needed?
-
-parse building's meta
-
-
-building id has been changed from string to number
-buildingsById is not longer relevant, 
 
 why does main.cpp allocate. does it ever clear?
 
@@ -202,3 +69,94 @@ bboxes and spatial indexes....
 remove obsolete isGridCorner
 
 if can't see next corner, check distance to the line between the corner and the last point from which you saw the corner
+
+which triangle am I
+current one? it's neighbour 1, 2, 3?
+check neighbour, check neighbour's poly
+
+helper triangle corridor
+empty?
+    check neighbours
+    check "I'm inside the next poly"
+    no? -> cast ray to corner
+
+
+
+I'm going to use corridor property for polygons instead of triangles.
+I'm going to update the corridor when entering a triangle which belongs to a new polygon.
+
+What code will that affect? What should I be mindfull of?
+
+
+I want to update the path patching logic. If an agent no longer sees the next corner,
+then it calculate the LINE1 between the corner and the last point where that corner was certainly visible.
+then it takes the edge which the raycasting has returned
+find the LINE2 which goes through the agent and is parallel to that edge
+finds R = intersection of LINE1, LINE2
+finds the triangle of R
+checks that R is visible from agent's position
+uses R as the next corner, while the actual next corner becomes the next-next corner.
+
+if R is not visible -> recalculate path fully.
+
+distance to the line
+If this distance is 
+
+
+
+new polygonalization
+
+operates on NavmeshData
+
+it splits triangles into groups:
+for each unclassified triangle it starts a flood fill that will join them all into a group:
+for each neighbour, if it has an admissible edge with this triangle -> it's added to the group
+an admissible edge means that it doesn't create obtuse angle if removed.
+specifically for atriangles ABC, BDC:
+BC is shared. check AB * AD < AB * AC && AC * AD < AC * AB, where * is a cross product and all edges are of normalizaed length
+
+it passes the edges to the group too.
+
+Next the algorithm runs on each of the groups separately.
+
+
+for the initial implementation I just want to run some statistics and calculate the size of the largest group and median group.
+
+
+
+
+
+
+=== NAVMESH GENERATION SUMMARY ===
+Total vertices: 25144
+Total triangles: 50282
+  - Walkable triangles: 33226
+  - Impassable triangles: 17056
+Total polygons: 18248
+  - Walkable polygons: 14202 (0.0% reduction)
+    • Largest polygon: 11 triangles
+    • Average triangles per polygon: 2.3
+    • Single triangle polygons: 3004
+  - Impassable polygons: 4046 (0.0% reduction)
+Polygon vertices count: 102222
+Polygon triangles count: 50282
+Average triangle area: 1578.70
+Average polygon area: 4889.68
+
+
+
+=== NAVMESH GENERATION SUMMARY ===
+Total vertices: 25144
+Total triangles: 50282
+  - Walkable triangles: 33226
+  - Impassable triangles: 17056
+Total polygons: 18248
+  - Walkable polygons: 14202 (0.0% reduction)
+    • Largest polygon: 11 triangles
+    • Average triangles per polygon: 2.3
+    • Single triangle polygons: 3004
+  - Impassable polygons: 4046 (0.0% reduction)
+Polygon vertices count: 102222
+Polygon triangles count: 50282
+Average triangle area: 1578.70
+Average polygon area: 4889.68

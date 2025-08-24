@@ -3,7 +3,7 @@ import path from 'path';
 import minimist from 'minimist';
 import { loadBlobs, loadBuildings } from './nav_data_io';
 import { triangulate } from './triangulate';
-import { hertelMehlhorn } from './hertel_mehlhorn';
+import { hertelMehlhorn } from './polygonize';
 import { kOptOptimize } from './k_opt';
 import { MyPolygon, MyPoint, NavmeshData } from './navmesh_struct';
 import { printFinalSummary, finalizeNavmeshData } from './nav_summary';
@@ -12,22 +12,20 @@ import { populateTriangulationData, populatePolygonData, populateBuildingData, p
 import { finalizeNavmesh, buildFinalTriangleToPolygonMap } from './finalize_navmesh';
 import { drawNavmesh } from './navmesh_visualization';
 import { generateBoundary, validateBoundaryTriangulation } from './navmesh_boundary';
-import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping } from './navmesh_validation';
+import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex } from './navmesh_validation';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import { newPolygonization } from './polygonize_o';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-500, -500, 500, 500];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, 0, 120, 120];
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, -120, 120, 120];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-500, -500, 500, 500];
 const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
 const BOUNDARY_INFLATION = 100;
-
-const POLYGONIZATION_SETTINGS = {
-    enableConvexityChecks: true,
-    maxMergeAttempts: 1000
-} as const;
 
 const OPTIMIZATION_SETTINGS = {
     walkable: {
@@ -76,24 +74,14 @@ function main() {
     const buildingsFilePath = path.join(inputDir, 'buildings_s7.txt');
     const buildings = loadBuildings(buildingsFilePath);
     
-    // === DEBUG LOGGING: Initial building data ===
-    console.log(`\n=== BUILDING DATA TRACKING ===`);
-    console.log(`Initial buildings loaded: ${buildings.length}`);
-    console.log(`Sample building IDs: ${buildings.slice(0, 5).map(b => b.properties.osm_id).join(', ')}`);
-    console.log(`Blob-to-building mappings: ${blobToBuildings.length}`);
-    console.log(`Sample blob mappings:`, blobToBuildings.slice(0, 3));
-    
     // Count total building references in blobs
     const totalBuildingRefs = blobToBuildings.flat().length;
     const uniqueBuildingRefs = new Set(blobToBuildings.flat()).size;
-    console.log(`Total building references in blobs: ${totalBuildingRefs}`);
-    console.log(`Unique building references in blobs: ${uniqueBuildingRefs}`);
     
     // Step 1.1: Snap all coordinates to 2 decimal precision for consistency
     const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
     const snapPolygon = (poly: MyPolygon): MyPolygon => poly.map(([x, y]) => [snapTo2Decimals(x), snapTo2Decimals(y)]);
     const holePolygons = rawHolePolygons.map(snapPolygon);
-    console.log(`Loaded and processed ${holePolygons.length} hole polygons`);
     
     const processingBbox = calculateProcessingBounds(holePolygons);
     
@@ -129,6 +117,7 @@ function main() {
     // Step 2: Initialize the final navmesh data structure
     console.log('\n=== INITIALIZING NAVMESH DATA STRUCTURE ===');
     const navmeshData = initializeNavmeshData();
+    navmeshData.debug_output_dir = outputDir;
 
     // Step 3: Triangulation phase
     console.log('\n=== TRIANGULATION PHASE ===');
@@ -137,27 +126,19 @@ function main() {
 
     // Step 4: Polygonization phase  
     console.log('\n=== WALKABLE POLYGONIZATION PHASE ===');
-    const { polygons: rawWalkablePolygons, triangleToPolygonMap: walkableT2P } = hertelMehlhorn({
-        navmeshData,
-        settings: POLYGONIZATION_SETTINGS,
-    });
-    
-    validateIntermediateTrianglePolygonMapping(walkableT2P, navmeshData.walkable_triangle_count, rawWalkablePolygons.length, "Polygonization");
+    newPolygonization(navmeshData);
 
-    // Step 4.1: Snap walkable polygon coordinates to 2-decimal precision
-    // (hertel-mehlhorn reads from navmeshData.vertices which has Float32Array precision loss)
-    const walkablePolygons = rawWalkablePolygons.map(snapPolygon);
-    const impassablePolygons = [...holePolygons, ...boundaryData.boundaryBlobs];
+    // Step 4.1: No longer need to extract polygons, they are in navmeshData.
+    validateAllPolygonsConvex(navmeshData, "Polygonization");
     
     // Create a mapping from the global triangle index to the new global polygon index.
     const impassableT2P = new Map<number, number>();
     const walkableTriangleCount = navmeshData.walkable_triangle_count;
-    const walkablePolygonCount = walkablePolygons.length;
     
     // Map all impassable triangles to their blobs (includes boundary triangles now)
     triangulationResult.impassableTriangleToBlobIndex.forEach((blobIndex, triangleIndexInBlob) => {
         const globalTriangleIndex = walkableTriangleCount + triangleIndexInBlob;
-        const globalPolygonIndex = walkablePolygonCount + blobIndex;
+        const globalPolygonIndex = navmeshData.walkable_polygon_count + blobIndex;
         impassableT2P.set(globalTriangleIndex, globalPolygonIndex);
     });
 
@@ -172,40 +153,44 @@ function main() {
         }
     }
 
-    // Step 5: Optimization phase
-    console.log('\n=== OPTIMIZATION PHASE ===');
-    console.log('Optimizing walkable polygons...');
-    const optimizedWalkable = kOptOptimize(walkablePolygons, { ...OPTIMIZATION_SETTINGS.walkable, initialSeed });
+    // // Step 5: Optimization phase
+    // console.log('\n=== OPTIMIZATION PHASE ===');
+    // console.log('Optimizing walkable polygons...');
+    // const optimizedWalkable = kOptOptimize(walkablePolygons, { ...OPTIMIZATION_SETTINGS.walkable, initialSeed });
 
-    console.log('Skipping optimization for impassable polygons...');
-    const optimizedImpassable = {
-        polygons: impassablePolygons,
-        originalCount: impassablePolygons.length,
-        optimizedCount: impassablePolygons.length,
-        improvementPercent: 0,
-        iterations: 0,
-    };
+    // console.log('Skipping optimization for impassable polygons...');
+    // const optimizedImpassable = {
+    //     polygons: impassablePolygons,
+    //     originalCount: impassablePolygons.length,
+    //     optimizedCount: impassablePolygons.length,
+    //     improvementPercent: 0,
+    //     iterations: 0,
+    // };
 
-    const optimizedT2P = buildFinalTriangleToPolygonMap(navmeshData, navmeshData.walkable_triangle_count, optimizedWalkable.polygons, walkableT2P, new Map());
-    validateIntermediateTrianglePolygonMapping(optimizedT2P, navmeshData.walkable_triangle_count, optimizedWalkable.polygons.length, "Optimization");
+    // const optimizedT2P = buildFinalTriangleToPolygonMap(navmeshData, navmeshData.walkable_triangle_count, optimizedWalkable.polygons, walkableT2P, new Map());
+    // validateIntermediateTrianglePolygonMapping(optimizedT2P, navmeshData.walkable_triangle_count, optimizedWalkable.polygons.length, "Optimization");
+    
+    // // Hertel-Mehlhorn guarantees convex polygons, and k-opt is a stub, so we can assume convexity.
+    // // A full implementation would require re-validating convexity here.
+    // console.log("Polygon convexity validation (after Optimization) passed (stubbed).");
 
-    try {
-        fs.writeFileSync(bestSeedPath, optimizedWalkable.bestSeed.toString(), 'utf-8');
-        console.log(`Wrote new best seed to ${bestSeedPath}: ${optimizedWalkable.bestSeed}`);
-    } catch (e) {
-        console.error('Could not write best_seed.txt');
-    }
+    // try {
+    //     fs.writeFileSync(bestSeedPath, optimizedWalkable.bestSeed.toString(), 'utf-8');
+    //     console.log(`Wrote new best seed to ${bestSeedPath}: ${optimizedWalkable.bestSeed}`);
+    // } catch (e) {
+    //     console.error('Could not write best_seed.txt');
+    // }
 
     // Step 6: Populate and finalize navmesh data structure
     console.log('\n=== POPULATING AND FINALIZING NAVMESH DATA ===');
     
     // DEBUG: Log polygon sources
-    console.log(`Walkable polygons: ${optimizedWalkable.polygons.length} (from hertelMehlhorn + k-opt)`);
-    console.log(`Impassable polygons: ${optimizedImpassable.polygons.length} (original holes + boundary blobs)`);
+    console.log(`Walkable polygons: ${navmeshData.walkable_polygon_count} (from newPolygonization)`);
+    console.log(`Impassable polygons: ${holePolygons.length + boundaryData.boundaryBlobs.length} (original holes + boundary blobs)`);
     console.log(`  - Original hole polygons: ${holePolygons.length}`);
     console.log(`  - Boundary blobs: ${boundaryData.boundaryBlobs.length}`);
     
-    populatePolygonData(navmeshData, optimizedWalkable.polygons, optimizedImpassable.polygons);
+    populatePolygonData(navmeshData, [...holePolygons, ...boundaryData.boundaryBlobs]);
     const allBuildings = [...buildings, ...boundaryData.fakeBuildingsData];
 
     const extendedBlobToBuildings = [...blobToBuildings];
@@ -213,27 +198,9 @@ function main() {
     extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[0].properties.osm_id]); // First boundary blob
     extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[1].properties.osm_id]); // Second boundary blob
     
-    // === DEBUG LOGGING: Before populateBuildingData ===
-    console.log(`\n=== BEFORE POPULATE BUILDING DATA ===`);
-    console.log(`Total buildings (including fake): ${allBuildings.length}`);
-    console.log(`Original buildings: ${buildings.length}`);
-    console.log(`Fake buildings: ${boundaryData.fakeBuildingsData.length}`);
-    console.log(`Extended blob-to-building mappings: ${extendedBlobToBuildings.length}`);
-    console.log(`Sample fake building IDs: ${boundaryData.fakeBuildingsData.map(b => b.properties.osm_id).join(', ')}`);
-    console.log(`Last two blob mappings (should be fake buildings):`, extendedBlobToBuildings.slice(-2));
-    
     const { reorderedBuildings, buildingVertexStats } = populateBuildingData(navmeshData, allBuildings, extendedBlobToBuildings);
-    
-    // === DEBUG LOGGING: After populateBuildingData ===
-    console.log(`\n=== AFTER POPULATE BUILDING DATA ===`);
-    console.log(`Returned reorderedBuildings count: ${reorderedBuildings.length}`);
-    console.log(`Sample returned building IDs: ${reorderedBuildings.slice(0, 5).map(b => `${b.id}(osm:${b.properties.osm_id})`).join(', ')}`);
-    
     const triangleToPolygonMap = finalizeNavmesh(
         navmeshData,
-        triangulationResult.walkableTriangles.length,
-        optimizedWalkable.polygons,
-        walkableT2P,
         impassableT2P
     );
     
@@ -241,25 +208,13 @@ function main() {
     populatePolygonCentroids(navmeshData);
 
     finalizeNavmeshData(navmeshData, {
-        walkablePolygons: optimizedWalkable.polygons,
-        impassablePolygons: optimizedImpassable.polygons,
         triangulationResult,
-        optimizationStats: {
-            walkable: optimizedWalkable,
-            impassable: optimizedImpassable
-        },
         processingBbox,
         inflatedBbox
     });
 
     // Step 7: Write output
     console.log('\n=== WRITING OUTPUT ===');
-    
-    // === DEBUG LOGGING: Before writeNavmeshOutput ===
-    console.log(`\n=== BEFORE WRITE OUTPUT ===`);
-    console.log(`Buildings being passed to writeNavmeshOutput: ${reorderedBuildings.length}`);
-    console.log(`Sample building IDs being written: ${reorderedBuildings.slice(0, 5).map(b => `${b.id}(osm:${b.properties.osm_id})`).join(', ')}`);
-    
     const { createdFiles } = writeNavmeshOutput(outputDir, navmeshData, reorderedBuildings, OUTPUT_SETTINGS);
     
     if (OUTPUT_SETTINGS.generateVisualization) {
@@ -294,10 +249,8 @@ function main() {
 
     // Step 8: Validate navmesh data
     validateVertexDistance(navmeshData);
-    // validateTrianglePolygonMapping(navmeshData);
+    validateTrianglePolygonMapping(navmeshData);
 
-    printFinalSummary(navmeshData, optimizedWalkable, optimizedImpassable, triangleToPolygonMap, buildingVertexStats);
-    
     // Step 9: Generate structure files
     console.log('\n=== GENERATING STRUCTURE FILES ===');
     try {
@@ -320,6 +273,9 @@ function main() {
         console.error(`Failed to run generate-building-props-structure.cjs: ${(error as Error).message}`);
         // Do not exit, as this is a post-processing step
     }
+
+
+    printFinalSummary(navmeshData, { improvementPercent: 0 }, { improvementPercent: 0 }, triangleToPolygonMap, buildingVertexStats);
 }
 
 // ================================

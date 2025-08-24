@@ -80,10 +80,9 @@ const FEATURES_TO_EXTRACT = {
 
 async function runStep(name: keyof typeof STEPS_TO_RUN, stepFunction: () => Promise<void> | void): Promise<void> {
     if (STEPS_TO_RUN[name]) {
-        console.log(`\n\n==================== RUNNING STEP: ${name} ====================`);
+        console.log(`\n==================== RUNNING STEP: ${name} ====================`);
         try {
             await stepFunction();
-            console.log(`==================== COMPLETED STEP: ${name} ====================\n`);
         } catch (error) {
             console.error(`\n!!!!!! STEP FAILED: ${name} !!!!!!`);
             console.error(error);
@@ -215,7 +214,7 @@ async function main(): Promise<void> {
     await runStep('copyData', stepCopyData);
     // runStep('buildNavmesh', stepBuildNavmesh);
 
-    console.log('\nData generation pipeline finished!');
+    console.log('nData generation pipeline finished!');
 }
 
 main(); 

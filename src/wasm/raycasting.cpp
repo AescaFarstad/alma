@@ -26,9 +26,7 @@ RaycastWithCorridorResult raycastCorridor(const Point2& startPoint, const Point2
             hasClearPath = true;
         }
     } else {
-        std::array<Point2, 3> triPoints;
-        getTrianglePoints(lastTriIdx, triPoints);
-        if (math::isPointInTriangle(endPoint, triPoints[0], triPoints[1], triPoints[2])) {
+        if (test_point_inside_triangle(endPoint, lastTriIdx)) {
             hasClearPath = true;
         }
     }
@@ -62,9 +60,7 @@ RaycastHitOnlyResult raycastPoint(const Point2& startPoint, const Point2& endPoi
             hasClearPath = true;
         }
     } else {
-        std::array<Point2, 3> triPoints;
-        getTrianglePoints(lastTriIdx, triPoints);
-        if (math::isPointInTriangle(endPoint, triPoints[0], triPoints[1], triPoints[2])) {
+        if (test_point_inside_triangle(endPoint, lastTriIdx)) {
             hasClearPath = true;
         }
     }

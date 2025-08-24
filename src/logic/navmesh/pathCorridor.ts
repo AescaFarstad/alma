@@ -1,5 +1,6 @@
 import { Navmesh } from "./Navmesh";
-import { Point2, isPointInTriangle } from "../core/math";
+import { Point2 } from "../core/math";
+import { testPointInsideTriangle } from "./NavUtils";
 // Remove aStar import since we're inlining it
 import { GameState } from "../GameState";
 // import { arePointsSuspiciouslyClose } from "../debug/AgentDebugUtils";
@@ -127,19 +128,7 @@ export function getTriangleFromPoint(navmesh: Navmesh, point: Point2): number {
             continue;
         }
         
-        const triVertexStartIndex = triIdx * 3;
-        const p1Index = navmesh.triangles[triVertexStartIndex];
-        const p2Index = navmesh.triangles[triVertexStartIndex + 1];
-        const p3Index = navmesh.triangles[triVertexStartIndex + 2];
-
-        const p1x = navmesh.vertices[p1Index * 2];
-        const p1y = navmesh.vertices[p1Index * 2 + 1];
-        const p2x = navmesh.vertices[p2Index * 2];
-        const p2y = navmesh.vertices[p2Index * 2 + 1];
-        const p3x = navmesh.vertices[p3Index * 2];
-        const p3y = navmesh.vertices[p3Index * 2 + 1];
-
-        if (isPointInTriangle(point.x, point.y, p1x, p1y, p2x, p2y, p3x, p3y)) {
+        if (testPointInsideTriangle(navmesh, point.x, point.y, triIdx)) {
             return triIdx;
         }
     }

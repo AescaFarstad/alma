@@ -16,6 +16,19 @@ namespace {
 
 namespace math {
 
+    uint64_t advance_seed(uint64_t seed) {
+        uint64_t state = math::seed_to_state(seed);
+        state = (state * 0x5851F42D4C957F2DULL + 0x14057B7EF767814FULL);
+        return state >> 32;
+    }
+
+    SeededRandomResult seededRandom(uint64_t seed) {
+        uint64_t state = math::seed_to_state(seed);
+        float value = static_cast<float>(math::pcg_state_to_output(state)) / 4294967296.0f;
+        uint64_t next_seed = advance_seed(seed);
+        return {value, next_seed};
+    }
+
 void set_rng_seed(uint64_t seed) {
     // Replicate TS seedToState(seed) exactly:
     // s = abs(seed) & 0xFFFFFFFF

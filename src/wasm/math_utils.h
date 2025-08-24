@@ -9,6 +9,15 @@
 
 namespace math {
 
+    // To match the TypeScript seededRandom behavior
+    struct SeededRandomResult {
+        float value;
+        uint64_t newSeed;
+    };
+    
+    uint64_t advance_seed(uint64_t seed);
+    SeededRandomResult seededRandom(uint64_t seed);
+
     // Deterministic PCG32 RNG API
     void set_rng_seed(uint64_t seed);
     uint32_t pcg32();
@@ -18,6 +27,8 @@ namespace math {
     // New functions to match TS logic
     float seed_to_random_no_advance(uint64_t* seed_state);
     uint64_t advance_seed_cpp(uint64_t seed_state);
+    uint64_t seed_to_state(uint64_t seed);
+    uint32_t pcg_state_to_output(uint64_t state);
 
     // Basic vector operations (many are already overloaded in Point2)
 
@@ -132,10 +143,6 @@ namespace math {
         const float v2x = px - ax; const float v2y = py - ay; // P - A
 
         const float det = v0x * v1y - v0y * v1x; // signed 2*area
-        const float eps = 1e-12f;
-        if (std::fabs(det) < eps) {
-            return false; // Degenerate triangle
-        }
 
         const float invDet = 1.0f / det;
         const float s = ( v1y * v2x - v1x * v2y) * invDet;

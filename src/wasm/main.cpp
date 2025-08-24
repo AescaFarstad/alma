@@ -16,6 +16,8 @@
 #include <vector>
 #include "sprite_renderer.h"
 #include "model.h"
+#include "wasm_impulse.h"
+#include "benchmarks.h"
 
 // Global state for our agent simulation
 AgentSoA agent_data;
