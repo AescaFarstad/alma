@@ -1,7 +1,6 @@
 import type { Navmesh } from './navmesh/Navmesh';
 import { Point2, isToRight } from './core/math';
-import { getTriangleFromPoint } from './navmesh/pathCorridor';
-import { testPointInsideTriangle } from './navmesh/NavUtils';
+import { getTriangleFromPoint, testPointInsideTriangle } from './navmesh/NavUtils';
 import { GameState } from './GameState';
 
 export type RaycastWithCorridorResult = {

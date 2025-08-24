@@ -6,20 +6,6 @@
 #include <cstdint>
 #include <algorithm>
 
-// Flat arrays to replace unordered_map for A* on fixed triangle index domain [0, numTriangles)
-struct FlatCameFrom {
-    std::vector<int32_t> parent; // -1 = unknown
-
-    FlatCameFrom() = default;
-    explicit FlatCameFrom(size_t size) { init(size); }
-
-    inline void init(size_t size) { parent.assign(size, -1); }
-    inline void reset() { std::fill(parent.begin(), parent.end(), -1); }
-    inline bool has(int idx) const { return idx >= 0 && (size_t)idx < parent.size() && parent[(size_t)idx] != -1; }
-    inline void set(int child, int par) { parent[(size_t)child] = par; }
-    inline int get(int idx) const { return parent[(size_t)idx]; }
-};
-
 struct FlatScores {
     std::vector<float> g; // max() = unknown
     std::vector<float> f;

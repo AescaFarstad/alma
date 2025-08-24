@@ -2,13 +2,16 @@
 #define PATH_CORRIDOR_H
 
 #include "data_structures.h"
+#include "navmesh.h"
 #include <vector>
 
-std::vector<int> findCorridor(
+bool findCorridor(
+    Navmesh& navmesh,
     const Point2& startPoint,
     const Point2& endPoint,
-    int startTriHint = -1,
-    int endTriHint = -1
+    std::vector<int>& outCorridor,
+    int startPolyHint = -1,
+    int endPolyHint = -1
 );
 
 #endif // PATH_CORRIDOR_H 

@@ -1,4 +1,4 @@
-import { getTriangleFromPoint } from "./navmesh/pathCorridor";
+import { getTriangleFromPoint } from './navmesh/NavUtils';
 import { wagentsLimit, type GameState } from "./GameState";
 import { WAgent } from "./WAgent";
 import { Agent } from "./agents/Agent";
@@ -135,8 +135,6 @@ export function updateWAgentSpawners(spawners: WAgentSpawner[], dt: number, gs: 
                 console.warn("Failed to create WASM agent - no available slots");
                 continue;
             }
-
-            console.log(`[WASM Spawner] Created WASM agent ${wAgent.agentIndex} at (${customConfig.coordinate!.x.toFixed(1)}, ${customConfig.coordinate!.y.toFixed(1)}), tri: ${customConfig.currentTri}`);
         }
     }
 } 

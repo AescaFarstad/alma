@@ -3,6 +3,7 @@
 #include "nav_utils.h"
 #include "navmesh.h"
 #include <array>
+#include <tuple>
 
 // Forward declaration of internal functions
 static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex);
@@ -10,12 +11,12 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
 static void getTrianglePoints(int triIdx, std::array<Point2, 3>& outPoints);
 
 
-RaycastWithCorridorResult raycastCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
+std::tuple<Point2, Point2, std::vector<int>, bool> raycastCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
     int hitEdgeIndex = -1;
     std::vector<int> corridor = traceStraightCorridor(startPoint, endPoint, startTriIdx, endTriIdx, hitEdgeIndex);
 
     if (corridor.empty()) {
-        return {{startPoint}, {startPoint}, {}, true};
+        return std::make_tuple(startPoint, startPoint, std::vector<int>{}, true);
     }
 
     int lastTriIdx = corridor.back();
@@ -32,7 +33,7 @@ RaycastWithCorridorResult raycastCorridor(const Point2& startPoint, const Point2
     }
 
     if (hasClearPath) {
-        return {{}, {}, corridor, false};
+        return std::make_tuple(Point2{}, Point2{}, corridor, false);
     }
 
     if (hitEdgeIndex != -1) {
@@ -40,18 +41,18 @@ RaycastWithCorridorResult raycastCorridor(const Point2& startPoint, const Point2
         getTrianglePoints(lastTriIdx, triPoints);
         Point2 p1 = triPoints[hitEdgeIndex];
         Point2 p2 = triPoints[(hitEdgeIndex + 1) % 3];
-        return {p1, p2, corridor, true};
+        return std::make_tuple(p1, p2, corridor, true);
     }
 
-    return {{}, {}, corridor, false}; // Fallback
+    return std::make_tuple(Point2{}, Point2{}, corridor, false); // Fallback
 }
 
-RaycastHitOnlyResult raycastPoint(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
+std::tuple<Point2, Point2, bool> raycastPoint(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
     int hitEdgeIndex = -1;
     int lastTriIdx = traceStraightCorridorHitOnly(startPoint, endPoint, startTriIdx, endTriIdx, hitEdgeIndex);
 
     if (lastTriIdx == -1) {
-        return {{startPoint}, {startPoint}, true};
+        return std::make_tuple(startPoint, startPoint, true);
     }
 
     bool hasClearPath = false;
@@ -66,7 +67,7 @@ RaycastHitOnlyResult raycastPoint(const Point2& startPoint, const Point2& endPoi
     }
 
     if (hasClearPath) {
-        return {{}, {}, false};
+        return std::make_tuple(Point2{}, Point2{}, false);
     }
 
     if (hitEdgeIndex != -1) {
@@ -74,10 +75,10 @@ RaycastHitOnlyResult raycastPoint(const Point2& startPoint, const Point2& endPoi
         getTrianglePoints(lastTriIdx, triPoints);
         Point2 p1 = triPoints[hitEdgeIndex];
         Point2 p2 = triPoints[(hitEdgeIndex + 1) % 3];
-        return {p1, p2, true};
+        return std::make_tuple(p1, p2, true);
     }
 
-    return {{}, {}, false}; // Fallback
+    return std::make_tuple(Point2{}, Point2{}, false); // Fallback
 }
 
 static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex) {

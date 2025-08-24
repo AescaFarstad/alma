@@ -3,28 +3,16 @@
 
 #include "data_structures.h"
 #include <vector>
+#include <tuple>
 
-struct RaycastWithCorridorResult {
-    Point2 hitP1;
-    Point2 hitP2;
-    std::vector<int> corridor;
-    bool hasHit;
-};
-
-struct RaycastHitOnlyResult {
-    Point2 hitP1;
-    Point2 hitP2;
-    bool hasHit;
-};
-
-RaycastWithCorridorResult raycastCorridor(
+std::tuple<Point2, Point2, std::vector<int>, bool> raycastCorridor(
     const Point2& startPoint,
     const Point2& endPoint,
     int startTriIdx = -1,
     int endTriIdx = -1
 );
 
-RaycastHitOnlyResult raycastPoint(
+std::tuple<Point2, Point2, bool> raycastPoint(
     const Point2& startPoint,
     const Point2& endPoint,
     int startTriIdx = -1,

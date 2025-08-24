@@ -18,6 +18,7 @@ SRCS = main.cpp \
        path_corners.cpp \
        agent_move_phys.cpp \
        agent_navigation.cpp \
+       agent_nav_utils.cpp \
        agent_grid.cpp \
        agent_collision.cpp \
        agent_statistic.cpp \

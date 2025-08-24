@@ -203,3 +203,60 @@ export function testPointInsidePolygon(navmesh: Navmesh, x: number, y: number, p
     
     return orientation >= 0;
 }
+
+export function testPointInsideBlob(navmesh: Navmesh, x: number, y: number, blob_idx: number): boolean {
+    const blob_start = navmesh.poly_tris[blob_idx];
+    const blob_end = navmesh.poly_tris[blob_idx + 1];
+    for (let i = blob_start; i < blob_end; i++) {
+        if (testPointInsideTriangle(navmesh, x, y, i)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+export function getTriangleFromPolyPoint(navmesh: Navmesh, point: Point2, poly_idx: number): number {
+    const poly_start = navmesh.poly_tris[poly_idx];
+    const poly_end = navmesh.poly_tris[poly_idx + 1];
+
+    for (let i = poly_start; i < poly_end; i++) {
+        if (testPointInsideTriangle(navmesh, point.x, point.y, i)) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+export function getTriangleFromPoint(navmesh: Navmesh, point: Point2): number {
+    const possibleTris = navmesh.triangleIndex.query(point.x, point.y);
+    for (let i = 0; i < possibleTris.length; i++) {
+        if (testPointInsideTriangle(navmesh, point.x, point.y, possibleTris[i])) {
+            return possibleTris[i];
+        }
+    }
+
+    return -1;
+}
+
+export function getPolygonFromPoint(navmesh: Navmesh, point: Point2): number {
+    const possiblePolys = navmesh.polygonIndex.query(point.x, point.y);
+    for (let i = 0; i < possiblePolys.length; i++) {
+        if (testPointInsidePolygon(navmesh, point.x, point.y, possiblePolys[i])) {
+            return possiblePolys[i];
+        }
+    }
+
+    return -1;
+}
+
+export function getBlobFromPoint(navmesh: Navmesh, point: Point2): number {
+    const possibleBlobs = navmesh.blobIndex.query(point.x, point.y);
+    for (let i = 0; i < possibleBlobs.length; i++) {
+        if (testPointInsideBlob(navmesh, point.x, point.y, possibleBlobs[i])) {
+            return possibleBlobs[i];
+        }
+    }
+
+    return -1;
+}

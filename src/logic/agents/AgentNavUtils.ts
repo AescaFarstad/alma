@@ -25,11 +25,13 @@ export function findPathToDestination(
     endTri: number, 
     errorContext: string
 ): boolean {
-    const corridorResult = findCorridor(navmesh, agent.coordinate, agent.endTarget, startTri, endTri);
+    const startPoly = navmesh.triangle_to_polygon[startTri];
+    const endPoly = navmesh.triangle_to_polygon[endTri];
+    const corridorResult = findCorridor(navmesh, agent.coordinate, agent.endTarget, startPoly, endPoly);
     agent.corridor = corridorResult ?? [];
 
     if (agent.corridor.length > 0) {
-        findNextCorner(navmesh, gs, agent.corridor, agent.coordinate, agent.endTarget, NavConst.CORNER_OFFSET, reusableDualCorner);
+        findNextCorner(navmesh, agent.corridor, agent.coordinate, agent.endTarget, NavConst.CORNER_OFFSET, reusableDualCorner);
         if (reusableDualCorner.numValid > 0) {
             set_(agent.nextCorner, reusableDualCorner.corner1);
             set_(agent.nextCorner2, reusableDualCorner.corner2);
@@ -70,22 +72,39 @@ export function raycastAndPatchCorridor(
     
     if (!raycastResult.hitP1 && !raycastResult.hitP2 && raycastResult.corridor) {
         // Raycast succeeded - we have a clear line of sight
-        // Find where the target triangle appears in the current corridor
-        let targetTriIndex = -1;
+        
+        // Convert triangle corridor from raycast to a polygon corridor
+        const raycastPolyCorridor: number[] = [];
+        if (raycastResult.corridor.length > 0) {
+            for (const tri of raycastResult.corridor) {
+                const poly = navmesh.triangle_to_polygon[tri];
+                if (raycastPolyCorridor.length === 0 || raycastPolyCorridor[raycastPolyCorridor.length - 1] !== poly) {
+                    raycastPolyCorridor.push(poly);
+                }
+            }
+        }
+        
+        // Find where the target polygon appears in the current corridor
+        const targetPoly = navmesh.triangle_to_polygon[targetTri];
+        let targetPolyIndex = -1;
         for (let i = 0; i < agent.corridor.length; i++) {
-            if (agent.corridor[i] === targetTri) {
-                targetTriIndex = i;
+            if (agent.corridor[i] === targetPoly) {
+                targetPolyIndex = i;
                 break;
             }
         }
         
-        if (targetTriIndex !== -1) {
-            // Replace corridor up to target triangle with raycast corridor
-            // Keep the rest of the corridor after target triangle
+        if (targetPolyIndex !== -1) {
+            // Replace corridor up to target polygon with raycast polygon corridor
+            // Keep the rest of the corridor after target polygon
             agent.corridor = [
-                ...raycastResult.corridor,
-                ...agent.corridor.slice(targetTriIndex + 1)
+                ...raycastPolyCorridor,
+                ...agent.corridor.slice(targetPolyIndex + 1)
             ];
+            return true;
+        } else if (raycastPolyCorridor.length > 0) {
+            // If the target isn't in our current path but we can see it, take the direct route.
+            agent.corridor = raycastPolyCorridor;
             return true;
         }
     }
@@ -137,10 +156,10 @@ export function debugPath(
     endPoint: Point2,
     color: string,
     label: string
-): { corners: number; length: number; triangles: number } {
+): { corners: number; length: number; polygons: number } {
     if (corridor.length === 0) {
         console.log(`${label}: Empty corridor`);
-        return { corners: 0, length: 0, triangles: 0 };
+        return { corners: 0, length: 0, polygons: 0 };
     }
 
     try {
@@ -152,15 +171,15 @@ export function debugPath(
         drawPath(cornerPoints, color, label);
         
         // Log debug info
-        console.log(`${label}: ${corners.length} corners, ${pathLength.toFixed(2)}m, ${corridor.length} triangles`);
+        console.log(`${label}: ${corners.length} corners, ${pathLength.toFixed(2)}m, ${corridor.length} polygons`);
         
         return {
             corners: corners.length,
             length: pathLength,
-            triangles: corridor.length
+            polygons: corridor.length
         };
     } catch (error) {
         console.error(`Error debugging path for ${label}:`, error);
-        return { corners: 0, length: 0, triangles: corridor.length };
+        return { corners: 0, length: 0, polygons: corridor.length };
     }
 }

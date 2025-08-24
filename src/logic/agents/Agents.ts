@@ -1,7 +1,7 @@
 import { WAgent } from "../WAgent";
 
 // Maximum number of agents supported by the system
-export const MAX_AGENTS = 12100;
+export const MAX_AGENTS = 18100;
 
 export class Agents {
   // Core physics

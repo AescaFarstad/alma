@@ -3,8 +3,7 @@ import path from 'path';
 import minimist from 'minimist';
 import { loadBlobs, loadBuildings } from './nav_data_io';
 import { triangulate } from './triangulate';
-import { hertelMehlhorn } from './polygonize';
-import { kOptOptimize } from './k_opt';
+
 import { MyPolygon, MyPoint, NavmeshData } from './navmesh_struct';
 import { printFinalSummary, finalizeNavmeshData } from './nav_summary';
 import { writeNavmeshOutput } from './nav_data_io';

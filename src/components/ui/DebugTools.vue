@@ -2,21 +2,25 @@
   <div id="debug-tools">
     <div class="debug-section">
       <input type="text" v-model="coordinates" placeholder="" />
+      <button @click="pasteCoordinates">Paste</button>
       <button @click="flyToCoordinates">Fly</button>
       <button @click="findTriangle">Tri</button>
       <button @click="drawPoint">Draw</button>
+      <button @click="debugPoint">Debug</button>
     </div>
     <div class="debug-section">
       <input type="text" v-model="triangleIndex" placeholder="Triangle Index" />
+      <button @click="pasteTriangleIndex">Paste</button>
       <button @click="flyToTriangle">Fly</button>
       <button @click="logTriangle">Log</button>
-      <button @click="drawTriangle">Draw</button>
+      <button @click="() => drawTriangle()">Draw</button>
     </div>
     <div class="debug-section">
       <input type="text" v-model="polygonIndex" placeholder="Polygon Index" />
+      <button @click="pastePolygonIndex">Paste</button>
       <button @click="flyToPolygon">Fly</button>
       <button @click="logPolygon">Log</button>
-      <button @click="drawPolygon">Draw</button>
+      <button @click="() => drawPolygon()">Draw</button>
     </div>
   </div>
 </template>
@@ -24,9 +28,9 @@
 <script setup lang="ts">
 import { ref, inject } from 'vue';
 import { mapInstance } from '../../map_instance';
-import { getTriangleFromPoint } from '../../logic/navmesh/pathCorridor';
 import type { GameState } from '../../logic/GameState';
-import { SceneState, ACGREEN, ACINDIGO } from '../../logic/drawing/SceneState';
+import { SceneState, ACGREEN, ACINDIGO, ACBLUE, ACYELLOW, ACBROWN } from '../../logic/drawing/SceneState';
+import { getTriangleFromPoint, getPolygonFromPoint } from '../../logic/navmesh/NavUtils';
 
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
@@ -34,6 +38,18 @@ const sceneState = inject<SceneState>('sceneState');
 const coordinates = ref('');
 const triangleIndex = ref('');
 const polygonIndex = ref('');
+
+const pasteCoordinates = async () => {
+  coordinates.value = await navigator.clipboard.readText();
+};
+
+const pasteTriangleIndex = async () => {
+  triangleIndex.value = await navigator.clipboard.readText();
+};
+
+const pastePolygonIndex = async () => {
+  polygonIndex.value = await navigator.clipboard.readText();
+};
 
 const parseCoordinatesFromString = (input: string): { x: number, y: number } | null => {
   const trimmedInput = input.trim();
@@ -79,6 +95,88 @@ const drawPoint = () => {
   if (coords) {
     sceneState.addDebugPoint(coords, ACINDIGO);
   }
+};
+
+const debugPoint = () => {
+  if (!gameState?.navmesh || !sceneState) {
+    console.error("Navmesh or SceneState not available");
+    return;
+  }
+  const coords = parseCoordinatesFromString(coordinates.value);
+  if (!coords) {
+    console.error("Invalid coordinates");
+    return;
+  }
+  sceneState.addDebugPoint(coords, ACBROWN);
+
+  // 1. log the triangle that corresponds to this point
+  const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
+  console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
+  if (triIndex !== -1) {
+    triangleIndex.value = triIndex.toString();
+  }
+
+  // 2. log the polygon index and specifying if it is walkable
+  const polyIndex = getPolygonFromPoint(gameState.navmesh, coords);
+  if (polyIndex === -1) {
+    console.log("Point is not within any polygon.");
+    return;
+  }
+
+  const navmesh = gameState.navmesh;
+  const isPolyWalkable = (pIndex: number): boolean => {
+    if (!gameState?.navmesh) return false;
+    const navmesh = gameState.navmesh;
+    const pTriStart = navmesh.poly_tris[pIndex];
+    const pTriEnd = navmesh.poly_tris[pIndex + 1];
+    for (let i = pTriStart; i < pTriEnd; i++) {
+      if (i >= navmesh.walkable_triangle_count) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  const polyTriStart = navmesh.poly_tris[polyIndex];
+  const polyTriEnd = navmesh.poly_tris[polyIndex + 1];
+  
+  const polyTriangleIndexes = [];
+  for (let i = polyTriStart; i < polyTriEnd; i++) {
+    polyTriangleIndexes.push(i);
+  }
+  console.log(`Polygon index: ${polyIndex}, Walkable: ${isPolyWalkable(polyIndex)}`);
+
+  // 3. log all triangle indexes this poly contains
+  console.log(`Polygon ${polyIndex} contains triangles:`, polyTriangleIndexes);
+
+  // 4. drawing the polygon in transparent blue and all neighbour polygons in transparent yellow
+  drawPolygon(polyIndex, ACBLUE);
+  
+  const polyVertStart = navmesh.polygons[polyIndex];
+  const polyVertEnd = navmesh.polygons[polyIndex + 1];
+  const neighborPolys = new Set<number>();
+  for (let i = polyVertStart; i < polyVertEnd; i++) {
+    const neighborIndex = navmesh.poly_neighbors[i];
+    if (neighborIndex !== -1 && !neighborPolys.has(neighborIndex)) {
+      neighborPolys.add(neighborIndex);
+      console.log(`Neighbor polygon index: ${neighborIndex}, Walkable: ${isPolyWalkable(neighborIndex)}`);
+      const vertIndex = navmesh.poly_verts[i];
+      const color = vertIndex % 2 === 0 ? ACYELLOW : ACGREEN;
+      drawPolygon(neighborIndex, color);
+    }
+  }
+
+  // 5. draw all triangles of the affected polygons
+  const drawTrianglesForPolygon = (pIndex: number) => {
+    const pTriStart = navmesh.poly_tris[pIndex];
+    const pTriEnd = navmesh.poly_tris[pIndex + 1];
+    for (let i = pTriStart; i < pTriEnd; i++) {
+      drawTriangle(i, ACGREEN, false);
+    }
+  };
+
+  drawTrianglesForPolygon(polyIndex);
+  neighborPolys.forEach(drawTrianglesForPolygon);
 };
 
 const findTriangle = () => {
@@ -136,8 +234,8 @@ const logTriangle = () => {
   console.log(`Triangle ${triIndex} neighbors:`, neighbors);
 };
 
-const drawTriangle = () => {
-  const triIndex = parseInt(triangleIndex.value, 10);
+const drawTriangle = (triIndexToDraw?: number, color = ACGREEN, withLabels = true) => {
+  const triIndex = triIndexToDraw ?? parseInt(triangleIndex.value, 10);
   if (isNaN(triIndex) || !gameState?.navmesh || !sceneState) {
     return;
   }
@@ -152,10 +250,14 @@ const drawTriangle = () => {
   const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
   const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
 
-  sceneState.addDebugArea([p1, p2, p3], ACGREEN);
-  sceneState.addDebugText(p1, 'v1', ACGREEN)
-  sceneState.addDebugText(p2, 'v2', ACGREEN)
-  sceneState.addDebugText(p3, 'v3', ACGREEN)
+  sceneState.addDebugLine(p1, p2, color);
+  sceneState.addDebugLine(p2, p3, color);
+  sceneState.addDebugLine(p3, p1, color);
+  if (withLabels) {
+    sceneState.addDebugText(p1, 'v1', color)
+    sceneState.addDebugText(p2, 'v2', color)
+    sceneState.addDebugText(p3, 'v3', color)
+  }
 };
 
 const flyToPolygon = () => {
@@ -207,8 +309,8 @@ const logPolygon = () => {
   console.log(`Polygon ${polyIndex} neighbors:`, neighbors);
 };
 
-const drawPolygon = () => {
-  const polyIndex = parseInt(polygonIndex.value, 10);
+const drawPolygon = (polyIndexToDraw?: number, color = ACGREEN) => {
+  const polyIndex = polyIndexToDraw ?? parseInt(polygonIndex.value, 10);
   if (isNaN(polyIndex) || !gameState?.navmesh || !sceneState) {
     return;
   }
@@ -230,7 +332,7 @@ const drawPolygon = () => {
     });
   }
 
-  sceneState.addDebugArea(vertices, ACGREEN);
+  sceneState.addDebugArea(vertices, color);
 };
 
 </script>

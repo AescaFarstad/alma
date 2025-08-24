@@ -1,7 +1,6 @@
 import { Agent, AgentState, STUCK_DANGER_2 } from "./Agent";
 import { GameState } from "../GameState";
 import { add, dot, length, length_sq, add_, set, scale_, set_, distance_sq, subtract_, normalize_, lerp, cvt } from "../core/math";
-// import { getTriangleFromPoint } from "./navmesh/pathfinding";
 import { raycastPoint } from "../Raycasting";
 import { findTriangle, isPointInNavmesh } from "../navmesh/NavUtils";
 

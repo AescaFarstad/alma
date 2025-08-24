@@ -1,11 +1,7 @@
 import { reactive } from "vue";
 import { Point2 } from "../core/math";
 import { MouseCoordinates } from "../../types";
-
-export const DEBUG_COLORS = ['red', 'green', 'blue', 'yellow', 'magenta', 'cyan', 'orange',
-'purple', 'brown', 'black', 'white', 'gray','emerald','indigo','pink'];
-
-export type DebugColor = typeof DEBUG_COLORS[number];
+import { CircleStyle, LineStyle, PolyStyle } from "./PrimitiveState";
 
 export const ACRED = 'red';
 export const ACGREEN = 'green';
@@ -14,6 +10,7 @@ export const ACYELLOW = 'yellow';
 export const ACMAGENTA = 'magenta';
 export const ACCYAN = 'cyan';
 export const ACORANGE = 'orange';
+export const ACPURPLE = 'purple';
 export const ACBROWN = 'brown';
 export const ACBLACK = 'black';
 export const ACWHITE = 'white';
@@ -21,6 +18,40 @@ export const ACGRAY = 'gray';
 export const ACEMERALD = 'emerald';
 export const ACINDIGO = 'indigo';
 export const ACPINK = 'pink';
+
+export const DEBUG_COLORS = [ACRED, ACGREEN, ACBLUE, ACYELLOW, ACMAGENTA, ACCYAN, ACORANGE,
+    ACPURPLE, ACBROWN, ACBLACK, ACWHITE, ACGRAY, ACEMERALD, ACINDIGO, ACPINK];
+
+const colorMap: Record<string, number> = {
+    [ACRED]: 0xFF0000,
+    [ACGREEN]: 0x00FF00,
+    [ACBLUE]: 0x3333FF,
+    [ACYELLOW]: 0xFFFF00,
+    [ACMAGENTA]: 0xFF00FF,
+    [ACCYAN]: 0x00FFFF,
+    [ACORANGE]: 0xFF9900,
+    [ACPURPLE]: 0x800080,
+    [ACBROWN]: 0x994400,
+    [ACBLACK]: 0x000000,
+    [ACWHITE]: 0xFFFFFF,
+    [ACGRAY]: 0x808080,
+    [ACEMERALD]: 0x50C878,
+    [ACINDIGO]: 0x000088,
+    [ACPINK]: 0xFFC0CB,
+};
+
+export const debugFillStyles: Record<string, CircleStyle> = {} as any;
+export const debugStrokeStyles: Record<string, LineStyle> = {} as any;
+export const debugTransparentStyles: Record<string, PolyStyle> = {} as any;
+
+for (const color of DEBUG_COLORS) {
+    const hexColor = colorMap[color];
+    if (hexColor !== undefined) {
+        debugFillStyles[color] = { fillStyle: { color: hexColor, alpha: 1 } };
+        debugStrokeStyles[color] = { color: hexColor, alpha: 1, width: 0.25 };
+        debugTransparentStyles[color] = { fillStyle: { color: hexColor, alpha: 0.3 } };
+    }
+}
 
 
 export class SceneState {
@@ -33,14 +64,14 @@ export class SceneState {
     public isDirty = true;
 
     public debugPolygons: Point2[][] = [];
-    public debugPoints: Record<DebugColor, Point2[]> = makeDebugColorRecord(() => []);
-    public debugLines: Record<DebugColor, DebugLine[]> = makeDebugColorRecord(() => []);
-    public debugCircles: Record<DebugColor, DebugCircle[]> = makeDebugColorRecord(() => []);
-    public debugXs: Record<DebugColor, DebugX[]> = makeDebugColorRecord(() => []);
-    public debugArrows: Record<DebugColor, DebugArrow[]> = makeDebugColorRecord(() => []);
-    public debugAreas: Record<DebugColor, Point2[][]> = makeDebugColorRecord(() => []);
-    public debugTexts: Record<DebugColor, DebugText[]> = makeDebugColorRecord(() => []);
-    public debugNavmeshTriangles: Record<DebugColor, DebugNavmeshTriangle[]> = makeDebugColorRecord(() => []);
+    public debugPoints: Record<string, Point2[]> = makeDebugColorRecord(() => []);
+    public debugLines: Record<string, DebugLine[]> = makeDebugColorRecord(() => []);
+    public debugCircles: Record<string, DebugCircle[]> = makeDebugColorRecord(() => []);
+    public debugXs: Record<string, DebugX[]> = makeDebugColorRecord(() => []);
+    public debugArrows: Record<string, DebugArrow[]> = makeDebugColorRecord(() => []);
+    public debugAreas: Record<string, Point2[][]> = makeDebugColorRecord(() => []);
+    public debugTexts: Record<string, DebugText[]> = makeDebugColorRecord(() => []);
+    public debugNavmeshTriangles: Record<string, DebugNavmeshTriangle[]> = makeDebugColorRecord(() => []);
 
     public setMeasurementLine(start: MouseCoordinates, end: MouseCoordinates) {
         this.measurementLine = { start, end };
@@ -216,42 +247,42 @@ export class SceneState {
         this.isDirty = true;
     }
 
-    public addDebugPoint(point: Point2, color: DebugColor) {
+    public addDebugPoint(point: Point2, color: string) {
         this.debugPoints[color].push(point);
         this.isDirty = true;
     }
 
-    public addDebugLine(start: Point2, end: Point2, color: DebugColor) {
+    public addDebugLine(start: Point2, end: Point2, color: string) {
         this.debugLines[color].push({ start, end });
         this.isDirty = true;
     }
 
-    public addDebugCircle(center: Point2, color: DebugColor) {
+    public addDebugCircle(center: Point2, color: string) {
         this.debugCircles[color].push({ center });
         this.isDirty = true;
     }
 
-    public addDebugX(center: Point2, color: DebugColor) {
+    public addDebugX(center: Point2, color: string) {
         this.debugXs[color].push({ center });
         this.isDirty = true;
     }
 
-    public addDebugArrow(start: Point2, end: Point2, color: DebugColor) {
+    public addDebugArrow(start: Point2, end: Point2, color: string) {
         this.debugArrows[color].push({ start, end });
         this.isDirty = true;
     }
 
-    public addDebugArea(polygon: Point2[], color: DebugColor) {
+    public addDebugArea(polygon: Point2[], color: string) {
         this.debugAreas[color].push(polygon);
         this.isDirty = true;
     }
 
-    public addDebugText(position: Point2, text: string, color: DebugColor) {
+    public addDebugText(position: Point2, text: string, color: string) {
         this.debugTexts[color].push({ position, text });
         this.isDirty = true;
     }
 
-    public addDebugNavmeshTriangle(index: number, color: DebugColor, text?: string) {
+    public addDebugNavmeshTriangle(index: number, color: string, text?: string) {
         this.debugNavmeshTriangles[color].push({ index, text });
         this.isDirty = true;
     }
@@ -315,10 +346,10 @@ export type Path = {
     totalLength: number;
 };
 
-function makeDebugColorRecord<T>(valueFactory: () => T): Record<DebugColor, T> {
+function makeDebugColorRecord<T>(valueFactory: () => T): Record<string, T> {
     const record: Record<string, T> = {};
     for (const color of DEBUG_COLORS) {
         record[color] = valueFactory();
     }
-    return record as Record<DebugColor, T>;
+    return record;
 }

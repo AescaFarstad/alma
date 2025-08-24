@@ -54,6 +54,9 @@ int32_t get_triangles_in_cell(int32_t cellX, int32_t cellY, int32_t* triangleIds
 bool is_point_in_triangle(Point2 point, Point2 v1, Point2 v2, Point2 v3);
 
 int getTriangleFromPoint(const Point2& point);
+int getPolygonFromPoint(const Point2& point);
+int getBlobFromPoint(const Point2& point);
+int getTriangleFromPolyPoint(const Point2& point, int poly_idx);
 
 inline bool test_point_inside_triangle(const Point2& p, int tri_idx) {
     const int32_t v1_idx = g_navmesh.triangles[tri_idx * 3];
@@ -82,6 +85,17 @@ inline bool test_point_inside_triangle(const Point2& p, int tri_idx) {
         : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
         
     return o31 >= 0;
+}
+
+inline bool testPointInsideBlob(const Point2& p, int blob_idx) {
+    const int32_t blob_start = g_navmesh.poly_tris[blob_idx];
+    const int32_t blob_end = g_navmesh.poly_tris[blob_idx + 1];
+    for (int i = blob_start; i < blob_end; i++) {
+        if (test_point_inside_triangle(p, i)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 inline bool test_point_inside_poly_bi(const Point2 p, int poly_idx) {

@@ -2,7 +2,7 @@ import { GameState } from '../GameState';
 import { PrimitiveState } from './PrimitiveState';
 import { PolyStyle, CircleStyle, TextStyle, LineStyle } from './PrimitiveState';
 import { TextStyle as PIXITextStyle } from 'pixi.js';
-import { SceneState } from './SceneState';
+import { SceneState, debugFillStyles, debugStrokeStyles, debugTransparentStyles } from './SceneState';
 import { mapInstance } from '../../map_instance';
 import { cvtExp } from '../core/math';
 import { getBuildingGeometry } from '../../mapgen/simplification/geometryUtils';
@@ -47,47 +47,6 @@ const debugPolygonStyle: PolyStyle = {
     fillStyle: { color: 0xFF0000, alpha: 0.3 },
     strokeStyle: { width: 1, color: 0xFF0000, alpha: 0.7 },
 };
-
-const debugPointStyles: Record<string, CircleStyle> = {
-    red:        { fillStyle: { color: 0xFF0000, alpha: 1 } },
-    green:      { fillStyle: { color: 0x9ACD32, alpha: 1 } }, // "acidic"
-    blue:       { fillStyle: { color: 0x3399FF, alpha: 1 } }, // lighter
-    yellow:     { fillStyle: { color: 0xFFFF00, alpha: 1 } },
-    magenta:    { fillStyle: { color: 0xFF00FF, alpha: 1 } },
-    cyan:       { fillStyle: { color: 0x00FFFF, alpha: 1 } },
-    orange:     { fillStyle: { color: 0xFFA500, alpha: 1 } },
-    // purple:     { fillStyle: { color: 0x800080, alpha: 1 } },
-    brown:      { fillStyle: { color: 0xA52A2A, alpha: 1 } },
-    black:      { fillStyle: { color: 0x000000, alpha: 1 } },
-    white:      { fillStyle: { color: 0xFFFFFF, alpha: 1 } },
-    gray:       { fillStyle: { color: 0x808080, alpha: 1 } },
-    emerald:    { fillStyle: { color: 0x50C878, alpha: 1 } }, // dark green
-    indigo:     { fillStyle: { color: 0x4B0082, alpha: 1 } }, // dark blue
-    pink:       { fillStyle: { color: 0xFFC0CB, alpha: 1 } }, // light reddish white
-};
-
-const debugLineStyles: Record<string, LineStyle> = Object.fromEntries(
-    Object.entries(debugPointStyles).map(([color, style]) => [
-        color,
-        { width: 0.25, color: style.fillStyle?.color ?? 0, alpha: 1 }
-    ])
-);
-
-const debugCircleStyles: Record<string, LineStyle> = Object.fromEntries(
-    Object.entries(debugPointStyles).map(([color, style]) => [
-        color,
-        { width: 0.25, color: style.fillStyle?.color ?? 0, alpha: 1 }
-    ])
-);
-
-const debugAreaStyles: Record<string, PolyStyle> = Object.fromEntries(
-    Object.entries(debugPointStyles).map(([color, style]) => [
-        color,
-        {
-            fillStyle: { color: style.fillStyle?.color ?? 0, alpha: 0.4 },
-        }
-    ])
-);
 
 export class DrawScene {
     public static buildPrimitives(primitives: PrimitiveState, sceneState: SceneState, gameState: GameState) {
@@ -175,10 +134,10 @@ export class DrawScene {
         r = debugPointColors.length;
         for (const color of debugPointColors) {
             r--;
-            const points = sceneState.debugPoints[color as keyof typeof sceneState.debugPoints];
+            const points = sceneState.debugPoints[color];
             if (points.length === 0) continue;
 
-            const style = debugPointStyles[color];
+            const style = debugFillStyles[color];
             if (style) {
                 for (const point of points) {
                     primitives.addCircle(point.x, -point.y, 0.3 + r * 0.07, style);
@@ -188,9 +147,9 @@ export class DrawScene {
 
         const debugLineColors = Object.keys(sceneState.debugLines);
         for (const color of debugLineColors) {
-            const lines = sceneState.debugLines[color as keyof typeof sceneState.debugLines];
+            const lines = sceneState.debugLines[color];
             if (lines.length === 0) continue;
-            const style = debugLineStyles[color];
+            const style = debugStrokeStyles[color];
             if (style) {
                 const dynamicStyle = { ...style, width: dynamicWidth };
                 for (const line of lines) {
@@ -202,9 +161,9 @@ export class DrawScene {
         const debugCircleColors = Object.keys(sceneState.debugCircles);
         r = debugCircleColors.length;
         for (const color of debugCircleColors) {
-            const circles = sceneState.debugCircles[color as keyof typeof sceneState.debugCircles];
+            const circles = sceneState.debugCircles[color];
             if (circles.length === 0) continue;
-            const style = debugCircleStyles[color];
+            const style = debugStrokeStyles[color];
             if (style) {
                 const dynamicStyle = { ...style, width: dynamicWidth };
                 for (const circle of circles) {
@@ -216,9 +175,9 @@ export class DrawScene {
         const debugXColors = Object.keys(sceneState.debugXs);
         r = debugXColors.length;
         for (const color of debugXColors) {
-            const xs = sceneState.debugXs[color as keyof typeof sceneState.debugXs];
+            const xs = sceneState.debugXs[color];
             if (xs.length === 0) continue;
-            const style = debugLineStyles[color];
+            const style = debugStrokeStyles[color];
             if (style) {
                 const dynamicStyle = { ...style, width: dynamicWidth };
                 for (const x of xs) {
@@ -231,9 +190,9 @@ export class DrawScene {
 
         const debugArrowColors = Object.keys(sceneState.debugArrows);
         for (const color of debugArrowColors) {
-            const arrows = sceneState.debugArrows[color as keyof typeof sceneState.debugArrows];
+            const arrows = sceneState.debugArrows[color];
             if (arrows.length === 0) continue;
-            const style = debugLineStyles[color];
+            const style = debugStrokeStyles[color];
             if (style) {
                 const dynamicStyle = { ...style, width: dynamicWidth };
                 for (const arrow of arrows) {
@@ -249,9 +208,9 @@ export class DrawScene {
 
         const debugAreaColors = Object.keys(sceneState.debugAreas);
         for (const color of debugAreaColors) {
-            const areas = sceneState.debugAreas[color as keyof typeof sceneState.debugAreas];
+            const areas = sceneState.debugAreas[color];
             if (areas.length === 0) continue;
-            const style = debugAreaStyles[color];
+            const style = debugTransparentStyles[color];
             if (style) {
                 for (const area of areas) {
                     const n = area.length;
@@ -268,7 +227,7 @@ export class DrawScene {
 
         const debugTextColors = Object.keys(sceneState.debugTexts);
         for (const color of debugTextColors) {
-            const texts = sceneState.debugTexts[color as keyof typeof sceneState.debugTexts];
+            const texts = sceneState.debugTexts[color];
             if (texts.length === 0) continue;
             
             for (const debugText of texts) {
@@ -278,10 +237,10 @@ export class DrawScene {
 
         const debugNavmeshTriangleColors = Object.keys(sceneState.debugNavmeshTriangles);
         for (const color of debugNavmeshTriangleColors) {
-            const triangles = sceneState.debugNavmeshTriangles[color as keyof typeof sceneState.debugNavmeshTriangles];
+            const triangles = sceneState.debugNavmeshTriangles[color];
             if (triangles.length === 0) continue;
 
-            const style = debugAreaStyles[color];
+            const style = debugTransparentStyles[color];
             if (style && gameState.navmesh) {
                 for (const debugTriangle of triangles) {
                     const triIdx = debugTriangle.index;
@@ -311,7 +270,7 @@ export class DrawScene {
         // Render corridors stored in SceneState
         const corridors = sceneState.getAllCorridors();
         if (corridors.length > 0) {
-            const blueStyle = debugAreaStyles['blue'];
+            const blueStyle = debugTransparentStyles['blue'];
             
             if (blueStyle) {
                 for (const corridor of corridors) {
@@ -338,7 +297,7 @@ export class DrawScene {
         // Render paths stored in SceneState
         const paths = sceneState.getAllPaths();
         if (paths.length > 0) {
-            const indigoLineStyle = debugLineStyles['indigo'];
+            const indigoLineStyle = debugStrokeStyles['indigo'];
             
             if (indigoLineStyle) {
                 const dynamicIndigoStyle = { ...indigoLineStyle, width: dynamicWidth };

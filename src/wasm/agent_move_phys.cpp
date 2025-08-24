@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cstdio>
+#include <tuple>
 
 extern Navmesh g_navmesh;
 extern float g_sim_time;
@@ -115,13 +116,13 @@ void update_agent_phys(int agentIndex, float deltaTime) {
             Point2 normVelocity = math::normalize(agent_data.velocities[agentIndex]);
             Point2 endPointForRecast = endPoint + (normVelocity * 0.45f);
             
-            RaycastHitOnlyResult raycastResult = raycastPoint(agent_data.positions[agentIndex], endPointForRecast, agent_data.current_tris[agentIndex]);
+            auto raycastResult = raycastPoint(agent_data.positions[agentIndex], endPointForRecast, agent_data.current_tris[agentIndex]);
 
-            if (raycastResult.hasHit) {
+            if (std::get<2>(raycastResult)) {
                 if (!g_wall_contact.empty() && g_wall_contact[agentIndex] == 0) {
                     g_wall_contact[agentIndex] = 1;
                 }
-                Point2 wallVector = raycastResult.hitP2 - raycastResult.hitP1;
+                Point2 wallVector = std::get<1>(raycastResult) - std::get<0>(raycastResult);
                 Point2 wallNormal = {-wallVector.y, wallVector.x};
                 math::normalize_inplace(wallNormal);
 

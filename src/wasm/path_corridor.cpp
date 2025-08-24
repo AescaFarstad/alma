@@ -8,66 +8,100 @@
 // Global state dependencies
 extern Navmesh g_navmesh;
 
+// Pre-allocated A* data structures for reuse
+static FastPriorityQueue openSet;
+static int32_t* cameFrom_parent = nullptr;
+static int cameFrom_size = 0;
+static FlatScores scores;
+static bool astar_initialized = false;
+
+
 inline float heuristic(int from, int to) {
-    return math::distance(g_navmesh.triangle_centroids[from], g_navmesh.triangle_centroids[to]);
+    return math::distance(g_navmesh.poly_centroids[from], g_navmesh.poly_centroids[to]);
 }
 
-std::vector<int> findCorridor(
+bool findCorridor(
+    Navmesh& navmesh,
     const Point2& startPoint,
     const Point2& endPoint,
-    int startTriHint,
-    int endTriHint
+    std::vector<int>& outCorridor,
+    int startPolyHint,
+    int endPolyHint
 ) {
-    int startTri = (startTriHint != -1) ? startTriHint : getTriangleFromPoint(startPoint);
-    int endTri = (endTriHint != -1) ? endTriHint : getTriangleFromPoint(endPoint);
+    int startPoly = (startPolyHint != -1) ? startPolyHint : getPolygonFromPoint(startPoint);
+    int endPoly = (endPolyHint != -1) ? endPolyHint : getPolygonFromPoint(endPoint);
 
-    if (startTri == -1 || endTri == -1) {
-        return {};
+    if (startPoly == -1 || endPoly == -1) {
+        return false;
     }
 
-    const int numTris = g_navmesh.triangles_count;
+    if (startPoly == endPoly) {
+        outCorridor.clear();
+        outCorridor.push_back(startPoly);
+        return true;
+    }
 
-    FastPriorityQueue openSet;
-    openSet.reserve(64); // small default; heap grows as needed
-    openSet.put(startTri, 0.0f);
+    const int numWalkablePolys = g_navmesh.walkable_polygon_count;
 
-    FlatCameFrom cameFrom(static_cast<size_t>(numTris));
-    FlatScores scores(static_cast<size_t>(numTris));
-    scores.setG(startTri, 0.0f);
-    scores.setF(startTri, heuristic(startTri, endTri));
+    if (!astar_initialized) {
+        openSet.reserve(256); // Reserve a reasonable starting capacity
+        cameFrom_size = numWalkablePolys;
+        cameFrom_parent = new int32_t[cameFrom_size];
+        scores.init(numWalkablePolys);
+        astar_initialized = true;
+    } else {
+        openSet.clear();
+        scores.reset();
+    }
+    std::fill(cameFrom_parent, cameFrom_parent + cameFrom_size, -1);
 
+    openSet.put(startPoly, 0.0f);
+
+    scores.setG(startPoly, 0.0f);
+    scores.setF(startPoly, heuristic(startPoly, endPoly));
+
+    int iterations = 0;
     while (!openSet.empty()) {
+        iterations++;
+        if (iterations > 100000) {
+            return false;
+        }
         int current = openSet.get();
 
-        if (current == endTri) {
-            std::vector<int> path;
-            path.push_back(current);
-            while (cameFrom.has(current)) {
-                current = cameFrom.get(current);
-                path.push_back(current);
+        if (current == endPoly) {
+            outCorridor.clear();
+            outCorridor.push_back(current);
+            while (cameFrom_parent[current] != -1) {
+                current = cameFrom_parent[current];
+                outCorridor.push_back(current);
             }
-            std::reverse(path.begin(), path.end());
-            return path;
+            std::reverse(outCorridor.begin(), outCorridor.end());
+            return true;
         }
 
-        const int base = current * 3;
-        for (int i = 0; i < 3; ++i) {
-            const int neighbor = g_navmesh.neighbors[base + i];
-            if (neighbor == -1 || neighbor >= g_navmesh.walkable_triangle_count) {
+        const int32_t polyVertStart = g_navmesh.polygons[current];
+        const int32_t polyVertEnd = g_navmesh.polygons[current + 1];
+        const int32_t polyVertCount = polyVertEnd - polyVertStart;
+
+        for (int i = 0; i < polyVertCount; i++) {
+            const int32_t neighborIdx = polyVertStart + i;
+            const int32_t neighbor = g_navmesh.poly_neighbors[neighborIdx];
+            
+            if (neighbor == -1 || (neighbor != endPoly && neighbor >= g_navmesh.walkable_polygon_count)) {
                 continue;
             }
 
             const float tentative_g = scores.getG(current) + heuristic(current, neighbor);
 
             if (!scores.hasG(neighbor) || tentative_g < scores.getG(neighbor)) {
-                cameFrom.set(neighbor, current);
+                cameFrom_parent[neighbor] = current;
                 scores.setG(neighbor, tentative_g);
-                const float f = tentative_g + heuristic(neighbor, endTri);
+                const float f = tentative_g + heuristic(neighbor, endPoly);
                 scores.setF(neighbor, f);
                 openSet.put(neighbor, f);
             }
         }
     }
 
-    return {}; // No path found
+    return false;
 } 

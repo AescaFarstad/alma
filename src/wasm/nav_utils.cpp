@@ -134,3 +134,36 @@ int getTriangleFromPoint(const Point2& point) {
 
     return -1;
 }
+
+int getPolygonFromPoint(const Point2& point) {
+    std::vector<int> possiblePolys = g_navmesh.polygon_index.query(point);
+    for (int polyIdx : possiblePolys) {
+        if (test_point_inside_poly_t(point, polyIdx)) {
+            return polyIdx;
+        }
+    }
+    return -1;
+}
+
+int getBlobFromPoint(const Point2& point) {
+    std::vector<int> possibleBlobs = g_navmesh.blob_index.query(point);
+    for (int blobIdx : possibleBlobs) {
+        if (testPointInsideBlob(point, blobIdx)) {
+            return blobIdx;
+        }
+    }
+    return -1;
+}
+
+int getTriangleFromPolyPoint(const Point2& point, int poly_idx) {
+    const int32_t poly_start = g_navmesh.poly_tris[poly_idx];
+    const int32_t poly_end = g_navmesh.poly_tris[poly_idx + 1];
+
+    for (int i = poly_start; i < poly_end; i++) {
+        if (test_point_inside_triangle(point, i)) {
+            return i;
+        }
+    }
+
+    return -1;
+}

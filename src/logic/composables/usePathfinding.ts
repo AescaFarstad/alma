@@ -1,7 +1,8 @@
 import type { GameState } from '../GameState';
 import type { SceneState } from '../drawing/SceneState';
 import { findCorners } from '../navmesh/pathCorners';
-import { findCorridor, getTriangleFromPoint } from '../navmesh/pathCorridor';
+import { findCorridor } from '../navmesh/pathCorridor';
+import { getTriangleFromPoint } from '../navmesh/NavUtils';
 
 export function usePathfinding(
   gameState: GameState | undefined,
@@ -55,7 +56,21 @@ export function usePathfinding(
           const startTri = getTriangleFromPoint(navmesh, startPoint);
           const endTri = getTriangleFromPoint(navmesh, endPoint);
 
-          const corridor = findCorridor(navmesh, startPoint, endPoint, startTri, endTri);
+          console.log(`Pathfinding from point ${mark1Id} to ${mark2Id}`);
+          console.log('Start point:', startPoint, 'End point:', endPoint);
+          console.log('Start triangle:', startTri, 'End triangle:', endTri);
+
+          if (startTri === -1 || endTri === -1) {
+            console.log(
+              'Could not find start or end triangle. One of the points is likely outside the navmesh.'
+            );
+            continue;
+          }
+
+          const startPoly = navmesh.triangle_to_polygon[startTri];
+          const endPoly = navmesh.triangle_to_polygon[endTri];
+
+          const corridor = findCorridor(navmesh, startPoint, endPoint, startPoly, endPoly);
 
           if (corridor) {
             const corners = findCorners(navmesh, corridor, startPoint, endPoint);
@@ -69,8 +84,17 @@ export function usePathfinding(
             }
             pathLengths.push(Math.round(pathLength));
 
+            const triangleCorridor: number[] = [];
+            for (const polyId of corridor) {
+                const triStart = navmesh.poly_tris[polyId];
+                const triEnd = navmesh.poly_tris[polyId + 1];
+                for (let i = triStart; i < triEnd; i++) {
+                    triangleCorridor.push(i);
+                }
+            }
+
             const corridorId = `${mark1Id}-${mark2Id}`;
-            sceneState.addCorridor(corridorId, corridor, startPoint, endPoint);
+            sceneState.addCorridor(corridorId, triangleCorridor, startPoint, endPoint);
             sceneState.addPath(corridorId, cornerPoints, startPoint, endPoint);
             corridorCount++;
           } else {

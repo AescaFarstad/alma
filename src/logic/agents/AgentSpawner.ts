@@ -1,6 +1,6 @@
 import { agentsLimit, GameState } from "../GameState";
 import { copy, Point2 } from "../core/math";
-import { getTriangleFromPoint } from "../navmesh/pathCorridor";
+import { getTriangleFromPoint } from "../navmesh/NavUtils";
 import { Agent } from "./Agent";
 
 export type Spawner = {
@@ -53,11 +53,7 @@ export function updateSpawners(gs: GameState, dt: number) {
             spawner.spawnTimer += spawner.spawnCooldown;
             spawner.spawnCount++;
 
-            // Debug: Check navmesh triangles around spawn point
-            console.log(`[Spawner] Attempting to spawn at (${spawner.coordinate.x}, ${spawner.coordinate.y})`);
-            
             let currentTri = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
-            console.log(`[Spawner] Triangle at spawn point: ${currentTri}`);
 
             // Create agent with default configuration
             const newAgent = createAgentWithConfig({
@@ -78,8 +74,6 @@ export function updateSpawners(gs: GameState, dt: number) {
             // newAgent.endTargetTri = 2852;
             // findPathToDestination(gs.navmesh, gs, newAgent, newAgent.currentTri, newAgent.endTargetTri, "hardcoded")
             // newAgent.state = AgentState.Traveling
-            
-            console.log(`[Spawner] Created TS agent at (${newAgent.coordinate.x.toFixed(1)}, ${newAgent.coordinate.y.toFixed(1)}), tri: ${newAgent.currentTri}, state: ${newAgent.state}`);
             
             gs.agents.push(newAgent);
             // Rare event: spawn
