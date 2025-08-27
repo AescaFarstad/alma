@@ -15,7 +15,7 @@
 // External reference to the global unified navmesh
 extern Navmesh g_navmesh;
 
-uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uint32_t totalMemorySize) {
+uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uint32_t totalMemorySize, float cellSize) {
     if (memoryStart == nullptr) {
         std::cerr << "[WASM] Memory start is null. Cannot initialize navmesh." << std::endl;
         return 0;
@@ -271,7 +271,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     
     const float width = spatialMaxX - spatialMinX;
     const float height = spatialMaxY - spatialMinY;
-    const float cellSize = 128.0f; // From NavmeshInit.ts
+    // cellSize parameter passed from TypeScript
     
     const int gridWidth = static_cast<int>(std::ceil(width / cellSize));
     const int gridHeight = static_cast<int>(std::ceil(height / cellSize));

@@ -11,6 +11,7 @@ import { Wasm } from './logic/Wasm';
 import { runPointInTriangleBenchmark } from './logic/debug/PointInTriangleBenchmark';
 import { WasmFacade } from './logic/WasmFacade';
 
+
 async function initializeGame() {
     const gameState = new GameState();
     gameState.uiState = reactive(gameState.uiState);

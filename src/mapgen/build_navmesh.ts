@@ -22,7 +22,7 @@ const __dirname = path.dirname(__filename);
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-500, -500, 500, 500];
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, 0, 120, 120];
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, -120, 120, 120];
-// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-500, -500, 500, 500];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-200, -200, 200, 200];
 const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
 const BOUNDARY_INFLATION = 100;
 

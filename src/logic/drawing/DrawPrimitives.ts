@@ -20,6 +20,7 @@ export class DrawPrimitives {
         }
 
         for (const [style, polygons] of primitives.polyCommands.entries()) {
+            if (polygons.length === 0) continue;
             for (const poly of polygons) {
                 graphics.poly(poly);
             }
@@ -30,13 +31,15 @@ export class DrawPrimitives {
         }
 
         for (const [style, data] of primitives.circleCommands.entries()) {
+            if (data.length === 0) continue;
             for (let i = 0; i < data.length; i += 3) {
                 graphics.circle(data[i], data[i + 1], data[i + 2]);
-                graphics.fill(style.fillStyle);
             }
+            graphics.fill(style.fillStyle);
         }
 
         for (const [style, data] of primitives.lineCommands.entries()) {
+            if (data.length === 0) continue;
             for (let i = 0; i < data.length; i += 4) {
                 graphics.moveTo(data[i], data[i + 1]);
                 graphics.lineTo(data[i + 2], data[i + 3]);

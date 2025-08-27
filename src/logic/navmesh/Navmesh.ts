@@ -1,6 +1,9 @@
 import { SpatialIndex } from './SpatialIndex';
 import { BuildingProperties } from '../../types';
 
+// Centralized constant for spatial index cell size used across navmesh and WASM
+export const SPATIAL_INDEX_CELL_SIZE = 64;
+
 export class Navmesh {
     // Layout: [x1, y1, x2, y2, x3, y3, ...]
     public vertices: Float32Array;

@@ -3,6 +3,8 @@ description:
 globs: 
 alwaysApply: true
 ---
+Do not use git unless explisitly requested!
+Got forbid you restore or checkout anything from git!
 To check for errors run 'npx tsc --noEmit --project tsconfig.json'. Do not run it unless the refactor may break things outside of the edited files. For comprehensive refactors, check errors with 'npm run build'
 Do not create test files unless explicitly asked. If linting / compiling is unavailable for whatever reason - simply skip it.
 Current working directory is '/mnt/WoB/WOB/web%20rep/alma'

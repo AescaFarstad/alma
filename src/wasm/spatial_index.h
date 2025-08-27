@@ -14,7 +14,7 @@ public:
     // Grid parameters
     int gridWidth = 0;
     int gridHeight = 0;
-    float cellSize = 128.0f;
+    float cellSize = 1024.0f;
     float minX = 0.0f;
     float minY = 0.0f;
     float maxX = 0.0f;

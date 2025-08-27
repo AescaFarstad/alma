@@ -17,8 +17,10 @@ export function initializeConst(wasm: WasmFacade, buffer: ArrayBuffer, offset: n
     f32[i++] = NavConst.STUCK_DANGER_1;
     f32[i++] = NavConst.STUCK_DANGER_2;
     f32[i++] = NavConst.STUCK_DANGER_3;
+    f32[i++] = NavConst.STUCK_HIT_WALL;
     i32[i++] = NavConst.PATH_LOG_RATE;
     f32[i++] = NavConst.LOOK_ROT_SPEED_RAD_S;
+    f32[i++] = NavConst.CORRIDOR_EXPECTED_JUMP;
     f32[i++] = NavConst.ARRIVAL_THRESHOLD_SQ_DEFAULT;
     f32[i++] = NavConst.ARRIVAL_DESIRED_SPEED_DEFAULT;
     f32[i++] = NavConst.MAX_SPEED_DEFAULT;

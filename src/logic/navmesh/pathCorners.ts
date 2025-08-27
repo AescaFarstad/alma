@@ -2,7 +2,7 @@ import { Navmesh } from "./Navmesh";
 import { Point2, cross, add, subtract, scale, length_sq, normalize, set_, set, normalize_, add_, subtract_, scale_ } from "../core/math";
 import { GameState } from "../GameState";
 import { SpatialIndex } from "./SpatialIndex";
-import { getTriangleFromPolyPoint } from "./NavUtils";
+import { getTriangleFromPolyPoint, testPointInsideTriangle, getTriangleFromPoint, getTriangleFromPolyVertex, getTriangleFromVertex } from "./NavUtils";
 
 export type Corner = {
     point: Point2;
@@ -12,9 +12,78 @@ export type Corner = {
 export interface DualCorner {
     corner1: Point2;
     tri1: number;
+    vIdx1: number;  // Vertex index for corner1, -1 if not a navmesh vertex
     corner2: Point2;
     tri2: number;
+    vIdx2: number;  // Vertex index for corner2, -1 if not a navmesh vertex
     numValid: 0 | 1 | 2;
+}
+
+const tempV_offset = {x: 0, y: 0};
+
+function _calculateCornerMiterVector(navmesh: Navmesh, cornerPoint: Point2, cornerVIdx: number, polyIdx: number): Point2 | null {
+    const polyVertsStart = navmesh.polygons[polyIdx];
+    const polyVertsEnd = navmesh.polygons[polyIdx + 1];
+
+    for (let i = polyVertsStart; i < polyVertsEnd; i++) {
+        if (navmesh.poly_verts[i] === cornerVIdx) {
+            const B = cornerPoint;
+
+            const prevIndex = (i === polyVertsStart) ? polyVertsEnd - 1 : i - 1;
+            const nextIndex = (i === polyVertsEnd - 1) ? polyVertsStart : i + 1;
+
+            const A: Point2 = { 
+                x: navmesh.vertices[navmesh.poly_verts[prevIndex] * 2], 
+                y: navmesh.vertices[navmesh.poly_verts[prevIndex] * 2 + 1] 
+            };
+            const C: Point2 = { 
+                x: navmesh.vertices[navmesh.poly_verts[nextIndex] * 2], 
+                y: navmesh.vertices[navmesh.poly_verts[nextIndex] * 2 + 1] 
+            };
+
+            set_(tempV_offset, B);
+            subtract_(tempV_offset, A);
+            normalize_(tempV_offset);
+            
+            let vec_CB = subtract(B, C);
+            normalize_(vec_CB);
+            
+            add_(tempV_offset, vec_CB);
+            return { x: tempV_offset.x, y: tempV_offset.y };
+        }
+    }
+    return null; // vidx not found in polygon
+}
+
+export function offsetCorner(
+    navmesh: Navmesh,
+    cornerPoint: Point2,
+    cornerVIdx: number,
+    polyIdx: number,
+    offset: number
+): Point2 | null {
+    const miterVector = _calculateCornerMiterVector(navmesh, cornerPoint, cornerVIdx, polyIdx);
+
+    if (miterVector) {
+        if (length_sq(miterVector) > 1e-6) {
+            normalize_(miterVector);
+            scale_(miterVector, offset);
+            const newPoint = { x: cornerPoint.x, y: cornerPoint.y };
+            add_(newPoint, miterVector);
+            return newPoint;
+        }
+        return null; // cannot offset
+    }
+    
+    console.warn(`offsetCorner: FAILURE - Could not find matching vertex for corner in polygon. VIdx: ${cornerVIdx}, PolyIdx: ${polyIdx}`);
+    return null; // vidx not found in polygon
+}
+
+interface Portal {
+    left: Point2;
+    right: Point2;
+    leftVIdx: number;   // -1 if not a navmesh vertex
+    rightVIdx: number;  // -1 if not a navmesh vertex
 }
 const tempV = {x: 0, y: 0};
 
@@ -28,8 +97,10 @@ export function findNextCorner(navmesh: Navmesh, corridor: number[], startPoint:
     if (corridor.length === 0) {
         set_(result.corner1, endPoint);
         result.tri1 = -1;
+        result.vIdx1 = -1;
         set_(result.corner2, endPoint);
         result.tri2 = -1;
+        result.vIdx2 = -1;
         result.numValid = 1;
         return;
     }
@@ -37,9 +108,11 @@ export function findNextCorner(navmesh: Navmesh, corridor: number[], startPoint:
     // Special case: single polygon corridor - just go directly to the end point
     if (corridor.length === 1) {
         set_(result.corner1, endPoint);
-        result.tri1 = corridor[0];
+        result.tri1 = findTriangleForPortalPoint(navmesh, endPoint, -1, corridor[0], "endPoint (single poly)");
+        result.vIdx1 = -1;
         set_(result.corner2, endPoint);
-        result.tri2 = corridor[0];
+        result.tri2 = findTriangleForPortalPoint(navmesh, endPoint, -1, corridor[0], "endPoint (single poly)");
+        result.vIdx2 = -1;
         result.numValid = 1;
         return;
     }
@@ -51,88 +124,143 @@ export function findNextCorner(navmesh: Navmesh, corridor: number[], startPoint:
     if (result.numValid === 0) {
         set_(result.corner1, endPoint);
         result.tri1 = -1;
+        result.vIdx1 = -1;
         set_(result.corner2, endPoint);
         result.tri2 = -1;
+        result.vIdx2 = -1;
         result.numValid = 1;
         return;
     }    
 
     if (result.numValid === 1) {
-        // Single corner is already set by funnel_dual, no offset needed for endpoints
-        return;
+        // Add the final destination as the second corner
+        set_(result.corner2, endPoint);
+        result.tri2 = -1; // Triangle will be determined if needed
+        result.vIdx2 = -1;
+        result.numValid = 2;
     }
 
     // Apply offset to both corners (modifies in place)
-    applyOffsetToPoint(result.corner1, result.tri1, endPoint, offset, navmesh);
-    applyOffsetToPoint(result.corner2, result.tri2, endPoint, offset, navmesh);
+    if (result.numValid === 2) {
+        applyOffsetToCorner(result, 1, endPoint, offset, navmesh);
+        applyOffsetToCorner(result, 2, endPoint, offset, navmesh);
+    }
 }
 
-const applyOffsetToPoint = (point: Point2, tri: number, endPoint: Point2, offset: number, navmesh: Navmesh): void => {
-    if (tri !== -1 && offset > 0) {
-        const isEndPoint = point.x === endPoint.x && point.y === endPoint.y;
+const applyOffsetToCorner = (result: DualCorner, cornerNum: 1 | 2, endPoint: Point2, offset: number, navmesh: Navmesh): void => {
+    const point = cornerNum === 1 ? result.corner1 : result.corner2;
+    const vIdx = cornerNum === 1 ? result.vIdx1 : result.vIdx2;
+    const tri = cornerNum === 1 ? result.tri1 : result.tri2;
+    
+    if (vIdx === -1 || tri === -1 || offset <= 0) {
+        return;
+    }
+    
+    const isEndPoint = point.x === endPoint.x && point.y === endPoint.y;
+    if (isEndPoint) {
+        return;
+    }
+    
+    const nearbyBlobIds = navmesh.blobIndex.query(point.x, point.y);
+    let foundBlob = false;
+    
+    for (let j = 0; j < nearbyBlobIds.length; j++) {
+        const blobId = nearbyBlobIds[j];
+        const miterVector = _calculateCornerMiterVector(navmesh, point, vIdx, blobId);
 
-        if (!isEndPoint) {
-            const nearbyBlobIds = navmesh.blobIndex.query(point.x, point.y);
-            let foundBlob = false;
-
-            for (let j = 0; j < nearbyBlobIds.length; j++) {
-                const blobId = nearbyBlobIds[j];
-                const polyVertsStart = navmesh.polygons[blobId];
-                const polyVertsEnd = navmesh.polygons[blobId + 1];
-                const points_length = polyVertsEnd - polyVertsStart;
-
-                for (let i = 0; i < points_length; i++) {
-                    const vertIndex = navmesh.poly_verts[polyVertsStart + i];
-                    const p_x = navmesh.vertices[vertIndex * 2];
-                    const p_y = navmesh.vertices[vertIndex * 2 + 1];
-                    
-                    if (Math.abs(p_x - point.x) < 0.015 && Math.abs(p_y - point.y) < 0.015) {
-                        const B = point;
-                        
-                        // Find adjacent vertices
-                        const prev_i = (i + points_length - 1) % points_length;
-                        const prev_vertIndex = navmesh.poly_verts[polyVertsStart + prev_i];
-                        const A: Point2 = { x: navmesh.vertices[prev_vertIndex * 2], y: navmesh.vertices[prev_vertIndex * 2 + 1] };
-                        
-                        const next_i = (i + 1) % points_length;
-                        const next_vertIndex = navmesh.poly_verts[polyVertsStart + next_i];
-                        const C: Point2 = { x: navmesh.vertices[next_vertIndex * 2], y: navmesh.vertices[next_vertIndex * 2 + 1] };
-
-                        set_(tempV, B);
-                        subtract_(tempV, A);
-                        normalize_(tempV);
-                        
-                        let vec_CB = subtract(B, C);
-                        normalize_(vec_CB);
-                        
-                        add_(tempV, vec_CB);
-
-                        if (length_sq(tempV) > 1e-6) {
-                            normalize_(tempV);
-                            scale_(tempV, offset);
-                            add_(point, tempV);
-                        }
-                        
-                        foundBlob = true;
-                        break;
-                    }
-                }
-                if(foundBlob) break;
+        if (miterVector) {
+            if (length_sq(miterVector) > 1e-6) {
+                normalize_(miterVector);
+                scale_(miterVector, offset);
+                add_(point, miterVector);
             }
-
-            if (!foundBlob) {
-                console.warn("Could not find matching blob for corner, not applying offset.", point);
-            }
+            foundBlob = true;
+            break;
+        }
+    }
+    
+    // Add warning if blob not found (like C++ version)
+    if (!foundBlob) {
+        console.warn(`applyOffsetToCorner: FAILURE corner${cornerNum} - Could not find matching blob for corner, not applying offset. Point: (${point.x.toFixed(3)}, ${point.y.toFixed(3)}) vIdx=${vIdx}`);
+        console.warn("applyOffsetToCorner: Nearby blobs were:", nearbyBlobIds);
+    }
+    
+    // After moving the point, check if it's still in the original triangle
+    if (!testPointInsideTriangle(navmesh, point.x, point.y, tri)) {
+        const newTri = findNewTriangle(point, tri, vIdx, navmesh);
+        if (cornerNum === 1) {
+            result.tri1 = newTri;
+        } else {
+            result.tri2 = newTri;
         }
     }
 };
 
-function getPolygonPortals(navmesh: Navmesh, corridor: number[], startPoint: Point2, endPoint: Point2): { left: Point2, right: Point2 }[] {
-    const portals: { left: Point2, right: Point2 }[] = [];
+function findNewTriangle(point: Point2, startTri: number, vIdx: number, navmesh: Navmesh): number {
+    if (startTri < 0 || vIdx < 0) {
+        return startTri;
+    }
+
+    // Check immediate neighbors of the starting triangle
+    for (let i = 0; i < 3; i++) {
+        const neighbor = navmesh.neighbors[startTri * 3 + i];
+        if (neighbor !== -1 && neighbor < navmesh.walkable_triangle_count) {
+            if (testPointInsideTriangle(navmesh, point.x, point.y, neighbor)) {
+                return neighbor;
+            }
+        }
+    }
+
+    // If no immediate neighbor contains the point, use general search
+    const ftri = getTriangleFromPoint(navmesh, point);
+    return ftri;
+}
+
+/**
+ * Finds the best triangle for a portal point using multiple lookup strategies
+ * @param navmesh - The navigation mesh
+ * @param point - The portal point coordinates
+ * @param vertexIdx - The vertex index (-1 if not available)
+ * @param polygonIdx - The polygon index to search within
+ * @param debugName - Name for debug logging (e.g. "corner1", "corner2 (right)")
+ * @returns Triangle index, or -1 if all lookup methods fail
+ */
+function findTriangleForPortalPoint(
+    navmesh: Navmesh, 
+    point: Point2, 
+    vertexIdx: number, 
+    polygonIdx: number, 
+    debugName: string
+): number {
+    let triangleIdx = -1;
+    
+    if (vertexIdx !== -1) {
+        triangleIdx = getTriangleFromVertex(navmesh, vertexIdx, point);
+    }
+    
+    if (triangleIdx === -1) {
+        triangleIdx = getTriangleFromPolyPoint(navmesh, point, polygonIdx);
+    }
+
+    if (triangleIdx === -1) {
+        triangleIdx = getTriangleFromPoint(navmesh, point);
+    }
+    
+    if (triangleIdx === -1) {
+        console.error(`funnel_dual: FAILED to find triangle for ${debugName}: point=(${point.x.toFixed(2)}, ${point.y.toFixed(2)}) vIdx=${vertexIdx} poly=${polygonIdx}`);
+    }
+    
+    return triangleIdx;
+}
+
+function getPolygonPortals(navmesh: Navmesh, corridor: number[], startPoint: Point2, endPoint: Point2): Portal[] {
+    const portals: Portal[] = [];
     // Create copies to avoid reference issues
     portals.push({ 
         left: { x: startPoint.x, y: startPoint.y }, 
-        right: { x: startPoint.x, y: startPoint.y } 
+        right: { x: startPoint.x, y: startPoint.y },
+        leftVIdx: -1,
+        rightVIdx: -1
     });
 
     for (let i = 0; i < corridor.length - 1; i++) {
@@ -148,12 +276,14 @@ function getPolygonPortals(navmesh: Navmesh, corridor: number[], startPoint: Poi
     // Create copies to avoid reference issues
     portals.push({ 
         left: { x: endPoint.x, y: endPoint.y }, 
-        right: { x: endPoint.x, y: endPoint.y } 
+        right: { x: endPoint.x, y: endPoint.y },
+        leftVIdx: -1,
+        rightVIdx: -1
     });
     return portals;
 }
 
-function getPolygonPortalPoints(navmesh: Navmesh, poly1Idx: number, poly2Idx: number): { left: Point2, right: Point2 } | null {
+function getPolygonPortalPoints(navmesh: Navmesh, poly1Idx: number, poly2Idx: number): Portal | null {
     // Find the shared edge between two adjacent polygons
     const poly1VertStart = navmesh.polygons[poly1Idx];
     const poly1VertEnd = navmesh.polygons[poly1Idx + 1];
@@ -190,10 +320,10 @@ function getPolygonPortalPoints(navmesh: Navmesh, poly1Idx: number, poly2Idx: nu
             
             if (crossProduct > 0) {
                 // p2 is to the left of travel direction
-                return { left: p2, right: p1 };
+                return { left: p2, right: p1, leftVIdx: v2Idx, rightVIdx: v1Idx };
             } else {
                 // p1 is to the left of travel direction
-                return { left: p1, right: p2 };
+                return { left: p1, right: p2, leftVIdx: v1Idx, rightVIdx: v2Idx };
             }
         }
     }
@@ -201,13 +331,15 @@ function getPolygonPortalPoints(navmesh: Navmesh, poly1Idx: number, poly2Idx: nu
     return null;
 }
 
-function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: number[], result: DualCorner, navmesh: Navmesh): void {
+function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, navmesh: Navmesh): void {
     if (portals.length === 0) {
         // This shouldn't happen, but handle it gracefully
         set(result.corner1, 0, 0);
         set(result.corner2, 0, 0);
         result.tri1 = -1;
         result.tri2 = -1;
+        result.vIdx1 = -1;
+        result.vIdx2 = -1;
         result.numValid = 0;
         return;
     }
@@ -217,8 +349,10 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
         const tri = poly !== -1 ? getTriangleFromPolyPoint(navmesh, corner, poly) : -1;
         set_(result.corner1, corner);
         result.tri1 = tri;
+        result.vIdx1 = portals[0].leftVIdx;
         set_(result.corner2, corner);
         result.tri2 = tri;
+        result.vIdx2 = portals[0].leftVIdx;
         result.numValid = 1;
         return;
     }
@@ -254,16 +388,24 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
                     // Check if this corner is actually the start point (agent's current position)
                     if (!leftEqualsStart) {
                         set_(result.corner1, portalLeft);
-                        const poly = corridor[leftIndex];
-                        result.tri1 = getTriangleFromPolyPoint(navmesh, portalLeft, poly);
+                        // Map portal index to corridor index: portal 0 = start, portal i (i>0) = between corridor[i-1] and corridor[i]
+                        // (this whole indexing thing might be totaly wrong)
+                        const corridorIdx = (leftIndex > 0 && leftIndex <= corridor.length) ? leftIndex - 1 : 0;
+                        const leftVIdx = (leftIndex > 0 && leftIndex < portals.length) ? portals[leftIndex].leftVIdx : -1;
+                        
+                        result.tri1 = findTriangleForPortalPoint(navmesh, portalLeft, leftVIdx, corridor[corridorIdx], "corner1");
+                        result.vIdx1 = leftVIdx;
                         cornersFound = 1;
                     }
                 } else {
                     const corner1EqualsLeft = isPointsEqual(result.corner1, portalLeft);
                     if (!corner1EqualsLeft) {
                         set_(result.corner2, portalLeft);
-                        const poly = corridor[leftIndex];
-                        result.tri2 = getTriangleFromPolyPoint(navmesh, portalLeft, poly);
+                        const corridorIdx = (leftIndex > 0 && leftIndex <= corridor.length) ? leftIndex - 1 : 0;
+                        const leftVIdx = (leftIndex > 0 && leftIndex < portals.length) ? portals[leftIndex].leftVIdx : -1;
+                        
+                        result.tri2 = findTriangleForPortalPoint(navmesh, portalLeft, leftVIdx, corridor[corridorIdx], "corner2");
+                        result.vIdx2 = leftVIdx;
                         result.numValid = 2;
                         return;
                     }
@@ -300,16 +442,22 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
                     // Check if this corner is actually the start point (agent's current position)  
                     if (!rightEqualsStart) {
                         set_(result.corner1, portalRight);
-                        const poly = corridor[rightIndex];
-                        result.tri1 = getTriangleFromPolyPoint(navmesh, portalRight, poly);
+                        const corridorIdx = (rightIndex > 0 && rightIndex <= corridor.length) ? rightIndex - 1 : 0;
+                        const rightVIdx = (rightIndex > 0 && rightIndex < portals.length) ? portals[rightIndex].rightVIdx : -1;
+                        
+                        result.tri1 = findTriangleForPortalPoint(navmesh, portalRight, rightVIdx, corridor[corridorIdx], "corner1 (right)");
+                        result.vIdx1 = rightVIdx;
                         cornersFound = 1;
                     }
                 } else {
                     const corner1EqualsRight = isPointsEqual(result.corner1, portalRight);
                     if (!corner1EqualsRight) {
                         set_(result.corner2, portalRight);
-                        const poly = corridor[rightIndex];
-                        result.tri2 = getTriangleFromPolyPoint(navmesh, portalRight, poly);
+                        const corridorIdx = (rightIndex > 0 && rightIndex <= corridor.length) ? rightIndex - 1 : 0;
+                        const rightVIdx = (rightIndex > 0 && rightIndex < portals.length) ? portals[rightIndex].rightVIdx : -1;
+                        
+                        result.tri2 = findTriangleForPortalPoint(navmesh, portalRight, rightVIdx, corridor[corridorIdx], "corner2 (right)");
+                        result.vIdx2 = rightVIdx;
                         result.numValid = 2;
                         return;
                     }
@@ -337,11 +485,12 @@ function funnel_dual(portals: { left: Point2, right: Point2 }[], corridor: numbe
         set_(result.corner1, endPoint);
         const poly = corridor[corridor.length - 1];
         result.tri1 = getTriangleFromPolyPoint(navmesh, endPoint, poly);
+        result.vIdx1 = -1;
         result.numValid = 1;
     }
 }
 
-function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], _navmesh: Navmesh): Corner[] {
+function funnel(portals: Portal[], corridor: number[], _navmesh: Navmesh): Corner[] {
     if (portals.length < 2) {
         return [{ point: portals[0]?.left || { x: 0, y: 0 }, tri: corridor[0] ?? -1 }];
     }
@@ -405,7 +554,9 @@ function funnel(portals: { left: Point2, right: Point2 }[], corridor: number[], 
                 i = apexIndex;
                 continue;
             }
+
         }
+
     }
 
     // Append last point if not already equal to the last point

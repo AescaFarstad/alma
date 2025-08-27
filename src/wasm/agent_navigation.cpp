@@ -24,7 +24,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
     if (state == AgentState::Standing || agent_data.predicament_ratings[agentIndex] > 7) {
         if (agent_data.current_tris[agentIndex] == -1) return;
 
-        int endNode = get_random_triangle_in_area({0.0f, 0.0f}, 15, rng_seed);
+        int endNode = get_random_triangle_in_area({0.0f, 0.0f}, 30, rng_seed);
         *rng_seed = math::advance_seed_cpp(*rng_seed);
         if (endNode == -1) endNode = get_random_triangle(rng_seed);
         
@@ -111,7 +111,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         }
 
         if (agent_data.num_valid_corners[agentIndex] == 2 && (distanceToCornerSq < CORNER_OFFSET_SQ || crossedDemarkationLine)) {
-             DualCorner corners = find_next_corner(agent_data.positions[agentIndex], agent_data.corridors[agentIndex], agent_data.end_targets[agentIndex], CORNER_OFFSET);
+            DualCorner corners = find_next_corner(agent_data.positions[agentIndex], agent_data.corridors[agentIndex], agent_data.end_targets[agentIndex], CORNER_OFFSET);
             if (corners.numValid > 0) {
                 agent_data.next_corners[agentIndex] = corners.corner1;
                 agent_data.next_corner_tris[agentIndex] = corners.tri1;

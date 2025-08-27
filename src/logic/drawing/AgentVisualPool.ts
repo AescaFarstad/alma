@@ -295,43 +295,43 @@ export class AgentVisualPool {
     }
 
     private updateAccelLine(element: AgentPixiElements, pos: { x: number, y: number }, agent: Agent): void {
-        const scaleM = 0.2;
-        const line = element.accelLine;
-        line.clear();
-        line.stroke({ color: this.accelLineColor, width: 1, alpha: 0.9 });
-        line.moveTo(pos.x, -pos.y);
-        line.lineTo(pos.x + agent.lastAppliedAccel.x * scaleM, -pos.y - agent.lastAppliedAccel.y * scaleM);
-        line.stroke();
+        // const scaleM = 0.2;
+        // const line = element.accelLine;
+        // line.clear();
+        // line.stroke({ color: this.accelLineColor, width: 1, alpha: 0.9 });
+        // line.moveTo(pos.x, -pos.y);
+        // line.lineTo(pos.x + agent.lastAppliedAccel.x * scaleM, -pos.y - agent.lastAppliedAccel.y * scaleM);
+        // line.stroke();
     }
 
     private updateVelocityLine(element: AgentPixiElements, pos: { x: number, y: number }, agent: Agent): void {
-        const scaleM = 1;
-        const line = element.velocityLine;
-        line.clear();
-        line.stroke({ color: this.velocityLineColor, width: 1, alpha: 0.9 });
-        line.moveTo(pos.x, -pos.y);
-        line.lineTo(pos.x + agent.velocity.x * scaleM, -pos.y - agent.velocity.y * scaleM);
-        line.stroke();
+        // const scaleM = 1;
+        // const line = element.velocityLine;
+        // line.clear();
+        // line.stroke({ color: this.velocityLineColor, width: 1, alpha: 0.9 });
+        // line.moveTo(pos.x, -pos.y);
+        // line.lineTo(pos.x + agent.velocity.x * scaleM, -pos.y - agent.velocity.y * scaleM);
+        // line.stroke();
     }
 
     private updateVelocityDiffLine(element: AgentPixiElements, pos: { x: number, y: number }, agent: Agent): void {
-        const scaleM = 1;
-        const line = element.velocityDiffLine;
-        line.clear();
-        line.stroke({ color: this.velocityDiffLineColor, width: 1, alpha: 0.9 });
-        line.moveTo(pos.x, -pos.y);
-        line.lineTo(pos.x + agent.debug_velocityDiff.x * scaleM, -pos.y - agent.debug_velocityDiff.y * scaleM);
-        line.stroke();
+        // const scaleM = 1;
+        // const line = element.velocityDiffLine;
+        // line.clear();
+        // line.stroke({ color: this.velocityDiffLineColor, width: 1, alpha: 0.9 });
+        // line.moveTo(pos.x, -pos.y);
+        // line.lineTo(pos.x + agent.debug_velocityDiff.x * scaleM, -pos.y - agent.debug_velocityDiff.y * scaleM);
+        // line.stroke();
     }
 
     private updateDesiredVelocityLine(element: AgentPixiElements, pos: { x: number, y: number }, agent: Agent): void {
-        const scaleM = 1;
-        const line = element.desiredVelocityLine;
-        line.clear();
-        line.stroke({ color: this.desiredVelocityLineColor, width: 2, alpha: 0.7 });
-        line.moveTo(pos.x, -pos.y);
-        line.lineTo(pos.x + agent.debug_desiredVelocity.x * scaleM, -pos.y - agent.debug_desiredVelocity.y * scaleM);
-        line.stroke();
+        // const scaleM = 1;
+        // const line = element.desiredVelocityLine;
+        // line.clear();
+        // line.stroke({ color: this.desiredVelocityLineColor, width: 2, alpha: 0.7 });
+        // line.moveTo(pos.x, -pos.y);
+        // line.lineTo(pos.x + agent.debug_desiredVelocity.x * scaleM, -pos.y - agent.debug_desiredVelocity.y * scaleM);
+        // line.stroke();
     }
 
     private updatePathLines(element: AgentPixiElements, pos: { x: number, y: number }, agent: Agent): void {
@@ -370,7 +370,7 @@ export class AgentVisualPool {
 
         const speed = length(agent.velocity);        
         // text.text = `${Math.round(speed)} d: ${Math.round(length(agent.debug_desiredVelocity))} st:${Math.round(agent.stuckRating)}`;
-        text.text = agent.stuckRating > 15 ? `${Math.round(agent.stuckRating)}` : '';
+        text.text = `f ${agent.pathFrustration} s ${agent.stuckRating.toFixed(2)}`;
         text.x = pos.x;
         text.y = -pos.y + 8; // Offset above the agent
         

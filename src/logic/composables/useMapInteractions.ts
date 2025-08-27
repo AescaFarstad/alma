@@ -6,6 +6,8 @@ import { DragPan } from 'ol/interaction';
 import { PixiLayer } from '../Pixie';
 import { getBuildingGeometry } from '../../mapgen/simplification/geometryUtils';
 import { Point2 } from '../core/math';
+import { globalInputQueue } from "../Model";
+import type { CmdTimeScale } from "../input/InputCommands";
 
 const DRAG_THRESHOLD = 5; // pixels
 
@@ -52,8 +54,10 @@ export function useMapInteractions(
   const handleKeyDown = (evt: KeyboardEvent) => {
     if (!gameState) return;
 
-    if (evt.key === ' ' || evt.key === 'Spacebar') {
-      gameState.scheduledLaserBlasts++;
+    if (evt.key === ' ' || evt.key === 'Spacebar' || evt.code === 'Space') {
+      evt.preventDefault();
+      const command: CmdTimeScale = { name: "CmdTimeScale", scale: 0, playerId: "player1" };
+      globalInputQueue.push(command);
     }
 
     pressedKeys.add(evt.key.toLowerCase());

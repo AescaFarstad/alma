@@ -82,7 +82,25 @@ const copyCoordinatesJSON = () => {
 };
 
 function customStringify(obj: any): string {
-  const json = JSON.stringify(obj, null, 2);
+  // Handle circular references but preserve full arrays
+  const seen = new WeakSet();
+  const replacer = (key: string, value: any) => {
+    if (typeof value === "object" && value !== null) {
+      if (seen.has(value)) {
+        return "[Circular Reference]";
+      }
+      seen.add(value);
+    }
+    
+    // Only limit extremely long strings, not arrays
+    if (typeof value === "string" && value.length > 10000) {
+      return value.substring(0, 10000) + "... (truncated)";
+    }
+    
+    return value;
+  };
+  
+  const json = JSON.stringify(obj, replacer, 2);
   const inlineSimpleArrays = json.replace(/(\[\s+)([\s\S]+?)(\s+\])/g, (match, open, content, close) => {
     const flattened = content.trim().replace(/\s*\n\s*/g, ' ');
     if (/^(\d+(,\s*)?)+$/.test(flattened) || /^(".*?"(,\s*)?)+$/.test(flattened)) {
@@ -113,10 +131,21 @@ const copyAgentState = () => {
   }
 
   if (nearestAgent) {
-    const agentState = customStringify(nearestAgent);
-    navigator.clipboard.writeText(agentState).catch((err) => {
-      console.error('Could not copy agent state: ', err);
-    });
+    try {
+      // Create a complete copy using JSON serialization to capture ALL properties automatically
+      // This will include any new properties added to the Agent class without manual updates
+      const completeAgentState = JSON.parse(JSON.stringify(nearestAgent));
+      
+      const agentState = customStringify(completeAgentState);
+      navigator.clipboard.writeText(agentState).catch((err) => {
+        console.error('Could not copy agent state: ', err);
+      });
+    } catch (error) {
+      console.error('Error creating agent state copy:', error);
+      // Fallback: just copy basic info
+      const basicInfo = `Agent ID: ${nearestAgent.id}, Position: (${nearestAgent.coordinate.x}, ${nearestAgent.coordinate.y}), NextCorner: (${nearestAgent.nextCorner.x}, ${nearestAgent.nextCorner.y}), NextCornerTri: ${nearestAgent.nextCornerTri}`;
+      navigator.clipboard.writeText(basicInfo);
+    }
   }
 
   emit('hide');

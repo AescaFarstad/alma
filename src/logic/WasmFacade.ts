@@ -3,7 +3,7 @@ import { WasmImpulse } from "./wasm_impulse_codes";
 
 export interface WasmFacade {
     _init_agents: (sharedBuffer: number, maxAgents: number, seed: number) => void;
-    _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number) => number;
+    _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number, cellSize: number) => number;
     _finalize_init: () => void;
     _add_agent: (x: number, y: number) => number;
     _update: (dt: number, m3x3Ptr: number, widthPx: number, heightPx: number, dpr: number) => void;

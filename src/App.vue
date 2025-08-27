@@ -146,40 +146,6 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
         }
       }
     },
-    'draw-navmesh': drawNavmesh,
-    'find-corridors': findCorridors,
-    'build-path': buildPath,
-    'draw-nav-grid': (payload) => {
-      if (sceneState) {
-        drawNavGrid(payload.pattern)
-      }
-    },
-    'toggle-layer': (payload) => {
-      const layerId = payload.layerId as 'buildings' | 'roads' | 'footpaths';
-      layerVisibility[layerId] = !layerVisibility[layerId];
-      const combinedLayer = mapInstance.map?.getLayers().getArray().find(layer => layer.get('name') === 'combined') as VectorTileLayer<Feature>;
-      if (combinedLayer) {
-        combinedLayer.getSource()?.refresh();
-      }
-    },
-    'set-agent-render-mode': (payload) => {
-        if (mapComponent.value?.pixieLayer?.value) {
-            mapComponent.value.pixieLayer.value.setAgentRenderingMode(payload.mode);
-        }
-    },
-    'toggle-agents': (payload) => {
-        if (pixieLayerRef.value) {
-            pixieLayerRef.value.setAgentRenderingEnabled(payload.enabled);
-        }
-    },
-    'toggle-wasm-render': (payload) => {
-        if (wasmRenderEnabled) {
-          wasmRenderEnabled.value = payload.enabled;
-        }
-        if (!payload.enabled && WasmFacade._sprite_renderer_clear) {
-          WasmFacade._sprite_renderer_clear();
-        }
-    }
   };
 
   const handler = eventHandlers[event.type];
@@ -190,7 +156,7 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
 
 provide('gameState', gameState);
 provide('fpsMetrics', fpsMetrics);
-provide('pixieLayer', mapComponent.value?.pixieLayer);
+provide('pixieLayer', pixieLayerRef);
 if (wasmRenderEnabled) provide('wasmRenderEnabled', wasmRenderEnabled);
 provide('sceneState', sceneState);
 </script>

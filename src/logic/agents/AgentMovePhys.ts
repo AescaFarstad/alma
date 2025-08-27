@@ -3,6 +3,7 @@ import { GameState } from "../GameState";
 import { add, dot, length, length_sq, add_, set, scale_, set_, distance_sq, subtract_, normalize_, lerp, cvt } from "../core/math";
 import { raycastPoint } from "../Raycasting";
 import { findTriangle, isPointInNavmesh } from "../navmesh/NavUtils";
+import { NavConst } from "./NavConst";
 
 
 let desiredVelocity = { x: 0, y: 0 };
@@ -145,8 +146,8 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
             if (raycastResult.hitP1 && raycastResult.hitP2) {
                 if (!agent.wallContact) {
                     agent.wallContact = true;
-                    
                 }
+                agent.stuckRating += NavConst.STUCK_HIT_WALL;
                 set_(wallVector, raycastResult.hitP2);
                 subtract_(wallVector, raycastResult.hitP1);
                 

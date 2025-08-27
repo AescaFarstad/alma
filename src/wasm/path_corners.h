@@ -12,8 +12,10 @@ struct Corner {
 struct DualCorner {
     Point2 corner1;
     int tri1;
+    int vIdx1;
     Point2 corner2;
     int tri2;
+    int vIdx2;
     int numValid;
 };
 

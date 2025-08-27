@@ -4,8 +4,9 @@ import { getTriangleFromPoint, testPointInsideTriangle } from './navmesh/NavUtil
 import { GameState } from './GameState';
 
 export type RaycastWithCorridorResult = {
-    hitP1: Point2 | null;
-    hitP2: Point2 | null;
+    hitV1_idx: number;
+    hitV2_idx: number;
+    hitTri_idx: number;
     corridor: number[];
 };
 
@@ -35,32 +36,32 @@ export function raycastCorridor(
     const corridor = traceStraightCorridor(navmesh, startPoint, endPoint, startTriIdx, endTriIdx);
 
     if (corridor === null) {
-        return {hitP1: startPoint, hitP2: startPoint, corridor: []};
+        return {hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor: []};
     }
 
-    const lastTriIdx = corridor[corridor.length-1];
+    const lastTriIdx = corridor[corridor.length-2];
     
     // If endTriIdx is provided, trust it - no need for point-in-triangle check
     if (endTriIdx !== undefined) {
         if (lastTriIdx === endTriIdx) {
-            return { hitP1: null, hitP2: null, corridor };
+            return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor };
         }
     } else {
         // Fallback to point-in-triangle check when endTriIdx is not provided
         if(testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, lastTriIdx)) {
-            return { hitP1: null, hitP2: null, corridor };
+            return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor };
         }
     }
     
     // If we hit a wall, return the hit edge
     if (hitEdgeIndex !== -1) {
-        getTrianglePoints(navmesh, lastTriIdx, triPoints);
-        const p1 = triPoints[hitEdgeIndex];
-        const p2 = triPoints[(hitEdgeIndex + 1) % 3];
-        return {hitP1: p1, hitP2: p2, corridor};
+        const triVertexStartIndex = lastTriIdx * 3;
+        const hitV1_idx = navmesh.triangles[triVertexStartIndex + hitEdgeIndex];
+        const hitV2_idx = navmesh.triangles[triVertexStartIndex + ((hitEdgeIndex + 1) % 3)];
+        return {hitV1_idx, hitV2_idx, hitTri_idx: corridor[corridor.length-1], corridor};
     }
 
-    return { hitP1: null, hitP2: null, corridor }; // Fallback
+    return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor }; // Fallback
 }
 
 /**
@@ -173,6 +174,7 @@ function traceStraightCorridor(
             
             if (nextTriIdx >= navmesh.walkable_triangle_count) {
                 hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
+                corridor.push(nextTriIdx); //store the hit triangle
                 return corridor; // Hit a wall
             }
         } else {

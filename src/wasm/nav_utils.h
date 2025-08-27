@@ -33,6 +33,7 @@ int32_t get_random_triangle(uint64_t* seed);
  */
 int32_t get_random_triangle_in_area(Point2 center, int32_t numCellExtents, uint64_t* seed);
 
+
 /**
  * Get all triangles in a specific spatial index cell
  * @param cellX Cell X coordinate

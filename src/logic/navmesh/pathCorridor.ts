@@ -3,6 +3,7 @@ import { Point2 } from "../core/math";
 import { getPolygonFromPoint, testPointInsidePolygon } from "./NavUtils";
 import { GameState } from "../GameState";
 import { PriorityQueue } from "./priorityQueue";
+import { sceneState, ACRED } from "../drawing/SceneState";
 
 // Reusable priority queue instance with persistent pool
 const sharedOpenSet = new PriorityQueue();
@@ -54,6 +55,22 @@ export function findCorridor(
             break;
         }
 
+        if (fScore.get(current) === Infinity) {
+            continue;
+        }
+
+        // const polygonVertices: Point2[] = [];
+        // const polyVertsStart = navmesh.polygons[current];
+        // const polyVertsEnd = navmesh.polygons[current + 1];
+        // for (let i = polyVertsStart; i < polyVertsEnd; i++) {
+        //     const vertIndex = navmesh.poly_verts[i];
+        //     polygonVertices.push({
+        //         x: navmesh.vertices[vertIndex * 2],
+        //         y: navmesh.vertices[vertIndex * 2 + 1],
+        //     });
+        // }
+        // sceneState.addDebugArea(polygonVertices, ACRED);
+
 
 
         // Check if we reached the end polygon
@@ -66,6 +83,8 @@ export function findCorridor(
             }
             return path.reverse();
         }
+
+        fScore.set(current, Infinity);
 
         // Get neighbors of current polygon
         const polyVertStart = navmesh.polygons[current];

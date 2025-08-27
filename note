@@ -39,6 +39,8 @@ august 21-22
     ts and wasm parity on tiny navmesh
 august 24
     fix concave polygons, point in poly, point in triangle optimisations, benchmarks, fixes, new polygonalization
+august 25-26
+    debugging navigation, corners, offsets
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -163,3 +165,7 @@ Average polygon area: 4889.68
 
 
 do not reverse teh corridor
+
+optimise corner finding
+
+dual_funnel tri is incorrect because it is set before teh offsetting fo the corner

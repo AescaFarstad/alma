@@ -31,7 +31,9 @@ export class Agent {
     preEscapeCorner: Point2 = { x: 0, y: 0 };
     preEscapeCornerTri: number = -1;
     lastValidPosition: Point2 = { x: 0, y: 0 };
+    lastVisiblePointForNextCorner: Point2 = { x: 0, y: 0 };
     lastValidTri: number = -1;
+    alienPoly: number = -1;
     endTarget: Point2 = { x: 0, y: 0 };
     endTargetTri: number = -1;
     pathFrustration: number = 0;

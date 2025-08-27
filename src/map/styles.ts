@@ -10,11 +10,7 @@ export const buildingStyle = new Style({
     })
 });
 
-export function getBuildingStyle(_feature: any, resolution: number) {
-    // console.log(`getBuildingStyle called with resolution: ${resolution}`);
-    if (resolution > 20) {
-        return;
-    }
+export function getBuildingStyle(_feature: any, _resolution: number) {
     return buildingStyle;
 }
 
@@ -47,10 +43,7 @@ const serviceStyle = new Style({
     })
 });
 
-export function getRoadStyle(feature: any, resolution: number) {
-    if (resolution > 40) {
-        return;
-    }
+export function getRoadStyle(feature: any, _resolution: number) {
     const highway = feature.get('highway');
 
     switch (highway) {

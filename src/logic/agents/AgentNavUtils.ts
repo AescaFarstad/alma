@@ -1,25 +1,29 @@
-import { Agent, AgentState, STUCK_DANGER_1, STUCK_DANGER_2, STUCK_DANGER_3 } from './Agent';
+import { Agent } from './Agent';
 import { GameState } from '../GameState';
 import { Navmesh } from '../navmesh/Navmesh';
 import { findCorridor } from '../navmesh/pathCorridor';
 import { findNextCorner, DualCorner, findCorners } from '../navmesh/pathCorners';
-import { Point2, distance_sq, length_sq, set_, subtract_, normalize_, length, dot, cross, copy, set, distance } from '../core/math';
-import { raycastCorridor } from '../Raycasting';
-import { sceneState, ACYELLOW, ACINDIGO, ACRED } from '../drawing/SceneState';
+import { Point2, set_,  distance } from '../core/math';
+import { raycastCorridor, RaycastWithCorridorResult } from '../Raycasting';
+import { getTriangleFromPoint } from '../navmesh/NavUtils';
+import { sceneState } from '../drawing/SceneState';
 import { NavConst } from './NavConst';
+import { attemptPathPatchInternal } from './PathPatching';
+
 
 // Reusable objects to avoid allocations
 const reusableDualCorner: DualCorner = {
     corner1: { x: 0, y: 0 },
     tri1: -1,
+    vIdx1: -1,
     corner2: { x: 0, y: 0 },
     tri2: -1,
+    vIdx2: -1,
     numValid: 0
 };
 
 export function findPathToDestination(
-    navmesh: Navmesh, 
-    gs: GameState, 
+    navmesh: Navmesh,
     agent: Agent, 
     startTri: number, 
     endTri: number, 
@@ -40,6 +44,9 @@ export function findPathToDestination(
             agent.numValidCorners = reusableDualCorner.numValid;
             agent.pathFrustration = 0;
             
+            agent.lastVisiblePointForNextCorner.x = agent.coordinate.x;
+            agent.lastVisiblePointForNextCorner.y = agent.coordinate.y;
+            
             return true;
         } else {
             console.error(`Pathfinding failed to find a corner ${errorContext}.`, { agent });
@@ -54,13 +61,14 @@ export function findPathToDestination(
 /**
  * Performs raycast and patches the agent's corridor if successful.
  * If raycast succeeds (clear line of sight), replaces corridor segments up to the target triangle
- * with the more direct raycast corridor.
+ * with the more direct raycast corridor and updates the last visible point.
+ * If raycast fails, attempts geometric path patching before giving up.
  * 
  * @param navmesh - The navigation mesh
  * @param agent - The agent whose corridor to patch
  * @param targetPoint - The target point to raycast to
  * @param targetTri - The triangle containing the target point
- * @returns true if raycast succeeded and corridor was patched, false otherwise
+ * @returns true if raycast succeeded, corridor was patched, or path was geometrically patched; false otherwise
  */
 export function raycastAndPatchCorridor(
     navmesh: Navmesh,
@@ -70,8 +78,9 @@ export function raycastAndPatchCorridor(
 ): boolean {
     const raycastResult = raycastCorridor(navmesh, agent.coordinate, targetPoint, agent.currentTri, targetTri);
     
-    if (!raycastResult.hitP1 && !raycastResult.hitP2 && raycastResult.corridor) {
-        // Raycast succeeded - we have a clear line of sight
+    if (raycastResult.hitV1_idx === -1 && raycastResult.corridor) {
+        agent.lastVisiblePointForNextCorner.x = agent.coordinate.x;
+        agent.lastVisiblePointForNextCorner.y = agent.coordinate.y;
         
         // Convert triangle corridor from raycast to a polygon corridor
         const raycastPolyCorridor: number[] = [];
@@ -106,6 +115,12 @@ export function raycastAndPatchCorridor(
             // If the target isn't in our current path but we can see it, take the direct route.
             agent.corridor = raycastPolyCorridor;
             return true;
+        }
+    } else {
+        // Is this condition needed?
+        if (targetPoint.x === agent.nextCorner.x && targetPoint.y === agent.nextCorner.y && targetTri === agent.nextCornerTri) {
+            const result = attemptPathPatchInternal(navmesh, agent, raycastResult);
+            return result;
         }
     }
     
@@ -158,7 +173,6 @@ export function debugPath(
     label: string
 ): { corners: number; length: number; polygons: number } {
     if (corridor.length === 0) {
-        console.log(`${label}: Empty corridor`);
         return { corners: 0, length: 0, polygons: 0 };
     }
 
@@ -170,9 +184,6 @@ export function debugPath(
         // Draw the path
         drawPath(cornerPoints, color, label);
         
-        // Log debug info
-        console.log(`${label}: ${corners.length} corners, ${pathLength.toFixed(2)}m, ${corridor.length} polygons`);
-        
         return {
             corners: corners.length,
             length: pathLength,
@@ -183,3 +194,4 @@ export function debugPath(
         return { corners: 0, length: 0, polygons: corridor.length };
     }
 }
+

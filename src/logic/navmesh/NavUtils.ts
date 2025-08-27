@@ -228,10 +228,40 @@ export function getTriangleFromPolyPoint(navmesh: Navmesh, point: Point2, poly_i
     return -1;
 }
 
+export function getTriangleFromPolyVertex(navmesh: Navmesh, vertex_idx: number, poly_idx: number): number {
+    const poly_start = navmesh.poly_tris[poly_idx];
+    const poly_end = navmesh.poly_tris[poly_idx + 1];
+
+    // Search through all triangles in this polygon
+    for (let tri_idx = poly_start; tri_idx < poly_end; tri_idx++) {        
+        if (navmesh.triangles[tri_idx * 3] === vertex_idx || 
+            navmesh.triangles[tri_idx * 3 + 1] === vertex_idx || 
+            navmesh.triangles[tri_idx * 3 + 2] === vertex_idx) {
+            return tri_idx;
+        }
+    }
+
+    return -1;
+}
+
 export function getTriangleFromPoint(navmesh: Navmesh, point: Point2): number {
     const possibleTris = navmesh.triangleIndex.query(point.x, point.y);
     for (let i = 0; i < possibleTris.length; i++) {
         if (testPointInsideTriangle(navmesh, point.x, point.y, possibleTris[i])) {
+            return possibleTris[i];
+        }
+    }
+
+    return -1;
+}
+
+
+export function getTriangleFromVertex(navmesh: Navmesh, vertex_idx: number, point :Point2): number {
+    const possibleTris = navmesh.triangleIndex.query(point.x, point.y);
+    for (let i = 0; i < possibleTris.length; i++) {
+        if (navmesh.triangles[possibleTris[i] * 3] === vertex_idx || 
+            navmesh.triangles[possibleTris[i] * 3 + 1] === vertex_idx || 
+            navmesh.triangles[possibleTris[i] * 3 + 2] === vertex_idx) {
             return possibleTris[i];
         }
     }

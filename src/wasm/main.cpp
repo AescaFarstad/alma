@@ -56,8 +56,10 @@ EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf) {
     printf("STUCK_DANGER_1: %f\n", STUCK_DANGER_1);
     printf("STUCK_DANGER_2: %f\n", STUCK_DANGER_2);
     printf("STUCK_DANGER_3: %f\n", STUCK_DANGER_3);
+    printf("STUCK_HIT_WALL: %f\n", STUCK_HIT_WALL);
     printf("PATH_LOG_RATE: %d\n", PATH_LOG_RATE);
     printf("LOOK_ROT_SPEED_RAD_S: %f\n", LOOK_ROT_SPEED_RAD_S);
+    printf("CORRIDOR_EXPECTED_JUMP: %f\n", CORRIDOR_EXPECTED_JUMP);
     printf("ARRIVAL_THRESHOLD_SQ_DEFAULT: %f\n", ARRIVAL_THRESHOLD_SQ_DEFAULT);
     printf("ARRIVAL_DESIRED_SPEED_DEFAULT: %f\n", ARRIVAL_DESIRED_SPEED_DEFAULT);
     printf("MAX_SPEED_DEFAULT: %f\n", MAX_SPEED_DEFAULT);
@@ -133,10 +135,12 @@ EMSCRIPTEN_KEEPALIVE void set_rng_seed_js(uint32_t seed) {
 /**
  * @brief Initialize navmesh from binary data at specified WASM memory offset.
  * @param offset The offset in WASM memory where navmesh binary data is located.
- * @param size The size of the navmesh binary data in bytes.
+ * @param binarySize The size of the navmesh binary data in bytes.
+ * @param totalMemorySize Total available memory for navmesh and spatial indices.
+ * @param cellSize The spatial index cell size (propagated from TypeScript).
  * @return Size of data consumed, or 0 on failure.
  */
-EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize) {
+EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize, float cellSize) {
     uint8_t* memoryStart = reinterpret_cast<uint8_t*>(offset);
     
     if (memoryStart == nullptr) {
@@ -145,7 +149,7 @@ EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binaryS
     }
     
     // Initialize navmesh from the buffer - C++ will figure out auxiliary memory layout
-    uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize);
+    uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize, cellSize);
     
     // Return the total memory used
     return static_cast<int>(usedMemory);

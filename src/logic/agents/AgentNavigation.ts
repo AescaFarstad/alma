@@ -8,14 +8,18 @@ import { NavConst } from './NavConst';
 import { findPathToDestination, raycastAndPatchCorridor } from './AgentNavUtils';
 import { advanceSeed } from '../core/mathUtils';
 import { getRandomTriangleInArea } from '../navmesh/NavUtils';
+import { ACBLACK, sceneState } from '../drawing/SceneState';
+
 
 
 // Reusable objects to avoid allocations
 const reusableDualCorner: DualCorner = {
     corner1: { x: 0, y: 0 },
     tri1: -1,
+    vIdx1: -1,
     corner2: { x: 0, y: 0 },
     tri2: -1,
+    vIdx2: -1,
     numValid: 0
 };
 
@@ -31,12 +35,11 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
     if (agent.state === AgentState.Standing || agent.predicamentRating > 7) {
         if (agent.predicamentRating > 7)
             console.error("Predicament rating is too high, resetting. from, to:", copy(agent.coordinate), copy(agent.endTarget));
-        if (agent.currentTri === -1) {
+        if (agent.currentTri === -1)
             return;
-        }
 
         
-        const endNode = getRandomTriangleInArea(navmesh, 0, 0, 15, gs.rngSeed);
+        const endNode = getRandomTriangleInArea(navmesh, 0, 0, 30, gs.rngSeed);
         gs.rngSeed = advanceSeed(gs.rngSeed);
         
         agent.endTarget = { x: navmesh.triangle_centroids[endNode * 2], y: navmesh.triangle_centroids[endNode * 2 + 1] }
@@ -44,7 +47,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
         agent.predicamentRating = 0;
         agent.corridor.length = 0;
         
-        if (findPathToDestination(navmesh, gs, agent, agent.currentTri, endNode, "from start")) {
+        if (findPathToDestination(navmesh, agent, agent.currentTri, endNode, "from start")) {
             agent.state = AgentState.Traveling;
         }
     }
@@ -71,22 +74,22 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
             if (agent.sightRating < 1) {
                 agent.sightRating++;
                 
-                if (raycastAndPatchCorridor(navmesh, agent, agent.endTarget, agent.endTargetTri))
+                if (raycastAndPatchCorridor(navmesh, agent, agent.nextCorner, agent.nextCornerTri)) {
                     agent.stuckRating = 0;
-                else
+                }
+                else {
                     needFullRepath = true;
+                }
             }
             else if (agent.stuckRating > STUCK_DANGER_2)
                 needFullRepath = agent.stuckRating > STUCK_DANGER_3 || length_sq(agent.velocity) < agent.maxSpeed * agent.maxSpeed * 0.0025;
 
             if (needFullRepath) {
-                
+
                 agent.predicamentRating++;
-                
-                if (!findPathToDestination(navmesh, gs, agent, agent.currentTri, agent.endTargetTri, "from stuck")) {
+
+                if (!findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "from stuck")) {
                     console.error("Pathfinding failed to find a corner after getting stuck.", agent);
-                } else {
-                    
                 }
                 resetAgentStuck(agent);
             }
@@ -94,36 +97,41 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
 
         // Check 2: Are we still on the planned path?
         const currentPoly = navmesh.triangle_to_polygon[agent.currentTri];
-        let currentCorridorPolyIndex = -1;
-        const maxCheck = Math.min(3, agent.corridor.length);
-        for (let i = 0; i < maxCheck; i++) {
-            if (agent.corridor[i] === currentPoly) {
-                currentCorridorPolyIndex = i;
-                break;
+        if (agent.alienPoly != currentPoly){
+            let currentCorridorPolyIndex = -1;
+            const maxCheck = Math.min(NavConst.CORRIDOR_EXPECTED_JUMP, agent.corridor.length);
+            for (let i = 0; i < maxCheck; i++) {
+                if (agent.corridor[i] === currentPoly) {
+                    currentCorridorPolyIndex = i;
+                    break;
+                }
             }
-        }
-        if (currentCorridorPolyIndex === -1) {
-             agent.pathFrustration++;
-             if (agent.pathFrustration > agent.maxFrustration) {
-                // Path is too messed up, re-path to the original destination
-                agent.pathFrustration = 0;
-                                 if (findPathToDestination(navmesh, gs, agent, agent.currentTri, agent.endTargetTri, "after path recovery")) {
-                    
-                } else {
-                    // This can happen if the destination is very close.
-                    // Verify with raycast that we have a clear line of sight to the destination
-                    if (raycastAndPatchCorridor(navmesh, agent, agent.endTarget, agent.endTargetTri)) {
-                        set_(agent.nextCorner, agent.endTarget);
-                        agent.nextCornerTri = agent.endTargetTri;
+            if (currentCorridorPolyIndex === -1) {
+                agent.pathFrustration++;
+                if (agent.pathFrustration > agent.maxFrustration) {
+                    // Path is too messed up, re-path to the original destination
+                    agent.pathFrustration = 0;
+                    if (findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "after path recovery")) {
                     } else {
-                        console.error("Pathfinding failed to recover the path.", { agent });
+                        // This can happen if the destination is very close.
+                        // Verify with raycast that we have a clear line of sight to the destination
+                        if (raycastAndPatchCorridor(navmesh, agent, agent.endTarget, agent.endTargetTri)) {
+                            set_(agent.nextCorner, agent.endTarget);
+                            agent.nextCornerTri = agent.endTargetTri;
+                        } else {
+                            console.error("Pathfinding failed to recover the path.", { agent });
+                        }
                     }
                 }
-             }
-        } else {
-            agent.pathFrustration = 0;
-            if (currentCorridorPolyIndex > 0) {
-                agent.corridor = agent.corridor.slice(currentCorridorPolyIndex);
+                else {
+                    agent.alienPoly = currentPoly;
+                }
+            } else {
+                agent.alienPoly = -1;
+                if (currentCorridorPolyIndex > 0) {
+                    agent.pathFrustration = 0;
+                    agent.corridor = agent.corridor.slice(currentCorridorPolyIndex);
+                }
             }
         }
         
@@ -147,16 +155,17 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
             set_(tempLastVec, agent.lastCoordinate);
             subtract_(tempLastVec, agent.nextCorner2);
             
-            // Cross products
+
             currentCross = cross(tempLineVec, tempCurrentVec);
             lastCross = cross(tempLineVec, tempLastVec);
             
             // If signs are different, we've crossed the line
             crossedDemarkationLine = currentCross * lastCross <= 0;
         }
- 
+
         // --- Update corner logic ---
         if (agent.numValidCorners == 2 && (distanceToCornerSq < NavConst.CORNER_OFFSET_SQ || crossedDemarkationLine)) {
+            set_(agent.lastVisiblePointForNextCorner, agent.nextCorner);
             findNextCorner(navmesh, agent.corridor, agent.coordinate, agent.endTarget, NavConst.CORNER_OFFSET, reusableDualCorner);
             if (reusableDualCorner.numValid > 0) {
                 set_(agent.nextCorner, reusableDualCorner.corner1);
@@ -195,9 +204,8 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
             }
             
             if (agent.endTargetTri !== -1) {
-                if (findPathToDestination(navmesh, gs, agent, agent.currentTri, agent.endTargetTri, "after escaping")) {
+                if (findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "after escaping")) {
                     agent.state = AgentState.Traveling;
-                    
                 } else {
                     console.error("Pathfinding failed to find a corner after escaping.", { agent });
                 }

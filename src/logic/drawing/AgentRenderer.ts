@@ -11,8 +11,8 @@ export class AgentRenderer {
     private visualPool = new AgentVisualPool();
     public tsSpritePool = new TsAgentSpritePool();
     public wasmSpritePool = new WasmAgentSpritePool();
-    private mode: AgentRenderingMode = 'sprite';
-    private enabled: boolean = true;
+    private mode: AgentRenderingMode = 'visual';
+    private tsAgentsEnabled: boolean = true;
     private assetsLoaded = false;
 
     public async load(): Promise<void> {
@@ -33,14 +33,12 @@ export class AgentRenderer {
         return this.mode;
     }
 
-    public setEnabled(enabled: boolean): void {
-        this.enabled = enabled;
-        // Keep WASM sprite pool in sync so Pixie can call it directly
-        this.wasmSpritePool.setEnabled(enabled);
+    public setTsAgentsEnabled(enabled: boolean): void {
+        this.tsAgentsEnabled = enabled;
     }
 
-    public isEnabled(): boolean {
-        return this.enabled;
+    public areTsAgentsEnabled(): boolean {
+        return this.tsAgentsEnabled;
     }
 
     public getSpritePool(): TsAgentSpritePool {
@@ -54,7 +52,7 @@ export class AgentRenderer {
         olMap: OlMap
     ): void {
 
-        if (!this.enabled) {
+        if (!this.tsAgentsEnabled) {
             // Hide all agents when disabled
             this.tsSpritePool.syncWithAgents([], graphicsContainer);
             this.visualPool.syncWithAgents([], graphicsContainer, textContainer, olMap);

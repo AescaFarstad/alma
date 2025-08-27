@@ -6,19 +6,21 @@
       <AddAgentDebug />
     </div>
     <div id="controls">
-      <button @click="handleButtonClick($event, () => toggleLayer('buildings'))">Buildings</button>
+      <!-- <button @click="handleButtonClick($event, () => toggleLayer('buildings'))">Buildings</button>
       <button @click="handleButtonClick($event, () => toggleLayer('roads'))">Roads</button>
-      <button @click="handleButtonClick($event, () => toggleLayer('footpaths'))">Footpaths</button>
-      <button @click="handleButtonClick($event, () => toggleAgents())">{{ agentsEnabled ? 'Hide' : 'Show' }} Agents</button>
+      <button @click="handleButtonClick($event, () => toggleLayer('footpaths'))">Footpaths</button> -->
+      <button @click="handleButtonClick($event, () => toggleTsAgents())">{{ tsAgentsEnabled ? 'Hide' : 'Show' }} TS Agents</button>
+      <button @click="handleButtonClick($event, () => toggleWasmAgents())">{{ wasmAgentsEnabled ? 'Hide' : 'Show' }} WAgents</button>
       <button @click="handleButtonClick($event, () => toggleAgentRenderMode())">{{ agentRenderMode === 'visual' ? 'Visual' : 'Sprite' }} Mode</button>
       <button @click="handleButtonClick($event, () => toggleWasmRender())">{{ wasmRenderEnabled ? 'Hide' : 'Show' }} WASM</button>
-      <button @click="handleButtonClick($event, () => drawNavmesh())">Draw Navmesh</button>
-      <button @click="handleButtonClick($event, () => findCorridors())">Find Corridors</button>
-      <button @click="handleButtonClick($event, () => buildPath())">Build Path</button>
-      <button @click="handleButtonClick($event, () => drawNavGrid(1))">Draw Grid 1</button>
-      <button @click="handleButtonClick($event, () => drawNavGrid(2))">Draw Grid 2</button>
-      <button @click="handleButtonClick($event, () => copyAgentState())">Copy Agent State</button>
-      <button @click="handleButtonClick($event, () => runPitBenchmark())">Test PiT</button>
+      <button @click="handleButtonClick($event, () => drawNavmesh())">Navmesh</button>
+      <button @click="handleButtonClick($event, () => findCorridors())">pathfind</button>
+      <!-- <button @click="handleButtonClick($event, () => buildPath())">Build Path</button> -->
+      <button @click="handleButtonClick($event, () => drawNavGrid(1))">Grid 1</button>
+      <button @click="handleButtonClick($event, () => drawNavGrid(2))">Grid 2</button>
+      <button @click="handleButtonClick($event, () => spawnAgentFromJSON())">Spawn</button>
+      <!-- <button @click="handleButtonClick($event, () => copyAgentState())">Copy Agent State</button> -->
+      <!-- <button @click="handleButtonClick($event, () => runPitBenchmark())">Test PiT</button> -->
       <TimeControls />
     </div>
     <div id="fps-display" v-if="fpsMetrics">
@@ -44,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, inject, type PropType, ref } from 'vue';
+import { defineProps, defineEmits, inject, type PropType, ref, type Ref } from 'vue';
 import type { FPSMetrics } from '../../logic/FPSCounter';
 import SelectedBuildings from './SelectedBuildings.vue';
 import DebugTools from './DebugTools.vue';
@@ -54,14 +56,45 @@ import type { Avatar, GameState } from '../../logic/GameState';
 import TimeControls from './TimeControls.vue';
 import type { AgentRenderingMode } from '../../logic/drawing/AgentRenderer';
 import { runPointInTriangleBenchmark } from '../../logic/debug/PointInTriangleBenchmark';
+import type { PixiLayer } from '../../logic/Pixie';
+import { WasmFacade } from '../../logic/WasmFacade';
+import { usePathfinding } from '../../logic/composables/usePathfinding';
+import { useNavmeshDebug } from '../../logic/composables/useNavmeshDebug';
+import { useNavmeshGridDebug } from '../../logic/composables/useNavmeshGridDebug';
+import { SceneState } from '../../logic/drawing/SceneState';
+import { createAgentWithConfig } from '../../logic/agents/AgentSpawner';
+import agentData from '../../logic/agent-data.json';
 
 // Inject the game state provided in main.ts
 const fpsMetrics = inject<FPSMetrics>('fpsMetrics');
 const gameState = inject<GameState>('gameState');
+const sceneState = inject<SceneState>('sceneState');
+const pixieLayer = inject<Ref<PixiLayer | null> | undefined>('pixieLayer');
+const wasmRenderEnabled = inject<Ref<boolean>>('wasmRenderEnabled');
 
 const agentRenderMode = ref<AgentRenderingMode>('sprite');
-const agentsEnabled = ref(true);
-const wasmRenderEnabled = ref(false);
+const tsAgentsEnabled = ref(true);
+const wasmAgentsEnabled = ref(false);
+
+const { findCorridors, buildPath } = usePathfinding(gameState, sceneState);
+const { drawNavmesh } = useNavmeshDebug(gameState, sceneState);
+const { drawNavGrid } = useNavmeshGridDebug(gameState, sceneState);
+
+const spawnAgentFromJSON = () => {
+  if (!gameState) return;
+  
+  try {
+    // Create agent from the JSON data
+    const newAgent = createAgentWithConfig(agentData as any);
+    
+    // Add to the agents array
+    gameState.agents.push(newAgent);
+    
+    console.log('Spawned agent from JSON:', newAgent);
+  } catch (error) {
+    console.error('Failed to spawn agent from JSON:', error);
+  }
+};
 
 const copyAgentState = () => {
   if (gameState && gameState.agents.length > 0) {
@@ -124,33 +157,32 @@ const toggleLayer = (layerId: 'buildings' | 'roads' | 'footpaths') => {
 
 const toggleAgentRenderMode = () => {
   agentRenderMode.value = agentRenderMode.value === 'visual' ? 'sprite' : 'visual';
-  emit('map-event', { type: 'set-agent-render-mode', payload: { mode: agentRenderMode.value } });
+  if (pixieLayer?.value) {
+    pixieLayer.value.setAgentRenderingMode(agentRenderMode.value);
+  }
 };
 
-const toggleAgents = () => {
-  agentsEnabled.value = !agentsEnabled.value;
-  emit('map-event', { type: 'toggle-agents', payload: { enabled: agentsEnabled.value } });
+const toggleTsAgents = () => {
+  tsAgentsEnabled.value = !tsAgentsEnabled.value;
+  if (pixieLayer?.value) {
+    pixieLayer.value.setTsAgentRenderingEnabled(tsAgentsEnabled.value);
+  }
+};
+
+const toggleWasmAgents = () => {
+  wasmAgentsEnabled.value = !wasmAgentsEnabled.value;
+  if (pixieLayer?.value) {
+    pixieLayer.value.setWasmAgentRenderingEnabled(wasmAgentsEnabled.value);
+  }
 };
 
 const toggleWasmRender = () => {
-  wasmRenderEnabled.value = !wasmRenderEnabled.value;
-  emit('map-event', { type: 'toggle-wasm-render', payload: { enabled: wasmRenderEnabled.value } });
-};
-
-const drawNavmesh = () => {
-  emit('map-event', { type: 'draw-navmesh', payload: {} });
-};
-
-const findCorridors = () => {
-  emit('map-event', { type: 'find-corridors', payload: {} });
-};
-
-const buildPath = () => {
-  emit('map-event', { type: 'build-path', payload: {} });
-};
-
-const drawNavGrid = (pattern: number) => {
-  emit('map-event', { type: 'draw-nav-grid', payload: { pattern } });
+  if (wasmRenderEnabled) {
+    wasmRenderEnabled.value = !wasmRenderEnabled.value;
+    if (!wasmRenderEnabled.value && WasmFacade._sprite_renderer_clear) {
+      WasmFacade._sprite_renderer_clear();
+    }
+  }
 };
 
 const clearDebugVisuals = () => {

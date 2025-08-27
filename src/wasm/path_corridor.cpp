@@ -55,10 +55,11 @@ bool findCorridor(
     }
     std::fill(cameFrom_parent, cameFrom_parent + cameFrom_size, -1);
 
-    openSet.put(startPoly, 0.0f);
+    const float start_f = heuristic(startPoly, endPoly);
+    openSet.put(startPoly, start_f);
 
     scores.setG(startPoly, 0.0f);
-    scores.setF(startPoly, heuristic(startPoly, endPoly));
+    scores.setF(startPoly, start_f);
 
     int iterations = 0;
     while (!openSet.empty()) {
@@ -67,6 +68,10 @@ bool findCorridor(
             return false;
         }
         int current = openSet.get();
+
+        if (scores.getG(current) < 0) { // Already processed
+            continue;
+        }
 
         if (current == endPoly) {
             outCorridor.clear();
@@ -78,6 +83,8 @@ bool findCorridor(
             std::reverse(outCorridor.begin(), outCorridor.end());
             return true;
         }
+
+        scores.setG(current, -1.0f); // Mark as processed
 
         const int32_t polyVertStart = g_navmesh.polygons[current];
         const int32_t polyVertEnd = g_navmesh.polygons[current + 1];
@@ -91,7 +98,9 @@ bool findCorridor(
                 continue;
             }
 
-            const float tentative_g = scores.getG(current) + heuristic(current, neighbor);
+            const float g_from_current = scores.hasG(current) && scores.getG(current) >= 0 ? scores.getG(current) : 0; // !
+            const float tentative_g = g_from_current + heuristic(current, neighbor); // !
+
 
             if (!scores.hasG(neighbor) || tentative_g < scores.getG(neighbor)) {
                 cameFrom_parent[neighbor] = current;

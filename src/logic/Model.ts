@@ -27,22 +27,22 @@ export const globalInputQueue: CmdInput[] = [];
  * @param deltaTime The time elapsed since the last frame, in seconds.
  */
 export function update(gs: GameState, deltaTime: number): void {
-    const scaledDeltaTime = deltaTime * gs.timeScale.current;
-    
+    let effectiveDeltaTime: number;
     if (gs.timeScale.current === 0 && gs.allowedUpdates > 0) {
         gs.allowedUpdates--;
-        gs.gameTime += deltaTime;
+        effectiveDeltaTime = deltaTime; // A "tick" uses the real delta time
     } else if (gs.timeScale.current === 0) {
         processInputs(gs); // still process inputs to allow unpausing
-        return;
+        return; // Game is paused, no tick requested
     } else {
-        gs.gameTime += scaledDeltaTime;
+        effectiveDeltaTime = deltaTime * gs.timeScale.current;
     }
+    gs.gameTime += effectiveDeltaTime;
 
     processInputs(gs);
     Stats.processEventDispatcherQueue(gs.connections, gs);
 
-    gs.invoker.update(scaledDeltaTime, gs);
+    gs.invoker.update(effectiveDeltaTime, gs);
 
     // --- Handle Scheduled Laser Blasts ---
     if (gs.scheduledLaserBlasts > 0) {
@@ -57,8 +57,10 @@ export function update(gs: GameState, deltaTime: number): void {
         const raycastResult = raycastCorridor(gs.navmesh, startPoint, endPoint);
         
         let finalEndPoint = endPoint;
-        if (raycastResult.hitP1 && raycastResult.hitP2) {
-            const intersection = getLineSegmentIntersectionPoint(startPoint, endPoint, raycastResult.hitP1, raycastResult.hitP2);
+        if (raycastResult.hitV1_idx !== -1) {
+            const hitP1 = { x: gs.navmesh.vertices[raycastResult.hitV1_idx * 2], y: gs.navmesh.vertices[raycastResult.hitV1_idx * 2 + 1] };
+            const hitP2 = { x: gs.navmesh.vertices[raycastResult.hitV2_idx * 2], y: gs.navmesh.vertices[raycastResult.hitV2_idx * 2 + 1] };
+            const intersection = getLineSegmentIntersectionPoint(startPoint, endPoint, hitP1, hitP2);
             if (intersection) {
                 finalEndPoint = intersection;
             }
@@ -69,26 +71,26 @@ export function update(gs: GameState, deltaTime: number): void {
             start: startPoint,
             end: finalEndPoint,
             creationTime: gs.gameTime,
-            corridor: raycastResult.corridor,
+            corridor: [...raycastResult.corridor],
         });
     }
     
     if (deltaTime > 0) {
-        updateAvatar(gs.avatar, scaledDeltaTime, gs.navmesh);
+        updateAvatar(gs.avatar, effectiveDeltaTime, gs.navmesh);
 
         // Re-enable regular TS spawner updates to run side-by-side with WASM
-        updateSpawners(gs, scaledDeltaTime);
-        updateWAgentSpawners(gs.wAgentSpawners, scaledDeltaTime, gs);
-        WasmFacade._update_simulation(scaledDeltaTime, gs.wagents.length);
+        updateSpawners(gs, effectiveDeltaTime);
+        updateWAgentSpawners(gs.wAgentSpawners, effectiveDeltaTime, gs);
+        WasmFacade._update_simulation(effectiveDeltaTime, gs.wagents.length);
     }
     for (const agent of gs.agents) {
-        updateAgentNavigation(agent, gs, scaledDeltaTime);
+        updateAgentNavigation(agent, gs, effectiveDeltaTime);
     }
     for (const agent of gs.agents) {
-        updateAgentPhys(agent, scaledDeltaTime, gs);
+        updateAgentPhys(agent, effectiveDeltaTime, gs);
     }
     for (const agent of gs.agents) {
-        updateAgentStatistic(agent, gs, scaledDeltaTime);
+        updateAgentStatistic(agent, gs, effectiveDeltaTime);
     }
 
     gs.agentGrid.clearAndReindex(gs.agents);

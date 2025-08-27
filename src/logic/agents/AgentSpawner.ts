@@ -16,7 +16,7 @@ defaultAgent.coordinate.x = 0;
 defaultAgent.coordinate.y = 0;
 defaultAgent.accel = 500;
 defaultAgent.resistance = 0.9;
-defaultAgent.maxFrustration = 30;
+defaultAgent.maxFrustration = 4;
 defaultAgent.intelligence = 1;
 defaultAgent.arrivalDesiredSpeed = 1;
 defaultAgent.arrivalThresholdSq = 4;
@@ -70,6 +70,7 @@ export function updateSpawners(gs: GameState, dt: number) {
             }
             
             newAgent.lastValidTri = newAgent.currentTri;
+            newAgent.debug = false;
             // newAgent.endTarget = { "x": 344.8666687011719, "y": 208.2133331298828 };
             // newAgent.endTargetTri = 2852;
             // findPathToDestination(gs.navmesh, gs, newAgent, newAgent.currentTri, newAgent.endTargetTri, "hardcoded")

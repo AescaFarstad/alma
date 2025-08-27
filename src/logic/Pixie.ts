@@ -27,6 +27,7 @@ export class PixiLayer {
     private dynamicScene: DynamicScene;
     private agentRenderer: AgentRenderer;
     private stopped = false;
+    private wAgentsEnabled = false;
 
     private wasmCanvas: HTMLCanvasElement | null = null;
 
@@ -127,15 +128,14 @@ export class PixiLayer {
         );
 
         // Pixi WASM-sprite rendering (always on when sprite mode is active)
-        const agentsEnabled = this.agentRenderer.isEnabled();
         const renderMode = this.agentRenderer.getRenderingMode();
         
-        if (agentsEnabled && renderMode === 'sprite') {
+        if (this.wAgentsEnabled && renderMode === 'sprite') {
             this.agentRenderer.wasmSpritePool.syncWithWasmData(
                 this.gameState.wasm_agents,
                 this.gameState.wagents.length,
                 this.agentGraphicsContainer,
-                agentsEnabled,
+                this.wAgentsEnabled,
                 renderMode
             );
         } else {
@@ -144,7 +144,7 @@ export class PixiLayer {
                 this.gameState.wasm_agents,
                 0,
                 this.agentGraphicsContainer,
-                agentsEnabled,
+                false,
                 renderMode
             );
         }
@@ -173,8 +173,12 @@ export class PixiLayer {
         this.agentRenderer.setRenderingMode(mode);
     }
 
-    public setAgentRenderingEnabled(enabled: boolean): void {
-        this.agentRenderer.setEnabled(enabled);
+    public setTsAgentRenderingEnabled(enabled: boolean): void {
+        this.agentRenderer.setTsAgentsEnabled(enabled);
+    }
+
+    public setWasmAgentRenderingEnabled(enabled: boolean): void {
+        this.wAgentsEnabled = enabled;
     }
 
     private sync() {

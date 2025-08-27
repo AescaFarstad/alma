@@ -4,7 +4,7 @@ import { Agents } from '../agents/Agents';
 import type { AgentRenderingMode } from './AgentRenderer';
 
 export class WasmAgentSpritePool extends BaseAgentSpritePool {
-    private enabled: boolean = true;
+    private enabled: boolean = false;
 
     public setEnabled(enabled: boolean): void {
         this.enabled = enabled;

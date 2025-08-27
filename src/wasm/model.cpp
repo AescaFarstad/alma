@@ -21,9 +21,9 @@ void Model::update_simulation(float dt, int active_agents) {
         }
     }
 
-    // 2. Re-index the spatial grid
-    // clear_and_reindex_grid(active_agents);
 
-    // 3. Update collisions
-    // update_agent_collisions(active_agents);
+    clear_and_reindex_grid(active_agents);
+
+
+    update_agent_collisions(active_agents);
 } 

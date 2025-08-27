@@ -1,4 +1,4 @@
-import { Navmesh } from "../navmesh/Navmesh";
+import { Navmesh, SPATIAL_INDEX_CELL_SIZE } from "../navmesh/Navmesh";
 import { WasmFacade } from "../WasmFacade";
 
 const SIMD_ALIGNMENT = 16; // 16-byte alignment for SIMD
@@ -35,7 +35,7 @@ export function calculateNavmeshMemory(navmeshBin: ArrayBuffer): number {
     const spatialMaxX = bufferedMaxX + spatialIndexInflation;
     const spatialMaxY = bufferedMaxY + spatialIndexInflation;
     
-    const cellSize = 128; // From NavTriIndex.ts
+    const cellSize = SPATIAL_INDEX_CELL_SIZE;
     const spatialWidth = spatialMaxX - spatialMinX;
     const spatialHeight = spatialMaxY - spatialMinY;
     const gridWidth = Math.ceil(spatialWidth / cellSize);
@@ -90,8 +90,8 @@ export async function initializeNavmesh(wasm: WasmFacade, buffer: ArrayBuffer, o
     const targetView = new Uint8Array(buffer, offset, navmeshBin.byteLength);
     targetView.set(new Uint8Array(navmeshBin));
     
-    // Call WASM function to initialize navmesh - C++ will figure out the memory layout
-    const actualMemoryUsed = wasm._init_navmesh_from_bin(offset, navmeshBin.byteLength, availableMemory);
+    // Call WASM function to initialize navmesh - pass centralized cell size
+    const actualMemoryUsed = wasm._init_navmesh_from_bin(offset, navmeshBin.byteLength, availableMemory, SPATIAL_INDEX_CELL_SIZE);
     if (actualMemoryUsed === 0) {
         throw new Error("Failed to initialize navmesh in WASM");
     }
