@@ -251,17 +251,22 @@ export function useMapInteractions(
 
         if (distance <= clickRadius) {
           pointMarkClicked = true;
-          if (sceneState.isPointMarkSelected(pointMark.id)) {
-            sceneState.deselectPointMark(pointMark.id);
+          if (pointMark.selected) {
+            pointMark.selected = false;
           } else {
-            sceneState.selectPointMark(pointMark.id);
+            pointMark.selected = true;
           }
+          sceneState.isDirty = true;
           return;
         }
       }
 
       if (!pointMarkClicked) {
-        sceneState.clearSelectedPointMarks();
+        // Clear selection for all point marks
+        for (const mark of gameState.pointMarks) {
+          mark.selected = false;
+        }
+        sceneState.isDirty = true;
       }
     }
   };

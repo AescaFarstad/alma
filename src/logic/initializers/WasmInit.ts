@@ -5,6 +5,7 @@ import { RenderInit } from "./RenderInit";
 import { WasmFacade, createWasmModule } from "../WasmFacade";
 import { GameState } from "../GameState";
 
+export const INIT_LOGGING = false;
 let wasmModule: WasmFacade;
 
 export class WasmInit {
@@ -19,7 +20,7 @@ export class WasmInit {
         // Phase 2: Calculate memory requirements
         const totalMemoryRequired = 
             calculateConstMemory() +
-            calculateNavmeshMemory(navmeshBin) +
+            calculateNavmeshMemory(navmeshBin, INIT_LOGGING) +
             calculateAgentsMemory();
 
         // Phase 3: Single contiguous allocation
@@ -40,7 +41,7 @@ export class WasmInit {
         offset += constUsed;
         
         const navmeshAvailable = memoryEnd - offset;
-        const navmeshUsed = await initializeNavmesh(wasmModule, wasmMemory as ArrayBuffer, offset, navmeshBin, gameState.navmesh, navmeshAvailable);  
+        const navmeshUsed = await initializeNavmesh(wasmModule, wasmMemory as ArrayBuffer, offset, navmeshBin, gameState.navmesh, navmeshAvailable, INIT_LOGGING);  
         offset += navmeshUsed;
         
         const agentsUsed = initializeAgents(gameState.wasm_agents, gameState, wasmModule, wasmMemory as ArrayBuffer, offset);

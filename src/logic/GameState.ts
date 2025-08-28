@@ -15,11 +15,7 @@ import { Agents } from "./agents/Agents";
 import { getRandomTriangle } from "./navmesh/NavUtils";
 import { WAgent } from "./WAgent";
 
-// Constants for initial agent spawning
-const ENABLE_INITIAL_AGENT_SPAWNING = true;
-const INITIAL_AGENT_COUNT = 0;
 const INITIAL_SPAWN_SEED = 12345;
-const AGENTS_PER_FRAME = 5;
 
 export type Avatar = {
     coordinate: Point2;
@@ -46,8 +42,8 @@ export type LaserBlast = {
 };
 const spawnersCooldown = 0.01;
 // export const wagentsLimit = 100;
-export const wagentsLimit = 32000;
-export const agentsLimit = 10;
+export const wagentsLimit = 2;
+export const agentsLimit = 2;
 export class GameState { // This is a POD class. No functions allowed.
     public lib : Lib;
     public invoker: Invoker;
@@ -62,7 +58,7 @@ export class GameState { // This is a POD class. No functions allowed.
     public navmesh: Navmesh;
     public wasm_agents: Agents;
 
-    public pointMarks: { id: number, x: number, y: number }[];
+    public pointMarks: { id: number, x: number, y: number, selected: boolean }[] = [];
     public nextPointMarkId: number;
     public avatar: Avatar;
     public laserBlasts: LaserBlast[];
@@ -79,16 +75,15 @@ export class GameState { // This is a POD class. No functions allowed.
 
     public hypothetical: HypotheticalState | null = null;
 
-    // Initial agent spawning state
-    public initialAgentSpawningInProgress: boolean;
-    public agentsSpawnedSoFar: number;
-    public currentSpawnSeed: number;
-    // Deterministic RNG seed for regular (TS) systems
     public rngSeed: number;
 
     constructor() {
+        // this.pointMarks = [
+        //     {id:1, x:1039.2013310648636, y:1363.7068431395105, selected: true},
+        //     {id:0, x:-1282.2998158032574, y:-1495.2916003989103, selected: true},
+        // ]
         this.spawners = [
-            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
+            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
@@ -107,7 +102,7 @@ export class GameState { // This is a POD class. No functions allowed.
         
         // Initialize WAgent spawners
         this.wAgentSpawners = [
-            // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
+            { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
@@ -143,8 +138,7 @@ export class GameState { // This is a POD class. No functions allowed.
         this.connections = new Connections();
         this.navmesh = new Navmesh();
         this.wasm_agents = new Agents();
-        this.pointMarks = [];
-        this.nextPointMarkId = 0;
+        this.nextPointMarkId = 2;
         this.laserBlasts = [];
         this.nextLaserBlastId = 0;
         this.scheduledLaserBlasts = 0;
@@ -169,10 +163,6 @@ export class GameState { // This is a POD class. No functions allowed.
             isOutsideNavmesh: false,
         };
 
-        // Initialize spawning state
-        this.initialAgentSpawningInProgress = false;
-        this.agentsSpawnedSoFar = 0;
-        this.currentSpawnSeed = INITIAL_SPAWN_SEED;
         this.rngSeed = INITIAL_SPAWN_SEED;
     }
 
@@ -185,80 +175,5 @@ export class GameState { // This is a POD class. No functions allowed.
     public setTimeScale(newScale: number): void {
         this.timeScale.previous = this.timeScale.current;
         this.timeScale.current = newScale;
-    }
-
-    public startInitialAgentSpawning(): void {
-        if (!ENABLE_INITIAL_AGENT_SPAWNING || !this.navmesh.triangleIndex) {
-            return;
-        }
-
-        this.initialAgentSpawningInProgress = true;
-        this.agentsSpawnedSoFar = 0;
-        this.currentSpawnSeed = INITIAL_SPAWN_SEED;
-        
-        // console.log(`Starting initial agent spawning: ${INITIAL_AGENT_COUNT} agents, ${AGENTS_PER_FRAME} per frame`);
-    }
-
-    public continueInitialAgentSpawning(): void {
-        if (!this.initialAgentSpawningInProgress || !this.navmesh.triangleIndex) {
-            return;
-        }
-
-        const agentsToSpawn = Math.min(AGENTS_PER_FRAME, INITIAL_AGENT_COUNT - this.agentsSpawnedSoFar);
-        
-        for (let i = 0; i < agentsToSpawn; i++) {
-            // Use seeded random to get a triangle index
-            const triangleIndex = getRandomTriangle(this.navmesh, this.currentSpawnSeed);
-            const { newSeed } = seededRandom(this.currentSpawnSeed);
-            this.currentSpawnSeed = newSeed;
-            
-            // Get a random point within the triangle
-            const coordinate = this.getRandomPointInTriangle(triangleIndex, this.currentSpawnSeed);
-            const { newSeed: finalSeed } = seededRandom(this.currentSpawnSeed);
-            this.currentSpawnSeed = finalSeed;
-
-            // Create agent with same parameters as AgentSpawner
-            const newAgent = createAgent(
-                coordinate.x,
-                coordinate.y,
-                500, 0.9, 30, 
-                1
-            );
-
-            // Alternate between intelligent and non-intelligent agents (same logic as AgentSpawner)
-            if ((this.agentsSpawnedSoFar + i) % 2 === 0) {
-                newAgent.arrivalDesiredSpeed = 0.05;
-                newAgent.arrivalThresholdSq = 25;
-                newAgent.intelligence = 0;
-            }
-
-            newAgent.currentTri = triangleIndex;
-            newAgent.lastValidTri = newAgent.currentTri;
-            
-            this.agents.push(newAgent);
-        }
-
-        this.agentsSpawnedSoFar += agentsToSpawn;
-
-        if (this.agentsSpawnedSoFar >= INITIAL_AGENT_COUNT) {
-            this.initialAgentSpawningInProgress = false;
-            // console.log(`Completed initial agent spawning: ${this.agentsSpawnedSoFar} agents spawned`);
-        }
-    }
-
-    public spawnInitialAgents(): void {
-        // Legacy method - now just starts the progressive spawning
-        this.startInitialAgentSpawning();
-    }
-
-    private getRandomPointInTriangle(triangleIndex: number, seed: number): Point2 {
-        const { triangle_centroids } = this.navmesh;
-        const centroidX = triangle_centroids[triangleIndex * 2];
-        const centroidY = triangle_centroids[triangleIndex * 2 + 1];
-        
-        return {
-            x: centroidX,
-            y: centroidY
-        };
     }
 }

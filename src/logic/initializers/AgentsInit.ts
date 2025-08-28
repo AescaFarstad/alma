@@ -52,6 +52,8 @@ export function calculateAgentsMemory(): number {
     totalSize += sizeOfInt * MAX_AGENTS; // last_valid_tris
     totalSize += sizeOfFloat * MAX_AGENTS; // stuck_ratings
     totalSize += sizeOfFloat * MAX_AGENTS; // path_frustrations
+    totalSize += sizeOfInt * MAX_AGENTS; // alien_polys
+    totalSize += sizeOfPoint2 * MAX_AGENTS; // last_visible_points_for_next_corner
 
     // Statistics
     totalSize += sizeOfPoint2 * MAX_AGENTS; // last_end_targets
@@ -153,6 +155,12 @@ export function initializeAgents(
 
     agents.path_frustrations = new Float32Array(buffer, currentOffset, MAX_AGENTS);
     currentOffset += MAX_AGENTS * 4;
+
+    agents.alien_polys = new Int32Array(buffer, currentOffset, MAX_AGENTS);
+    currentOffset += MAX_AGENTS * 4;
+
+    agents.last_visible_points_for_next_corner = new Float32Array(buffer, currentOffset, MAX_AGENTS * 2);
+    currentOffset += MAX_AGENTS * 2 * 4;
 
     // Statistics
     agents.last_end_targets = new Float32Array(buffer, currentOffset, MAX_AGENTS * 2);

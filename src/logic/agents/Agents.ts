@@ -25,6 +25,8 @@ export class Agents {
   public end_target_tris! : Int32Array;
   public last_valid_positions! : Float32Array;
   public last_valid_tris! : Int32Array;
+  public alien_polys! : Int32Array;
+  public last_visible_points_for_next_corner! : Float32Array;
 
   // Statistics
   public last_end_targets! : Float32Array;

@@ -88,7 +88,7 @@ export class DrawScene {
 
         for (let i = 0; i < gameState.pointMarks.length; i++) {
             const pointMark = gameState.pointMarks[i];
-            const style = sceneState.isPointMarkSelected(pointMark.id)
+            const style = pointMark.selected
                 ? selectedPointMarkStyle
                 : pointMarkStyle;
             primitives.addCircle(pointMark.x, -pointMark.y, dynamicRadius * 1.5, style);

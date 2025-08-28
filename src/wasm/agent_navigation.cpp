@@ -8,6 +8,7 @@
 #include "agent_nav_utils.h"
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 extern Navmesh g_navmesh;
 extern float g_sim_time;
@@ -22,6 +23,8 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
     AgentState state = (AgentState)agent_data.states[agentIndex];
 
     if (state == AgentState::Standing || agent_data.predicament_ratings[agentIndex] > 7) {
+        if (agent_data.predicament_ratings[agentIndex] > 7)
+            std::cerr << "[WASM] Predicament rating is too high, resetting. (" << std::fixed << std::setprecision(2) << agent_data.positions[agentIndex].x << ", " << agent_data.positions[agentIndex].y << ")" << std::endl;
         if (agent_data.current_tris[agentIndex] == -1) return;
 
         int endNode = get_random_triangle_in_area({0.0f, 0.0f}, 30, rng_seed);
@@ -35,6 +38,12 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         
         if (findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], endNode, "from start")) {
              agent_data.states[agentIndex] = AgentState::Traveling;
+             agent_data.last_visible_points_for_next_corner[agentIndex] = agent_data.positions[agentIndex];
+            std::stringstream ss;
+            const auto& corridor = agent_data.corridors[agentIndex];
+            for(size_t i = 0; i < corridor.size(); ++i) {
+                ss << corridor[i] << (i < corridor.size() - 1 ? "," : "");
+            }
         }
     } 
     else if (state == AgentState::Traveling) {
@@ -52,7 +61,7 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
             bool needFullRepath = false;
             if (agent_data.sight_ratings[agentIndex] < 1) {
                 agent_data.sight_ratings[agentIndex]++;
-                if (raycastAndPatchCorridor(g_navmesh, agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_tris[agentIndex])) {
+                if (raycastAndPatchCorridor(g_navmesh, agentIndex, agent_data.next_corners[agentIndex], agent_data.next_corner_tris[agentIndex])) {
                     agent_data.stuck_ratings[agentIndex] = 0;
                 } else {
                     needFullRepath = true;
@@ -66,7 +75,10 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
 
             if (needFullRepath) {
                 agent_data.predicament_ratings[agentIndex]++;
-                findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex], "from stuck");
+                if (findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex], "from stuck")) {
+                } else {
+                    std::cerr << "[WASM] Pathfinding failed to find a corner after getting stuck." << std::endl;
+                }
                 reset_agent_stuck(agentIndex);
             }
         }
@@ -74,25 +86,39 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         const int currentPoly = g_navmesh.triangle_to_polygon[agent_data.current_tris[agentIndex]];
         auto& corridor = agent_data.corridors[agentIndex];
         
-        const int maxCheck = std::min(3, (int)corridor.size());
-        int currentCorridorPolyIndex = -1;
-        for (int i = 0; i < maxCheck; ++i) {
-            if (corridor[i] == currentPoly) {
-                currentCorridorPolyIndex = i;
-                break;
+        if (agent_data.alien_polys[agentIndex] != currentPoly) {
+            const int maxCheck = std::min((int)CORRIDOR_EXPECTED_JUMP, (int)corridor.size());
+            int currentCorridorPolyIndex = -1;
+            for (int i = 0; i < maxCheck; ++i) {
+                if (corridor[i] == currentPoly) {
+                    currentCorridorPolyIndex = i;
+                    break;
+                }
             }
-        }
 
-        if (currentCorridorPolyIndex == -1) {
-            agent_data.path_frustrations[agentIndex]++;
-            if(agent_data.path_frustrations[agentIndex] > agent_data.max_frustrations[agentIndex]) {
-                agent_data.path_frustrations[agentIndex] = 0;
-                findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex], "after path recovery");
-            }
-        } else {
-            agent_data.path_frustrations[agentIndex] = 0;
-            if (currentCorridorPolyIndex > 0) {
-                corridor.erase(corridor.begin(), corridor.begin() + currentCorridorPolyIndex);
+            if (currentCorridorPolyIndex == -1) {
+                agent_data.path_frustrations[agentIndex]++;
+                if (agent_data.path_frustrations[agentIndex] > agent_data.max_frustrations[agentIndex]) {
+                    agent_data.path_frustrations[agentIndex] = 0;
+                    if (findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex], "after path recovery")){
+                    } else {
+                        if (raycastAndPatchCorridor(g_navmesh, agentIndex, agent_data.end_targets[agentIndex], agent_data.end_target_tris[agentIndex])) {
+                            agent_data.next_corners[agentIndex] = agent_data.end_targets[agentIndex];
+                            agent_data.next_corner_tris[agentIndex] = agent_data.end_target_tris[agentIndex];
+                            agent_data.num_valid_corners[agentIndex] = 1;
+                        } else {
+                            std::cerr << "[WASM] Pathfinding failed to recover the path." << std::endl;
+                        }
+                    }
+                } else {
+                    agent_data.alien_polys[agentIndex] = currentPoly;
+                }
+            } else {
+                agent_data.alien_polys[agentIndex] = -1;
+                if (currentCorridorPolyIndex > 0) {
+                    agent_data.path_frustrations[agentIndex] = 0;
+                    corridor.erase(corridor.begin(), corridor.begin() + currentCorridorPolyIndex);
+                }
             }
         }
 
@@ -111,6 +137,8 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         }
 
         if (agent_data.num_valid_corners[agentIndex] == 2 && (distanceToCornerSq < CORNER_OFFSET_SQ || crossedDemarkationLine)) {
+            agent_data.last_visible_points_for_next_corner[agentIndex] = agent_data.next_corners[agentIndex];
+            
             DualCorner corners = find_next_corner(agent_data.positions[agentIndex], agent_data.corridors[agentIndex], agent_data.end_targets[agentIndex], CORNER_OFFSET);
             if (corners.numValid > 0) {
                 agent_data.next_corners[agentIndex] = corners.corner1;
@@ -143,7 +171,11 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
             if (agent_data.end_target_tris[agentIndex] != -1) {
                 if (findPathToDestination(g_navmesh, agentIndex, agent_data.current_tris[agentIndex], agent_data.end_target_tris[agentIndex], "after escaping")) {
                     agent_data.states[agentIndex] = AgentState::Traveling;
+                } else {
+                    std::cerr << "[WASM] Pathfinding failed to find a corner after escaping." << std::endl;
                 }
+            } else {
+                std::cerr << "[WASM] Original end target is not on navmesh after escaping." << std::endl;
             }
         }
     }

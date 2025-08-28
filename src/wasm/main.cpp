@@ -18,6 +18,7 @@
 #include "model.h"
 #include "wasm_impulse.h"
 #include "benchmarks.h"
+#include "path_corridor.h"
 
 // Global state for our agent simulation
 AgentSoA agent_data;
@@ -27,6 +28,8 @@ std::vector<uint8_t> g_wall_contact; // 0 = no contact, 1 = in contact
 
 // Global pointer to TS-provided constants buffer
 uint8_t* g_constants_buffer = nullptr;
+
+bool g_init_logging_enabled = false;
 
 extern "C" {
 
@@ -45,30 +48,33 @@ EMSCRIPTEN_KEEPALIVE void set_rng_seed(uint32_t seed) {
 }
 
 // Register constants buffer provided by JS/TS
-EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf) {
+EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf, bool debug) {
     g_constants_buffer = buf;
-
-    printf("--- C++ NavConst Values ---\n");
-    printf("STUCK_PASSIVE_X1: %f\n", STUCK_PASSIVE_X1);
-    printf("STUCK_DST_X2: %f\n", STUCK_DST_X2);
-    printf("STUCK_CORRIDOR_X3: %f\n", STUCK_CORRIDOR_X3);
-    printf("STUCK_DECAY: %f\n", STUCK_DECAY);
-    printf("STUCK_DANGER_1: %f\n", STUCK_DANGER_1);
-    printf("STUCK_DANGER_2: %f\n", STUCK_DANGER_2);
-    printf("STUCK_DANGER_3: %f\n", STUCK_DANGER_3);
-    printf("STUCK_HIT_WALL: %f\n", STUCK_HIT_WALL);
-    printf("PATH_LOG_RATE: %d\n", PATH_LOG_RATE);
-    printf("LOOK_ROT_SPEED_RAD_S: %f\n", LOOK_ROT_SPEED_RAD_S);
-    printf("CORRIDOR_EXPECTED_JUMP: %f\n", CORRIDOR_EXPECTED_JUMP);
-    printf("ARRIVAL_THRESHOLD_SQ_DEFAULT: %f\n", ARRIVAL_THRESHOLD_SQ_DEFAULT);
-    printf("ARRIVAL_DESIRED_SPEED_DEFAULT: %f\n", ARRIVAL_DESIRED_SPEED_DEFAULT);
-    printf("MAX_SPEED_DEFAULT: %f\n", MAX_SPEED_DEFAULT);
-    printf("ACCEL_DEFAULT: %f\n", ACCEL_DEFAULT);
-    printf("RESISTANCE_DEFAULT: %f\n", RESISTANCE_DEFAULT);
-    printf("MAX_FRUSTRATION_DEFAULT: %f\n", MAX_FRUSTRATION_DEFAULT);
-    printf("CORNER_OFFSET: %f\n", CORNER_OFFSET);
-    printf("CORNER_OFFSET_SQ: %f\n", CORNER_OFFSET_SQ);
-    printf("---------------------------\n");
+    if (debug) {
+        printf("--- C++ NavConst Values ---\n");
+        printf("STUCK_PASSIVE_X1: %f\n", STUCK_PASSIVE_X1);
+        printf("STUCK_DST_X2: %f\n", STUCK_DST_X2);
+        printf("STUCK_CORRIDOR_X3: %f\n", STUCK_CORRIDOR_X3);
+        printf("STUCK_DECAY: %f\n", STUCK_DECAY);
+        printf("STUCK_DANGER_1: %f\n", STUCK_DANGER_1);
+        printf("STUCK_DANGER_2: %f\n", STUCK_DANGER_2);
+        printf("STUCK_DANGER_3: %f\n", STUCK_DANGER_3);
+        printf("STUCK_HIT_WALL: %f\n", STUCK_HIT_WALL);
+        printf("PATH_LOG_RATE: %d\n", PATH_LOG_RATE);
+        printf("LOOK_ROT_SPEED_RAD_S: %f\n", LOOK_ROT_SPEED_RAD_S);
+        printf("CORRIDOR_EXPECTED_JUMP: %f\n", CORRIDOR_EXPECTED_JUMP);
+        printf("ARRIVAL_THRESHOLD_SQ_DEFAULT: %f\n", ARRIVAL_THRESHOLD_SQ_DEFAULT);
+        printf("ARRIVAL_DESIRED_SPEED_DEFAULT: %f\n", ARRIVAL_DESIRED_SPEED_DEFAULT);
+        printf("MAX_SPEED_DEFAULT: %f\n", MAX_SPEED_DEFAULT);
+        printf("ACCEL_DEFAULT: %f\n", ACCEL_DEFAULT);
+        printf("RESISTANCE_DEFAULT: %f\n", RESISTANCE_DEFAULT);
+        printf("MAX_FRUSTRATION_DEFAULT: %f\n", MAX_FRUSTRATION_DEFAULT);
+        printf("CORNER_OFFSET: %f\n", CORNER_OFFSET);
+        printf("CORNER_OFFSET_SQ: %f\n", CORNER_OFFSET_SQ);
+        printf("PATH_FREE_WIDTH: %f\n", PATH_FREE_WIDTH);
+        printf("PATH_WIDTH_PENALTY_MULT: %f\n", PATH_WIDTH_PENALTY_MULT);
+        printf("---------------------------\n");
+    }
 }
 
 /**
@@ -138,9 +144,10 @@ EMSCRIPTEN_KEEPALIVE void set_rng_seed_js(uint32_t seed) {
  * @param binarySize The size of the navmesh binary data in bytes.
  * @param totalMemorySize Total available memory for navmesh and spatial indices.
  * @param cellSize The spatial index cell size (propagated from TypeScript).
+ * @param enableLogging Enable detailed initialization logging.
  * @return Size of data consumed, or 0 on failure.
  */
-EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize, float cellSize) {
+EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize, float cellSize, bool enableLogging) {
     uint8_t* memoryStart = reinterpret_cast<uint8_t*>(offset);
     
     if (memoryStart == nullptr) {
@@ -148,8 +155,11 @@ EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binaryS
         return 0;
     }
     
+    // Set global logging toggle from first call
+    g_init_logging_enabled = enableLogging;
+    
     // Initialize navmesh from the buffer - C++ will figure out auxiliary memory layout
-    uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize, cellSize);
+    uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize, cellSize, enableLogging);
     
     // Return the total memory used
     return static_cast<int>(usedMemory);
@@ -201,7 +211,9 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_g_navmesh_ptr() {
     navmeshData[19] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_centroids);
     
     uint32_t result = reinterpret_cast<uintptr_t>(navmeshData);
-    std::cout << "[WASM] get_g_navmesh_ptr returning: " << result << " (offset in uint32: " << (result/4) << ")" << std::endl;
+    if (g_init_logging_enabled) {
+        std::cout << "[WASM] get_g_navmesh_ptr returning: " << result << " (offset in uint32: " << (result/4) << ")" << std::endl;
+    }
     
     return result;
 }
@@ -291,6 +303,42 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_spatial_index_data() {
     spatialIndexData[offset++] = g_navmesh.building_index.cellItemsCount;
     
     return reinterpret_cast<uintptr_t>(spatialIndexData);
+}
+
+/**
+ * @brief Test pathfinding by calling findCorridor and returning results to TypeScript.
+ * @param startX Start point X coordinate.
+ * @param startY Start point Y coordinate.
+ * @param endX End point X coordinate.
+ * @param endY End point Y coordinate.
+ * @param pathFreeWidth Free path width parameter.
+ * @param pathWidthPenaltyMult Width penalty multiplier.
+ * @param resultPtr Pointer to memory where corridor will be written.
+ * @param maxLength Maximum corridor length.
+ * @return Length of corridor found, or 0 if no path found.
+ */
+EMSCRIPTEN_KEEPALIVE int test_find_corridor(float startX, float startY, float endX, float endY, float pathFreeWidth, float pathWidthPenaltyMult, uint32_t* resultPtr, int maxLength) {
+    if (!resultPtr || maxLength <= 0) {
+        return 0;
+    }
+    
+    Point2 startPoint = {startX, startY};
+    Point2 endPoint = {endX, endY};
+    std::vector<int> corridor;
+    
+    bool success = findCorridor(g_navmesh, pathFreeWidth, pathWidthPenaltyMult, startPoint, endPoint, corridor, -1, -1);
+    
+    if (!success || corridor.empty()) {
+        return 0;
+    }
+    
+    // Copy corridor to result buffer
+    int copyLength = std::min((int)corridor.size(), maxLength);
+    for (int i = 0; i < copyLength; i++) {
+        resultPtr[i] = corridor[i];
+    }
+    
+    return copyLength;
 }
 
 } 

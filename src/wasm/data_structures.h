@@ -42,6 +42,8 @@ struct AgentSoA {
     int* end_target_tris;
     Point2* last_valid_positions;
     int* last_valid_tris;
+    int* alien_polys;
+    Point2* last_visible_points_for_next_corner;
 
     // Statistics
     Point2* last_end_targets;

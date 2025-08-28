@@ -34,6 +34,24 @@ int FastPriorityQueue::get() {
     return result;
 }
 
+void FastPriorityQueue::updatePriority(int item, float newPriority) {
+    for (size_t i = 0; i < heap_.size(); ++i) {
+        if (heap_[i].item == item) {
+            float oldPriority = heap_[i].priority;
+            heap_[i].priority = newPriority;
+            
+            // Restore heap property
+            if (newPriority < oldPriority) {
+                siftUp(i);
+            } else if (newPriority > oldPriority) {
+                siftDown(i);
+            }
+            return;
+        }
+    }
+    put(item, newPriority);
+}
+
 void FastPriorityQueue::siftUp(size_t idx) {
     while (idx > 0) {
         size_t parent = (idx - 1) >> 1;

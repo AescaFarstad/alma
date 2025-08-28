@@ -15,13 +15,15 @@
 // External reference to the global unified navmesh
 extern Navmesh g_navmesh;
 
-uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uint32_t totalMemorySize, float cellSize) {
+uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uint32_t totalMemorySize, float cellSize, bool enableLogging) {
     if (memoryStart == nullptr) {
         std::cerr << "[WASM] Memory start is null. Cannot initialize navmesh." << std::endl;
         return 0;
     }
     
-    printf("[WASM] Initializing navmesh from buffer. Binary size: %d, Total memory: %d bytes\n", binarySize, totalMemorySize);
+    if (enableLogging) {
+        printf("[WASM] Initializing navmesh from buffer. Binary size: %d, Total memory: %d bytes\n", binarySize, totalMemorySize);
+    }
     
     // Parse the binary data first to understand its layout
     uint8_t* navmeshBuffer = memoryStart;
@@ -130,10 +132,10 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     uint8_t* auxiliaryMemory = memoryStart + binaryDataEnd;
     size_t auxiliaryMemorySize = totalMemorySize - binaryDataEnd;
 
-    printf("[WASM MEM] Raw navmesh (bbox+header+arrays): %ld bytes\n", rawNavmeshBytes);
-    printf("[WASM MEM] Aligned auxiliary start: %zu\n", binaryDataEnd);
-
-    printf("[WASM] Binary data consumed: %zu bytes (aligned: %zu), Auxiliary memory: %zu bytes\n", offset, binaryDataEnd, auxiliaryMemorySize);
+    if (enableLogging) {
+        printf("[WASM MEM] Raw navmesh (bbox+header+arrays): %ld bytes\n", rawNavmeshBytes);
+        printf("[WASM] Binary data consumed: %zu bytes (aligned: %zu), Auxiliary memory: %zu bytes\n", offset, binaryDataEnd, auxiliaryMemorySize);
+    }
 
     // 4. Now allocate and compute auxiliary structures in the remaining memory
     size_t auxOffset = 0;
@@ -173,7 +175,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
                 g_navmesh.triangle_centroids[i].x = (v1_x + v2_x + v3_x) / 3.0f;
                 g_navmesh.triangle_centroids[i].y = (v1_y + v2_y + v3_y) / 3.0f;
             }
-            PRINT_ALLOC("triangle_centroids", aux_triangle_centroids_bytes);
+            if (enableLogging) { PRINT_ALLOC("triangle_centroids", aux_triangle_centroids_bytes); }
         } else {
             std::cerr << "[WASM] Not enough auxiliary memory for triangle centroids" << std::endl;
             g_navmesh.triangle_centroids = nullptr;
@@ -212,7 +214,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
                     }
                 }
             }
-            PRINT_ALLOC("triangle_to_polygon", aux_triangle_to_polygon_bytes);
+            if (enableLogging) { PRINT_ALLOC("triangle_to_polygon", aux_triangle_to_polygon_bytes); }
         } else {
             std::cerr << "[WASM] Not enough auxiliary memory for triangle_to_polygon mapping" << std::endl;
             g_navmesh.triangle_to_polygon = nullptr;
@@ -252,7 +254,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
                     }
                 }
             }
-            PRINT_ALLOC("building_to_blob", aux_building_to_blob_bytes);
+            if (enableLogging) { PRINT_ALLOC("building_to_blob", aux_building_to_blob_bytes); }
         } else {
             std::cerr << "[WASM] Not enough auxiliary memory for building_to_blob mapping" << std::endl;
             g_navmesh.building_to_blob = nullptr;
@@ -277,13 +279,6 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     const int gridHeight = static_cast<int>(std::ceil(height / cellSize));
     const int totalCells = gridWidth * gridHeight;
     
-    printf("[WASM INIT DEBUG] Real bbox: %.2f,%.2f to %.2f,%.2f\n", g_navmesh.bbox[0], g_navmesh.bbox[1], g_navmesh.bbox[2], g_navmesh.bbox[3]);
-    printf("[WASM INIT DEBUG] Buffered bbox: %.2f,%.2f to %.2f,%.2f\n", g_navmesh.buffered_bbox[0], g_navmesh.buffered_bbox[1], g_navmesh.buffered_bbox[2], g_navmesh.buffered_bbox[3]);
-    printf("[WASM INIT DEBUG] Spatial index bbox: %.2f,%.2f to %.2f,%.2f (buffered + %.0f)\n", spatialMinX, spatialMinY, spatialMaxX, spatialMaxY, spatialIndexInflation);
-    printf("[WASM INIT DEBUG] Using spatial index bbox: width=%.2f, height=%.2f, cellSize=%.2f\n", width, height, cellSize);
-    printf("[WASM INIT DEBUG] Grid: %dx%d cells, totalCells=%d\n", gridWidth, gridHeight, totalCells);
-    
-    // Initialize triangle spatial index
     g_navmesh.triangle_index.gridWidth = gridWidth;
     g_navmesh.triangle_index.gridHeight = gridHeight;
     g_navmesh.triangle_index.cellSize = cellSize;
@@ -307,14 +302,18 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
         g_navmesh.triangle_index.cellItemsCount = 0;
         g_navmesh.triangle_index.cellItems = nullptr;
         
-        printf("[WASM INIT DEBUG] Triangle index: cellOffsets allocated at %p, count=%d, bytes=%zu, cellItems=%p, itemsCount=%d\n", g_navmesh.triangle_index.cellOffsets, g_navmesh.triangle_index.cellOffsetsCount, tri_index_offsets_bytes, g_navmesh.triangle_index.cellItems, g_navmesh.triangle_index.cellItemsCount);
+        if (enableLogging) {
+            printf("[WASM INIT] Triangle index allocated: cells=%d, offsetsBytes=%zu\n", totalCells, tri_index_offsets_bytes);
+        }
 
         populate_triangle_index(g_navmesh, auxOffset, auxiliaryMemory, auxiliaryMemorySize);
         tri_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.triangle_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
-        PRINT_ALLOC("triangle_index items", tri_index_items_bytes);
+        if (enableLogging) { PRINT_ALLOC("triangle_index items", tri_index_items_bytes); }
 
     } else {
-        printf("[WASM INIT DEBUG] ERROR: Not enough auxiliary memory for triangle spatial index\n");
+        if (enableLogging) {
+            printf("[WASM INIT] ERROR: Not enough auxiliary memory for triangle spatial index\n");
+        }
     }
     
     // Copy grid parameters to other indices and allocate their cellOffsets
@@ -332,7 +331,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
         g_navmesh.polygon_index.cellItems = nullptr;
         populate_polygon_index(g_navmesh, auxOffset, auxiliaryMemory, auxiliaryMemorySize);
         poly_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.polygon_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
-        PRINT_ALLOC("polygon_index", poly_index_offsets_bytes);
+        if (enableLogging) { PRINT_ALLOC("polygon_index", poly_index_offsets_bytes); }
     }
     
     // Building spatial index
@@ -345,7 +344,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
         g_navmesh.building_index.cellItems = nullptr;
         populate_building_index(g_navmesh, auxOffset, auxiliaryMemory, auxiliaryMemorySize);
         bld_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.building_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
-        PRINT_ALLOC("building_index", bld_index_offsets_bytes);
+        if (enableLogging) { PRINT_ALLOC("building_index", bld_index_offsets_bytes); }
     }
     
     // Blob spatial index
@@ -358,24 +357,24 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
         g_navmesh.blob_index.cellItems = nullptr;
         populate_blob_index(g_navmesh, auxOffset, auxiliaryMemory, auxiliaryMemorySize);
         blob_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.blob_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
-        PRINT_ALLOC("blob_index", blob_index_offsets_bytes);
+        if (enableLogging) { PRINT_ALLOC("blob_index", blob_index_offsets_bytes); }
     }
 
     uint32_t totalUsed = static_cast<uint32_t>(binaryDataEnd + auxOffset);
 
-    printf("[WASM] Navmesh initialization complete. Triangles: %d, Polygons: %d, Used auxiliary memory: %zu/%zu, Total used: %u/%u bytes\n",
-           g_navmesh.walkable_triangle_count, g_navmesh.walkable_polygon_count, auxOffset, auxiliaryMemorySize, totalUsed, totalMemorySize);
+    if (enableLogging) {
+        printf("[WASM] Navmesh initialization complete. Triangles: %d, Polygons: %d, Used auxiliary memory: %zu/%zu, Total used: %u/%u bytes\n",
+               g_navmesh.walkable_triangle_count, g_navmesh.walkable_polygon_count, auxOffset, auxiliaryMemorySize, totalUsed, totalMemorySize);
 
-    // Detailed summary breakdown
-    printf("[WASM MEM SUMMARY] Raw navmesh bytes: %zu\n", rawNavmeshBytes);
-    printf("[WASM MEM SUMMARY] Aux breakdown:\n");
-    printf("  - triangle_centroids: %zu\n", aux_triangle_centroids_bytes);
-    printf("  - triangle_to_polygon: %zu\n", aux_triangle_to_polygon_bytes);
-    printf("  - building_to_blob: %zu\n", aux_building_to_blob_bytes);
-    printf("  - triangle_index: offsets=%zu, items(aligned)=%zu\n", tri_index_offsets_bytes, tri_index_items_bytes);
-    printf("  - polygon_index: offsets=%zu, items(aligned)=%zu\n", poly_index_offsets_bytes, poly_index_items_bytes);
-    printf("  - building_index: offsets=%zu, items(aligned)=%zu\n", bld_index_offsets_bytes, bld_index_items_bytes);
-    printf("  - blob_index: offsets=%zu, items(aligned)=%zu\n", blob_index_offsets_bytes, blob_index_items_bytes);
+        // Condensed summary
+        printf("[WASM MEM SUMMARY] raw=%zu, aux_total=%zu; centroids=%zu, tri2poly=%zu, bld2blob=%zu; triIdx(off=%zu,items=%zu), polyIdx(off=%zu,items=%zu), bldIdx(off=%zu,items=%zu), blobIdx(off=%zu,items=%zu)\n",
+               rawNavmeshBytes, auxOffset,
+               aux_triangle_centroids_bytes, aux_triangle_to_polygon_bytes, aux_building_to_blob_bytes,
+               tri_index_offsets_bytes, tri_index_items_bytes,
+               poly_index_offsets_bytes, poly_index_items_bytes,
+               bld_index_offsets_bytes, bld_index_items_bytes,
+               blob_index_offsets_bytes, blob_index_items_bytes);
+    }
 
     return totalUsed;
 } 

@@ -161,48 +161,68 @@ export function attemptPathPatchInternal(
                     
                     if (raycastToOffset.hitV1_idx === -1 && raycastToOffset.corridor) {
                         
-                        // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner), ACEMERALD);
-                        const raycastToNextCorner = raycastCorridor(navmesh, offsetPoint, agent.nextCorner, offsetTri, agent.nextCornerTri);
-                        
-                        if (raycastToNextCorner.hitV1_idx === -1 && raycastToNextCorner.corridor) {
+                        if (agent.numValidCorners === 2) {
+                            // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner2), ACYELLOW);
+                            const raycastToNextCorner2 = raycastCorridor(navmesh, offsetPoint, agent.nextCorner2, offsetTri, agent.nextCorner2Tri);
                             
-                            if (agent.numValidCorners === 2) {
-                                // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner2), ACYELLOW);
-                                const raycastToNextCorner2 = raycastCorridor(navmesh, offsetPoint, agent.nextCorner2, offsetTri, agent.nextCorner2Tri);
+                            if (raycastToNextCorner2.hitV1_idx === -1 && raycastToNextCorner2.corridor) {
+                                // Great: we can go offset -> nextCorner2; set nextCorner to offset and keep nextCorner2
+                                set_(agent.nextCorner, offsetPoint);
+                                agent.nextCornerTri = offsetTri;
+                                // numValidCorners remains 2
                                 
-                                if (raycastToNextCorner2.hitV1_idx === -1 && raycastToNextCorner2.corridor) {
-
+                                agent.corridor = mergeCorridor(
+                                    navmesh,
+                                    [raycastToOffset.corridor, raycastToNextCorner2.corridor],
+                                    agent.corridor,
+                                    agent.nextCorner2Tri
+                                );
+                                
+                                return true;
+                            } else {
+                                // fallback to trying nextCorner first
+                                // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner), ACEMERALD);
+                                const raycastToNextCorner = raycastCorridor(navmesh, offsetPoint, agent.nextCorner, offsetTri, agent.nextCornerTri);
+                                if (raycastToNextCorner.hitV1_idx === -1 && raycastToNextCorner.corridor) {
+                                    // Update corners: insert offset as nextCorner, keep nextCorner2 as is
                                     set_(agent.nextCorner, offsetPoint);
                                     agent.nextCornerTri = offsetTri;
-                                    agent.numValidCorners = 2;
-                                    
+                                    // numValidCorners remains 2
+
                                     agent.corridor = mergeCorridor(
                                         navmesh,
-                                        [raycastToOffset.corridor, raycastToNextCorner2.corridor],
+                                        [raycastToOffset.corridor, raycastToNextCorner.corridor],
                                         agent.corridor,
-                                        agent.nextCorner2Tri
+                                        agent.nextCorner2Tri 
                                     );
-                                    
                                     return true;
                                 }
+                                // give up miter approach
                             }
+                        } else {
+                            // Only one corner known: must be able to go offset -> nextCorner
+                            // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner), ACEMERALD);
+                            const raycastToNextCorner = raycastCorridor(navmesh, offsetPoint, agent.nextCorner, offsetTri, agent.nextCornerTri);
                             
-                            set_(agent.nextCorner2, agent.nextCorner);
-                            agent.nextCorner2Tri = agent.nextCornerTri;
-                            
-                            set_(agent.nextCorner, offsetPoint);
-                            agent.nextCornerTri = offsetTri;
-                            
-                            agent.numValidCorners = 2;
-                            
-                            agent.corridor = mergeCorridor(
-                                navmesh,
-                                [raycastToOffset.corridor, raycastToNextCorner.corridor],
-                                agent.corridor,
-                                agent.nextCorner2Tri
-                            );
-                            
-                            return true;
+                            if (raycastToNextCorner.hitV1_idx === -1 && raycastToNextCorner.corridor) {
+                                
+                                set_(agent.nextCorner2, agent.nextCorner);
+                                agent.nextCorner2Tri = agent.nextCornerTri;
+                                
+                                set_(agent.nextCorner, offsetPoint);
+                                agent.nextCornerTri = offsetTri;
+                                
+                                agent.numValidCorners = 2;
+                                
+                                agent.corridor = mergeCorridor(
+                                    navmesh,
+                                    [raycastToOffset.corridor, raycastToNextCorner.corridor],
+                                    agent.corridor,
+                                    agent.nextCorner2Tri
+                                );
+                                
+                                return true;
+                            }
                         }
                     }
                 }

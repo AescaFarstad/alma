@@ -17,7 +17,7 @@ defaultAgent.coordinate.x = 0;
 defaultAgent.coordinate.y = 0;
 defaultAgent.accel = 500;
 defaultAgent.resistance = 0.9;
-defaultAgent.maxFrustration = 30;
+defaultAgent.maxFrustration = 4;
 defaultAgent.intelligence = 1;
 defaultAgent.arrivalDesiredSpeed = 1;
 defaultAgent.arrivalThresholdSq = 4;
@@ -107,7 +107,7 @@ export function updateWAgentSpawners(spawners: WAgentSpawner[], dt: number, gs: 
     if (gs.wagents.length > wagentsLimit) {
         return;
     }
-    
+
     for (const spawner of spawners) {
         spawner.spawnTimer -= dt;
         if (spawner.spawnTimer <= 0) {

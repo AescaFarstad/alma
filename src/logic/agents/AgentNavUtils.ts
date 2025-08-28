@@ -31,7 +31,7 @@ export function findPathToDestination(
 ): boolean {
     const startPoly = navmesh.triangle_to_polygon[startTri];
     const endPoly = navmesh.triangle_to_polygon[endTri];
-    const corridorResult = findCorridor(navmesh, agent.coordinate, agent.endTarget, startPoly, endPoly);
+    const corridorResult = findCorridor(navmesh, NavConst.PATH_FREE_WIDTH, NavConst.PATH_WIDTH_PENALTY_MULT, agent.coordinate, agent.endTarget, startPoly, endPoly);
     agent.corridor = corridorResult ?? [];
 
     if (agent.corridor.length > 0) {
@@ -117,11 +117,7 @@ export function raycastAndPatchCorridor(
             return true;
         }
     } else {
-        // Is this condition needed?
-        if (targetPoint.x === agent.nextCorner.x && targetPoint.y === agent.nextCorner.y && targetTri === agent.nextCornerTri) {
-            const result = attemptPathPatchInternal(navmesh, agent, raycastResult);
-            return result;
-        }
+        return attemptPathPatchInternal(navmesh, agent, raycastResult);
     }
     
     return false;

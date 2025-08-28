@@ -22,4 +22,6 @@ export const NavConst = {
 
     CORNER_OFFSET: 2.1,
     CORNER_OFFSET_SQ: 2.1 * 2.1,
+    PATH_FREE_WIDTH: 70,
+    PATH_WIDTH_PENALTY_MULT: 3,
 }; 

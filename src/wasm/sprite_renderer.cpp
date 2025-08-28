@@ -9,6 +9,7 @@
 #include <cmath>
 #include <vector>
 #include "data_structures.h"
+#include <iostream>
 
 // Pull SoA and counters from main TU (C++ linkage)
 extern AgentSoA agent_data;

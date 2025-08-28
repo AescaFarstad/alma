@@ -29,20 +29,22 @@ export function initializeConst(wasm: WasmFacade, buffer: ArrayBuffer, offset: n
     f32[i++] = NavConst.MAX_FRUSTRATION_DEFAULT;
     f32[i++] = NavConst.CORNER_OFFSET;
     f32[i++] = NavConst.CORNER_OFFSET_SQ;
+    f32[i++] = NavConst.PATH_FREE_WIDTH;
+    f32[i++] = NavConst.PATH_WIDTH_PENALTY_MULT;
 
     if (i !== Object.keys(NavConst).length) {
         throw new Error("Mismatch between number of constants and initialized values");
     }
 
-    console.log("--- TypeScript NavConst Values ---");
-    for (const key in NavConst) {
-        console.log(`${key}: ${NavConst[key as keyof typeof NavConst]}`);
-    }
-    console.log("------------------------------------");
+    // console.log("--- TypeScript NavConst Values ---");
+    // for (const key in NavConst) {
+    //     console.log(`${key}: ${NavConst[key as keyof typeof NavConst]}`);
+    // }
+    // console.log("------------------------------------");
 
     const bytesWritten = i * 4;
     
-    wasm._set_constants_buffer(offset);
+    wasm._set_constants_buffer(offset, false);
 
     return bytesWritten;
 } 

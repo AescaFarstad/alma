@@ -1,7 +1,7 @@
 // Binary heap-based priority queue with typed arrays for better performance
 export class PriorityQueue {
-    private elements: Int32Array;
-    private priorities: Float32Array;
+    public elements: Int32Array;
+    public priorities: Float32Array;
     private size = 0;
     private capacity: number;
     
@@ -35,8 +35,8 @@ export class PriorityQueue {
         this.size++;
     }
     
-    dequeue(): number | undefined {
-        if (this.size === 0) return undefined;
+    dequeue(): number {
+        if (this.size === 0) return -1;
         
         const result = this.elements[0];
         
@@ -60,6 +60,23 @@ export class PriorityQueue {
     
     clear(): void {
         this.size = 0;
+    }
+    
+    updatePriority(element: number, newPriority: number): void {
+        let index = -1;
+        for (let i = 0; i < this.size; i++) {
+            if (this.elements[i] === element) {
+                index = i;
+                break;
+            }
+        }
+        if (index !== -1) {
+            this.priorities[index] = newPriority;
+            this.heapifyUp(index);
+        }
+        else {
+            this.enqueue(element, newPriority);
+        }
     }
     
     private heapifyUp(index: number): void {

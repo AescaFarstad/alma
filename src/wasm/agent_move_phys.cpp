@@ -106,7 +106,6 @@ void update_agent_phys(int agentIndex, float deltaTime) {
         if (moveLnSq >= distanceToTargetSq) {
             agent_data.positions[agentIndex] = agent_data.last_valid_positions[agentIndex];
             agent_data.velocities[agentIndex] = {0.0f, 0.0f};
-            agent_data.current_tris[agentIndex] = agent_data.last_valid_tris[agentIndex];
         } else {
             agent_data.positions[agentIndex] += moveVector;
         }
@@ -122,6 +121,7 @@ void update_agent_phys(int agentIndex, float deltaTime) {
                 if (!g_wall_contact.empty() && g_wall_contact[agentIndex] == 0) {
                     g_wall_contact[agentIndex] = 1;
                 }
+                agent_data.stuck_ratings[agentIndex] += STUCK_HIT_WALL;
                 Point2 wallVector = std::get<1>(raycastResult) - std::get<0>(raycastResult);
                 Point2 wallNormal = {-wallVector.y, wallVector.x};
                 math::normalize_inplace(wallNormal);

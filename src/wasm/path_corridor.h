@@ -7,6 +7,8 @@
 
 bool findCorridor(
     Navmesh& navmesh,
+    float FREE_WIDTH,
+    float STRAY_MULT,
     const Point2& startPoint,
     const Point2& endPoint,
     std::vector<int>& outCorridor,

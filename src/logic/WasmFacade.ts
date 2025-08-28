@@ -3,7 +3,7 @@ import { WasmImpulse } from "./wasm_impulse_codes";
 
 export interface WasmFacade {
     _init_agents: (sharedBuffer: number, maxAgents: number, seed: number) => void;
-    _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number, cellSize: number) => number;
+    _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number, cellSize: number, enableLogging: boolean) => number;
     _finalize_init: () => void;
     _add_agent: (x: number, y: number) => number;
     _update: (dt: number, m3x3Ptr: number, widthPx: number, heightPx: number, dpr: number) => void;
@@ -13,13 +13,16 @@ export interface WasmFacade {
     _get_blob_count: () => number;
     _g_navTriIndexPackedHeader?: number;
     _set_rng_seed?: (seed: number) => void;
-    _set_constants_buffer: (ptr: number) => void;
+    _set_constants_buffer: (ptr: number, debug : boolean) => void;
     
     // Navmesh data access functions
     _get_g_navmesh_ptr?: () => number;
     _get_navmesh_bbox_ptr?: () => number;
     _get_spatial_index_data?: () => number;
     _wasm_impulse: (code: number) => void;
+    
+    // Pathfinding test function
+    _test_find_corridor?: (startX: number, startY: number, endX: number, endY: number, pathFreeWidth: number, pathWidthPenaltyMult: number, resultPtr: number, maxLength: number) => number;
     
     ccall: (fname: string, returnType: string | null, argTypes: string[], args: any[]) => any;
     cwrap: (fname: string, returnType: string | null, argTypes: string[]) => Function;

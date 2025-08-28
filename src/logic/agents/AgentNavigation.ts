@@ -34,7 +34,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
     // State: Standing - Pick a new destination and find a path.
     if (agent.state === AgentState.Standing || agent.predicamentRating > 7) {
         if (agent.predicamentRating > 7)
-            console.error("Predicament rating is too high, resetting. from, to:", copy(agent.coordinate), copy(agent.endTarget));
+            console.error("Predicament rating is too high, resetting. ", copy(agent.coordinate), "corner:", copy(agent.nextCorner));
         if (agent.currentTri === -1)
             return;
 
@@ -118,6 +118,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
                         if (raycastAndPatchCorridor(navmesh, agent, agent.endTarget, agent.endTargetTri)) {
                             set_(agent.nextCorner, agent.endTarget);
                             agent.nextCornerTri = agent.endTargetTri;
+                            agent.numValidCorners = 1;
                         } else {
                             console.error("Pathfinding failed to recover the path.", { agent });
                         }
@@ -173,6 +174,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
                 agent.nextCornerTri = reusableDualCorner.tri1;
                 agent.nextCorner2Tri = reusableDualCorner.tri2;
                 agent.numValidCorners = reusableDualCorner.numValid;
+
                 
             }
         }

@@ -7,7 +7,7 @@ function alignTo(size: number, alignment: number): number {
     return Math.ceil(size / alignment) * alignment;
 }
 
-export function calculateNavmeshMemory(navmeshBin: ArrayBuffer): number {
+export function calculateNavmeshMemory(navmeshBin: ArrayBuffer, enableLogging : boolean): number {
     // Parse header structure (after BBOX: now 8 floats = 32 bytes for both real and buffered bbox)
     const headerView = new DataView(navmeshBin, 32, 14 * 4);
     
@@ -42,12 +42,14 @@ export function calculateNavmeshMemory(navmeshBin: ArrayBuffer): number {
     const gridHeight = Math.ceil(spatialHeight / cellSize);
     const totalCells = gridWidth * gridHeight;
 
-    console.log(`[TS NavmeshInit] Real bbox=(minX: ${realMinX.toFixed(2)}, minY: ${realMinY.toFixed(2)}, maxX: ${realMaxX.toFixed(2)}, maxY: ${realMaxY.toFixed(2)})`);
-    console.log(`[TS NavmeshInit] Buffered bbox=(minX: ${bufferedMinX.toFixed(2)}, minY: ${bufferedMinY.toFixed(2)}, maxX: ${bufferedMaxX.toFixed(2)}, maxY: ${bufferedMaxY.toFixed(2)})`);
-    console.log(`[TS NavmeshInit] Spatial index bbox=(minX: ${spatialMinX.toFixed(2)}, minY: ${spatialMinY.toFixed(2)}, maxX: ${spatialMaxX.toFixed(2)}, maxY: ${spatialMaxY.toFixed(2)}) (buffered + ${spatialIndexInflation})`);
-    console.log(`[TS NavmeshInit] Using spatial index bbox: width=${spatialWidth.toFixed(2)}, height=${spatialHeight.toFixed(2)}, cellSize=${cellSize}`);
-    console.log(`[TS NavmeshInit] gridWidth=${gridWidth}, gridHeight=${gridHeight}, totalCells=${totalCells}`);
-    
+    if (enableLogging){
+        console.log(`[TS NavmeshInit] Real bbox=(minX: ${realMinX.toFixed(2)}, minY: ${realMinY.toFixed(2)}, maxX: ${realMaxX.toFixed(2)}, maxY: ${realMaxY.toFixed(2)})`);
+        console.log(`[TS NavmeshInit] Buff bbox=(minX: ${bufferedMinX.toFixed(2)}, minY: ${bufferedMinY.toFixed(2)}, maxX: ${bufferedMaxX.toFixed(2)}, maxY: ${bufferedMaxY.toFixed(2)})`);
+        console.log(`[TS NavmeshInit] Idex bbox=(minX: ${spatialMinX.toFixed(2)}, minY: ${spatialMinY.toFixed(2)}, maxX: ${spatialMaxX.toFixed(2)}, maxY: ${spatialMaxY.toFixed(2)}) (buffered + ${spatialIndexInflation})`);
+        console.log(`[TS NavmeshInit] gridWidth=${gridWidth}, gridHeight=${gridHeight}, totalCells=${totalCells}, cellSize=${cellSize}, totalCells=${totalCells}`);
+    }
+
+
     let totalMemory = 0;
     
     // 1. Raw binary data from file
@@ -85,13 +87,13 @@ export function calculateNavmeshMemory(navmeshBin: ArrayBuffer): number {
     return totalMemory;
 }
 
-export async function initializeNavmesh(wasm: WasmFacade, buffer: ArrayBuffer, offset: number, navmeshBin: ArrayBuffer, navmesh: Navmesh, availableMemory: number): Promise<number> {
+export async function initializeNavmesh(wasm: WasmFacade, buffer: ArrayBuffer, offset: number, navmeshBin: ArrayBuffer, navmesh: Navmesh, availableMemory: number, logInitialization: boolean = false): Promise<number> {
     // Copy binary data to WASM buffer at offset
     const targetView = new Uint8Array(buffer, offset, navmeshBin.byteLength);
     targetView.set(new Uint8Array(navmeshBin));
     
     // Call WASM function to initialize navmesh - pass centralized cell size
-    const actualMemoryUsed = wasm._init_navmesh_from_bin(offset, navmeshBin.byteLength, availableMemory, SPATIAL_INDEX_CELL_SIZE);
+    const actualMemoryUsed = wasm._init_navmesh_from_bin(offset, navmeshBin.byteLength, availableMemory, SPATIAL_INDEX_CELL_SIZE, logInitialization);
     if (actualMemoryUsed === 0) {
         throw new Error("Failed to initialize navmesh in WASM");
     }
@@ -101,13 +103,13 @@ export async function initializeNavmesh(wasm: WasmFacade, buffer: ArrayBuffer, o
     initializeSpatialIndices(navmesh, wasm);
     
     // Load building properties after navmesh data is initialized
-    await loadBuildingProperties(navmesh);
+    await loadBuildingProperties(navmesh, logInitialization);
     
     // Return actual bytes used (as reported by C++)
     return actualMemoryUsed;
 }
 
-async function loadBuildingProperties(navmesh: Navmesh): Promise<void> {
+async function loadBuildingProperties(navmesh: Navmesh, enableLogging : boolean): Promise<void> {
     try {
         const response = await fetch('/data/building_properties.json');
         if (!response.ok) {
@@ -124,7 +126,8 @@ async function loadBuildingProperties(navmesh: Navmesh): Promise<void> {
         // Load properties into navmesh.building_properties with proper indexing
         navmesh.building_properties = buildingProperties;
         
-        console.log(`Loaded ${buildingProperties.length} building properties`);
+        if (enableLogging)
+            console.log(`Loaded ${buildingProperties.length} building properties`);
     } catch (error) {
         console.warn('Failed to load building properties:', error);
     }
@@ -219,9 +222,6 @@ function initializeNavmeshViews(navmesh: Navmesh, wasm: WasmFacade): void {
             const allBboxData = new Float32Array(HEAPF32.buffer, bboxPtr, 8);
             navmesh.bbox = new Float32Array(allBboxData.buffer, bboxPtr, 4); // Real bbox
             navmesh.buffered_bbox = new Float32Array(allBboxData.buffer, bboxPtr + 16, 4); // Buffered bbox (offset by 4 floats * 4 bytes = 16)
-            
-            console.log(`[TS NavmeshInit] Read real bbox: [${Array.from(navmesh.bbox).join(', ')}]`);
-            console.log(`[TS NavmeshInit] Read buffered bbox: [${Array.from(navmesh.buffered_bbox).join(', ')}]`);
         }
     }
 }
@@ -255,8 +255,6 @@ function initializeSpatialIndices(navmesh: Navmesh, wasm: WasmFacade): void {
     const triMaxY = HEAPF32[offset++];
     const triCellOffsetsCount = HEAPU32[offset++];
     const triCellTrianglesCount = HEAPU32[offset++];
-
-    console.log(`[TS NavmeshInit] From WASM: gridWidth=${triGridWidth}, gridHeight=${triGridHeight}, cellSize=${triCellSize}`);
     
     // Skip auxiliary lookup maps (already handled)
     offset += 4; // triangle_to_polygon, building_to_blob, total_triangles, total_buildings

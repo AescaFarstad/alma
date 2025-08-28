@@ -70,6 +70,12 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     agent_data.path_frustrations = reinterpret_cast<float*>(sharedBuffer + offset);
     offset += sizeof(float) * maxAgents;
 
+    agent_data.alien_polys = reinterpret_cast<int*>(sharedBuffer + offset);
+    offset += sizeof(int) * maxAgents;
+
+    agent_data.last_visible_points_for_next_corner = reinterpret_cast<Point2*>(sharedBuffer + offset);
+    offset += sizeof(Point2) * maxAgents;
+
     // Statistics
     agent_data.last_end_targets = reinterpret_cast<Point2*>(sharedBuffer + offset);
     offset += sizeof(Point2) * maxAgents;
@@ -114,7 +120,7 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     agent_data.predicament_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
     offset += sizeof(float) * maxAgents;
 
-    // Frame ids at very end (per-agent, read/written from JS)
+    // At very end
     agent_data.frame_ids = reinterpret_cast<uint16_t*>(sharedBuffer + offset);
     offset += sizeof(uint16_t) * maxAgents;
 }

@@ -16,6 +16,7 @@ public:
 
     void put(int item, float priority);
     int get(); // pops and returns the item with the smallest priority
+    void updatePriority(int item, float newPriority); // updates priority of existing item
 
 private:
     struct Entry {

@@ -6,6 +6,7 @@
 #include "agent_grid.h"
 #include "agent_collision.h"
 #include <cstdint>
+#include <iostream>
 
 extern AgentSoA agent_data;
 
@@ -20,10 +21,6 @@ void Model::update_simulation(float dt, int active_agents) {
             update_agent_statistic(i, dt);
         }
     }
-
-
     clear_and_reindex_grid(active_agents);
-
-
     update_agent_collisions(active_agents);
 } 

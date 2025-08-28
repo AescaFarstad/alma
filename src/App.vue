@@ -79,13 +79,9 @@ const layerVisibility = reactive({
   footpaths: false,
 });
 
-const { findCorridors, buildPath } = usePathfinding(gameState, sceneState);
-const { drawNavmesh } = useNavmeshDebug(gameState, sceneState);
-const { drawNavGrid } = useNavmeshGridDebug(gameState, sceneState);
 const { measurementDistance, updateMeasurementLine } = useMeasurement(sceneState, mouseCoordinates);
 usePointMarks(gameState, sceneState, contextMenu);
 const { avatar } = useAvatarState();
-const { drawTriangles: drawDebugTriangles } = useNavmeshTrianglesDebug(gameState, sceneState);
 
 const hideContextMenu = () => {
   contextMenu.visible = false;

@@ -13,9 +13,9 @@ export function usePointMarks(
         id: gameState.nextPointMarkId++,
         x: contextMenu.coordinate.lng,
         y: contextMenu.coordinate.lat,
+        selected: true,
       };
       gameState.pointMarks.push(newPointMark);
-      sceneState.selectPointMark(newPointMark.id);
       contextMenu.visible = false;
       sceneState.isDirty = true;
     }
@@ -49,20 +49,19 @@ export function usePointMarks(
   const selectAllPointMarks = () => {
     if (gameState && sceneState) {
       for (const pointMark of gameState.pointMarks) {
-        if (!sceneState.isPointMarkSelected(pointMark.id)) {
-          sceneState.selectPointMark(pointMark.id);
+        if (!pointMark.selected) {
+          pointMark.selected = true;
         }
       }
+      sceneState.isDirty = true;
     }
   };
 
   const deleteSelectedPointMarks = () => {
     if (gameState && sceneState) {
-      const selectedIds = sceneState.selectedPointMarkIds;
       gameState.pointMarks = gameState.pointMarks.filter(
-        (mark) => !selectedIds.has(mark.id)
+        (mark) => !mark.selected
       );
-      sceneState.selectedPointMarkIds.clear();
       sceneState.isDirty = true;
     }
   };
@@ -70,14 +69,13 @@ export function usePointMarks(
   const deleteAllPointMarks = () => {
     if (gameState && sceneState) {
       gameState.pointMarks = [];
-      sceneState.selectedPointMarkIds.clear();
       sceneState.isDirty = true;
     }
   };
 
   const selectedPointMarks = computed(() => {
-    if (sceneState) {
-      return Array.from(sceneState.selectedPointMarkIds);
+    if (gameState) {
+      return gameState.pointMarks.filter(mark => mark.selected).map(mark => mark.id);
     }
     return [];
   });

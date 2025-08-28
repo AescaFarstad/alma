@@ -78,7 +78,6 @@ export function update(gs: GameState, deltaTime: number): void {
     if (deltaTime > 0) {
         updateAvatar(gs.avatar, effectiveDeltaTime, gs.navmesh);
 
-        // Re-enable regular TS spawner updates to run side-by-side with WASM
         updateSpawners(gs, effectiveDeltaTime);
         updateWAgentSpawners(gs.wAgentSpawners, effectiveDeltaTime, gs);
         WasmFacade._update_simulation(effectiveDeltaTime, gs.wagents.length);
@@ -95,26 +94,19 @@ export function update(gs: GameState, deltaTime: number): void {
 
     gs.agentGrid.clearAndReindex(gs.agents);
 
-    // --- Agent Collision Detection ---
     if (gs.agents.length > 1) {
         updateAgentCollisions(gs.agents, gs.agentGrid);
     }
 
-    // --- Camera Follow --- is now handled in DrawDynamicScene ---
-    
-    // Copy avatar state to dynamic scene for rendering
     dynamicScene.avatar = gs.avatar;
 
     // --- Laser Blast Lifetime Management ---
     const now = gs.gameTime;
     gs.laserBlasts = gs.laserBlasts.filter(blast => now - blast.creationTime <= 15);
 
-    // Copy laser blasts to dynamic scene for rendering
     dynamicScene.laserBlasts = gs.laserBlasts;
-    
-    // Copy agents to dynamic scene for rendering (TS only; WASM rendered directly)
     dynamicScene.agents = gs.agents;
 
-    // Sync UI state after all game logic updates
+
     syncUIState(gs);
 } 

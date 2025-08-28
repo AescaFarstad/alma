@@ -65,10 +65,8 @@ async function initializeGame() {
         lastTimestamp = timestamp;
 
         processInputs(gameState);
-        gameState.continueInitialAgentSpawning();// Update TS-side logic and WASM simulation regardless of render flag
         Model.update(gameState, Math.min(1, deltaTime));
 
-        // WASM render with fresh map data only if enabled
         if (wasmRenderEnabled.value) {
             Wasm.render(gameState);
         }

@@ -56,7 +56,6 @@ for (const color of DEBUG_COLORS) {
 
 export class SceneState {
     public selectedBuildingIds: Set<number> = new Set();
-    public selectedPointMarkIds: Set<number> = new Set();
     public simplifiedGeometries: Map<number, Point2[]> = new Map();
     public measurementLine: { start: MouseCoordinates, end: MouseCoordinates } | null = null;
     public corridors: Map<string, Corridor> = new Map();
@@ -103,29 +102,7 @@ export class SceneState {
         return this.selectedBuildingIds.has(id);
     }
 
-    public selectPointMark(id: number) {
-        if (!this.selectedPointMarkIds.has(id)) {
-            this.selectedPointMarkIds.add(id);
-            this.isDirty = true;
-        }
-    }
 
-    public deselectPointMark(id: number) {
-        if (this.selectedPointMarkIds.delete(id)) {
-            this.isDirty = true;
-        }
-    }
-
-    public isPointMarkSelected(id: number): boolean {
-        return this.selectedPointMarkIds.has(id);
-    }
-
-    public clearSelectedPointMarks() {
-        if (this.selectedPointMarkIds.size > 0) {
-            this.selectedPointMarkIds.clear();
-            this.isDirty = true;
-        }
-    }
 
     public clearSelectedBuildings() {
         if (this.selectedBuildingIds.size > 0) {
@@ -133,7 +110,6 @@ export class SceneState {
             this.simplifiedGeometries.clear();
             this.isDirty = true;
         }
-        this.clearSelectedPointMarks();
     }
 
     public setSelectedBuildings(ids: number[]) {

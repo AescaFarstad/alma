@@ -4,6 +4,8 @@
 #include <vector>
 #include <algorithm>
 
+extern bool g_init_logging_enabled;
+
 void populate_polygon_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxiliaryMemory, size_t auxiliaryMemorySize) {
     SpatialIndex& index = navmesh.polygon_index;
     const int totalCells = index.gridWidth * index.gridHeight;
@@ -78,10 +80,12 @@ void populate_polygon_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxili
         index.cellOffsets[i] = currentOffset;
         if (!tempGrid[i].empty()) {
             std::memcpy(index.cellItems + currentOffset, tempGrid[i].data(), tempGrid[i].size() * sizeof(int32_t));
-            currentOffset += tempGrid[i].size();
+            currentOffset += static_cast<int32_t>(tempGrid[i].size());
         }
     }
     index.cellOffsets[totalCells] = currentOffset;
 
-    std::cout << "[WASM] Populated polygon spatial index. Total items: " << totalItems << std::endl;
+    if (g_init_logging_enabled) {
+        std::cout << "[WASM] Populated polygon spatial index. Total items: " << totalItems << std::endl;
+    }
 }

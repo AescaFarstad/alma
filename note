@@ -169,3 +169,5 @@ do not reverse teh corridor
 optimise corner finding
 
 dual_funnel tri is incorrect because it is set before teh offsetting fo the corner
+
+try corner offsetting during data generation
