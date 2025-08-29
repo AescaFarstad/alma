@@ -143,8 +143,8 @@ static std::vector<Portal> getPolygonPortals(const std::vector<int>& corridor, c
     portals.reserve(corridor.size() + 1);
     portals.push_back({startPoint, startPoint, -1, -1});
 
-    for (size_t i = 0; i < corridor.size() - 1; ++i) {
-        portals.push_back(getPolygonPortalPoints(corridor[i], corridor[i+1]));
+    for (size_t i = corridor.size() - 1; i > 0; --i) {
+        portals.push_back(getPolygonPortalPoints(corridor[i], corridor[i-1]));
     }
 
     portals.push_back({endPoint, endPoint, -1, -1});
@@ -236,7 +236,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                     if (!leftEqualsStart) {
                         result.corner1 = portalLeft;
                         // Map portal index to corridor index: portal 0 = start, portal i (i>0) = between corridor[i-1] and corridor[i]
-                        int corridorIdx = (leftIndex > 0 && leftIndex <= (int)corridor.size()) ? leftIndex - 1 : 0;
+                        int corridorIdx = (leftIndex > 0) ? corridor.size() - leftIndex : corridor.size() - 1;
                         result.tri1 = getTriangleFromPolyPoint(portalLeft, corridor[corridorIdx]);
                         result.vIdx1 = (leftIndex > 0 && leftIndex < (int)portals.size()) ? portals[leftIndex].leftVIdx : -1;
                         cornersFound = 1;
@@ -245,7 +245,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                     bool corner1EqualsLeft = isPointsEqual(result.corner1, portalLeft);
                     if (!corner1EqualsLeft) {
                         result.corner2 = portalLeft;
-                        int corridorIdx = (leftIndex > 0 && leftIndex <= (int)corridor.size()) ? leftIndex - 1 : 0;
+                        int corridorIdx = (leftIndex > 0) ? corridor.size() - leftIndex : corridor.size() - 1;
                         result.tri2 = getTriangleFromPolyPoint(portalLeft, corridor[corridorIdx]);
                         result.vIdx2 = (leftIndex > 0 && leftIndex < (int)portals.size()) ? portals[leftIndex].leftVIdx : -1;
                         result.numValid = 2;
@@ -280,7 +280,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                 if (cornersFound == 0) {
                     if (!rightEqualsStart) {
                         result.corner1 = portalRight;
-                        int corridorIdx = (rightIndex > 0 && rightIndex <= (int)corridor.size()) ? rightIndex - 1 : 0;
+                        int corridorIdx = (rightIndex > 0) ? corridor.size() - rightIndex : corridor.size() - 1;
                         result.tri1 = getTriangleFromPolyPoint(portalRight, corridor[corridorIdx]);
                         result.vIdx1 = (rightIndex > 0 && rightIndex < (int)portals.size()) ? portals[rightIndex].rightVIdx : -1;
                         cornersFound = 1;
@@ -289,7 +289,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
                     bool corner1EqualsRight = isPointsEqual(result.corner1, portalRight);
                     if (!corner1EqualsRight) {
                         result.corner2 = portalRight;
-                        int corridorIdx = (rightIndex > 0 && rightIndex <= (int)corridor.size()) ? rightIndex - 1 : 0;
+                        int corridorIdx = (rightIndex > 0) ? corridor.size() - rightIndex : corridor.size() - 1;
                         result.tri2 = getTriangleFromPolyPoint(portalRight, corridor[corridorIdx]);
                         result.vIdx2 = (rightIndex > 0 && rightIndex < (int)portals.size()) ? portals[rightIndex].rightVIdx : -1;
                         result.numValid = 2;

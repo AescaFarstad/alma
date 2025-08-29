@@ -21,6 +21,7 @@ let hitEdgeIndex = -1;
 
 /**
  * Raycast with corridor tracking - returns both hit information and the corridor of triangles traversed
+ * Note! Unlike path corridors, this one is in forward direction, meaning the starting triangle is [0], the last one is [length - 1]
  * @param endTriIdx - If provided, we trust this as the target triangle and avoid point-in-triangle checks
  * @returns {RaycastWithCorridorResult} - The edge of collision and the corridor. If there's a clear line of sight, hitP1/hitP2 are null.
  */

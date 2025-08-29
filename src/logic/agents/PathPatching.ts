@@ -71,37 +71,44 @@ const blockingEdgeDirection: Point2 = { x: 0, y: 0 };
  * @param joinTriangle - The triangle where the new path rejoins the original corridor
  * @returns New merged corridor
  */
-export function mergeCorridor(
+// Mirrors the C++ merge_corridors in path_patching.cpp
+// triangleCorridors must be ordered so that the first starts at the join polygon
+export function mergeCorridors(
     navmesh: Navmesh,
-    triangleCorridors: number[][],
+    triangleCorridorFirst: number[],
+    triangleCorridorSecond: number[],
     agentCorridor: number[],
     joinTriangle: number
 ): number[] {
     const polygonCorridor: number[] = [];
     
-    for (const triangleCorridor of triangleCorridors) {
-        for (const tri of triangleCorridor) {
-            const poly = navmesh.triangle_to_polygon[tri];
-            if (polygonCorridor.length === 0 || polygonCorridor[polygonCorridor.length - 1] !== poly) {
-                polygonCorridor.push(poly);
-            }
+    // First corridor must begin at the join polygon; convert triangles to polys in reverse order
+    for (let i = triangleCorridorFirst.length - 1; i >= 0; i--) {
+        const poly = navmesh.triangle_to_polygon[triangleCorridorFirst[i]];
+        if (polygonCorridor.length === 0 || polygonCorridor[polygonCorridor.length - 1] !== poly) {
+            polygonCorridor.push(poly);
+        }
+    }
+    // Followed by the second corridor continuing back toward the agent
+    for (let i = triangleCorridorSecond.length - 1; i >= 0; i--) {
+        const poly = navmesh.triangle_to_polygon[triangleCorridorSecond[i]];
+        if (polygonCorridor.length === 0 || polygonCorridor[polygonCorridor.length - 1] !== poly) {
+            polygonCorridor.push(poly);
         }
     }
     
-    let originalCorridorJoinIndex = agentCorridor.length;
+    let originalCorridorJoinIndex = -1;
     const joinPoly = navmesh.triangle_to_polygon[joinTriangle];
-    for (let i = 0; i < agentCorridor.length; i++) {
+    for (let i = agentCorridor.length - 1; i >= 0; i--) {
         if (agentCorridor[i] === joinPoly) {
-            originalCorridorJoinIndex = i + 1;
+            originalCorridorJoinIndex = i;
             break;
         }
     }
 
-    if (originalCorridorJoinIndex === agentCorridor.length && agentCorridor.length > 0) {
-    }
 
-    const restOfCorridor = agentCorridor.slice(originalCorridorJoinIndex);
-    const newCorridor = [...polygonCorridor, ...restOfCorridor];
+    const restOfCorridor = originalCorridorJoinIndex === -1 ? [] : agentCorridor.slice(0, originalCorridorJoinIndex);
+    const newCorridor = [...restOfCorridor, ...polygonCorridor];
 
     return newCorridor;
 }
@@ -171,9 +178,10 @@ export function attemptPathPatchInternal(
                                 agent.nextCornerTri = offsetTri;
                                 // numValidCorners remains 2
                                 
-                                agent.corridor = mergeCorridor(
+                                agent.corridor = mergeCorridors(
                                     navmesh,
-                                    [raycastToOffset.corridor, raycastToNextCorner2.corridor],
+                                    raycastToNextCorner2.corridor,
+                                    raycastToOffset.corridor,
                                     agent.corridor,
                                     agent.nextCorner2Tri
                                 );
@@ -189,9 +197,10 @@ export function attemptPathPatchInternal(
                                     agent.nextCornerTri = offsetTri;
                                     // numValidCorners remains 2
 
-                                    agent.corridor = mergeCorridor(
+                                    agent.corridor = mergeCorridors(
                                         navmesh,
-                                        [raycastToOffset.corridor, raycastToNextCorner.corridor],
+                                        raycastToNextCorner.corridor,
+                                        raycastToOffset.corridor,
                                         agent.corridor,
                                         agent.nextCorner2Tri 
                                     );
@@ -214,9 +223,10 @@ export function attemptPathPatchInternal(
                                 
                                 agent.numValidCorners = 2;
                                 
-                                agent.corridor = mergeCorridor(
+                                agent.corridor = mergeCorridors(
                                     navmesh,
-                                    [raycastToOffset.corridor, raycastToNextCorner.corridor],
+                                    raycastToNextCorner.corridor,
+                                    raycastToOffset.corridor,
                                     agent.corridor,
                                     agent.nextCorner2Tri
                                 );
@@ -277,9 +287,11 @@ export function attemptPathPatchInternal(
     agent.numValidCorners = 2;
     
     if (raycastToR.corridor && raycastToNextCorner.corridor) {
-        agent.corridor = mergeCorridor(
+        // Order matters: start with the segment that begins at the join poly (old nextCorner)
+        agent.corridor = mergeCorridors(
             navmesh,
-            [raycastToR.corridor, raycastToNextCorner.corridor],
+            raycastToNextCorner.corridor,
+            raycastToR.corridor,
             agent.corridor,
             agent.nextCorner2Tri
         );

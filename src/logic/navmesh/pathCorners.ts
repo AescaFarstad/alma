@@ -263,9 +263,9 @@ function getPolygonPortals(navmesh: Navmesh, corridor: number[], startPoint: Poi
         rightVIdx: -1
     });
 
-    for (let i = 0; i < corridor.length - 1; i++) {
+    for (let i = corridor.length - 1; i > 0; i--) {
         const poly1Idx = corridor[i];
-        const poly2Idx = corridor[i + 1];
+        const poly2Idx = corridor[i-1];
 
         const portalPoints = getPolygonPortalPoints(navmesh, poly1Idx, poly2Idx);
         if (portalPoints) {
@@ -390,7 +390,7 @@ function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, 
                         set_(result.corner1, portalLeft);
                         // Map portal index to corridor index: portal 0 = start, portal i (i>0) = between corridor[i-1] and corridor[i]
                         // (this whole indexing thing might be totaly wrong)
-                        const corridorIdx = (leftIndex > 0 && leftIndex <= corridor.length) ? leftIndex - 1 : 0;
+                        const corridorIdx = leftIndex > 0 ? corridor.length - leftIndex : corridor.length - 1;
                         const leftVIdx = (leftIndex > 0 && leftIndex < portals.length) ? portals[leftIndex].leftVIdx : -1;
                         
                         result.tri1 = findTriangleForPortalPoint(navmesh, portalLeft, leftVIdx, corridor[corridorIdx], "corner1");
@@ -401,7 +401,7 @@ function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, 
                     const corner1EqualsLeft = isPointsEqual(result.corner1, portalLeft);
                     if (!corner1EqualsLeft) {
                         set_(result.corner2, portalLeft);
-                        const corridorIdx = (leftIndex > 0 && leftIndex <= corridor.length) ? leftIndex - 1 : 0;
+                        const corridorIdx = leftIndex > 0 ? corridor.length - leftIndex : corridor.length - 1;
                         const leftVIdx = (leftIndex > 0 && leftIndex < portals.length) ? portals[leftIndex].leftVIdx : -1;
                         
                         result.tri2 = findTriangleForPortalPoint(navmesh, portalLeft, leftVIdx, corridor[corridorIdx], "corner2");
@@ -442,7 +442,7 @@ function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, 
                     // Check if this corner is actually the start point (agent's current position)  
                     if (!rightEqualsStart) {
                         set_(result.corner1, portalRight);
-                        const corridorIdx = (rightIndex > 0 && rightIndex <= corridor.length) ? rightIndex - 1 : 0;
+                        const corridorIdx = rightIndex > 0 ? corridor.length - rightIndex : corridor.length - 1;
                         const rightVIdx = (rightIndex > 0 && rightIndex < portals.length) ? portals[rightIndex].rightVIdx : -1;
                         
                         result.tri1 = findTriangleForPortalPoint(navmesh, portalRight, rightVIdx, corridor[corridorIdx], "corner1 (right)");
@@ -453,7 +453,7 @@ function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, 
                     const corner1EqualsRight = isPointsEqual(result.corner1, portalRight);
                     if (!corner1EqualsRight) {
                         set_(result.corner2, portalRight);
-                        const corridorIdx = (rightIndex > 0 && rightIndex <= corridor.length) ? rightIndex - 1 : 0;
+                        const corridorIdx = rightIndex > 0 ? corridor.length - rightIndex : corridor.length - 1;
                         const rightVIdx = (rightIndex > 0 && rightIndex < portals.length) ? portals[rightIndex].rightVIdx : -1;
                         
                         result.tri2 = findTriangleForPortalPoint(navmesh, portalRight, rightVIdx, corridor[corridorIdx], "corner2 (right)");
@@ -492,11 +492,11 @@ function funnel_dual(portals: Portal[], corridor: number[], result: DualCorner, 
 
 function funnel(portals: Portal[], corridor: number[], _navmesh: Navmesh): Corner[] {
     if (portals.length < 2) {
-        return [{ point: portals[0]?.left || { x: 0, y: 0 }, tri: corridor[0] ?? -1 }];
+        return [{ point: portals[0]?.left || { x: 0, y: 0 }, tri: corridor[corridor.length-1] ?? -1 }];
     }
 
     const path: Corner[] = [];
-    path.push({ point: portals[0].left, tri: corridor[0] });
+    path.push({ point: portals[0].left, tri: corridor[corridor.length - 1] });
 
     let portalApex = portals[0].left;
     let portalLeft = portals[0].left;
@@ -517,7 +517,8 @@ function funnel(portals: Portal[], corridor: number[], _navmesh: Navmesh): Corne
                 rightIndex = i;
             } else {
                 // Right over left, add left to path and restart scan
-                path.push({ point: portalLeft, tri: corridor[leftIndex] });
+                const corridorIdx = leftIndex > 0 ? corridor.length - leftIndex : corridor.length - 1;
+                path.push({ point: portalLeft, tri: corridor[corridorIdx] });
                 portalApex = portalLeft;
                 apexIndex = leftIndex;
                 
@@ -540,7 +541,8 @@ function funnel(portals: Portal[], corridor: number[], _navmesh: Navmesh): Corne
                 leftIndex = i;
             } else {
                 // Left over right, add right to path and restart scan
-                path.push({ point: portalRight, tri: corridor[rightIndex] });
+                const corridorIdx = rightIndex > 0 ? corridor.length - rightIndex : corridor.length - 1;
+                path.push({ point: portalRight, tri: corridor[corridorIdx] });
                 portalApex = portalRight;
                 apexIndex = rightIndex;
                 
@@ -563,7 +565,7 @@ function funnel(portals: Portal[], corridor: number[], _navmesh: Navmesh): Corne
     const lastPortal = portals[portals.length - 1];
     const lastCorner = path[path.length - 1];
     if (!isPointsEqual(lastCorner.point, lastPortal.left)) {
-        path.push({ point: lastPortal.left, tri: corridor[corridor.length - 1] });
+        path.push({ point: lastPortal.left, tri: corridor[0] });
     }
 
     return path;

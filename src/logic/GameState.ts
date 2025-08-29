@@ -82,6 +82,10 @@ export class GameState { // This is a POD class. No functions allowed.
         //     {id:1, x:1039.2013310648636, y:1363.7068431395105, selected: true},
         //     {id:0, x:-1282.2998158032574, y:-1495.2916003989103, selected: true},
         // ]
+        this.pointMarks = [
+            {id:1, x:85.78881648274813, y:16.75091448166262, selected: true},
+            {id:0, x:31.288327958551292, y:452.45371500383493, selected: true},
+        ]
         this.spawners = [
             { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
             // { coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },

@@ -101,8 +101,10 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
             let currentCorridorPolyIndex = -1;
             const maxCheck = Math.min(NavConst.CORRIDOR_EXPECTED_JUMP, agent.corridor.length);
             for (let i = 0; i < maxCheck; i++) {
-                if (agent.corridor[i] === currentPoly) {
-                    currentCorridorPolyIndex = i;
+                const corridorIdx = agent.corridor.length - 1 - i;
+                if (corridorIdx < 0) break;
+                if (agent.corridor[corridorIdx] === currentPoly) {
+                    currentCorridorPolyIndex = corridorIdx;
                     break;
                 }
             }
@@ -129,9 +131,9 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
                 }
             } else {
                 agent.alienPoly = -1;
-                if (currentCorridorPolyIndex > 0) {
+                if (currentCorridorPolyIndex < agent.corridor.length - 1) {
                     agent.pathFrustration = 0;
-                    agent.corridor = agent.corridor.slice(currentCorridorPolyIndex);
+                    agent.corridor.length = currentCorridorPolyIndex + 1;
                 }
             }
         }

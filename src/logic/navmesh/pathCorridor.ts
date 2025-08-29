@@ -78,16 +78,16 @@ export function findCorridor(
                 temp = cameFrom.get(temp)!;
                 path.push(temp);
             }
-            const finalPath = path.reverse();
+            
 
-            // const corridorLength = calculateCorridorLength(navmesh, finalPath, startPoint, endPoint);
-            // const corners = findCorners(navmesh, finalPath, startPoint, endPoint);
+            // const corridorLength = calculateCorridorLength(navmesh, path, startPoint, endPoint);
+            // const corners = findCorners(navmesh, path, startPoint, endPoint);
             // const cornerPoints = corners.map(c => c.point);
             // const pathLength = calculatePathLength(cornerPoints);
-            // sceneState.addCorridor(`pathfinding_${Date.now()}`, finalPath, startPoint, endPoint);
+            // sceneState.addCorridor(`pathfinding_${Date.now()}`, path, startPoint, endPoint);
             // sceneState.addPath(`path_${Date.now()}`, cornerPoints, startPoint, endPoint);            
             // // Draw corridor as areas
-            // for (const polyIdx of finalPath) {
+            // for (const polyIdx of path) {
             //     const polyVertStart = navmesh.polygons[polyIdx];
             //     const polyVertEnd = navmesh.polygons[polyIdx + 1];
             //     const polygonVertices: Point2[] = [];
@@ -110,7 +110,7 @@ export function findCorridor(
             //     sceneState.addDebugText(Point2(navmesh.poly_centroids[poly * 2], navmesh.poly_centroids[poly * 2 + 1]), `${f?.toFixed(0)}`, ACBLUE);
             // }
             
-            return finalPath;
+            return path;
         }
         const polyVertStart = navmesh.polygons[current];
         const polyVertEnd = navmesh.polygons[current + 1];

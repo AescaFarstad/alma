@@ -89,7 +89,12 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
         if (agent_data.alien_polys[agentIndex] != currentPoly) {
             const int maxCheck = std::min((int)CORRIDOR_EXPECTED_JUMP, (int)corridor.size());
             int currentCorridorPolyIndex = -1;
-            for (int i = 0; i < maxCheck; ++i) {
+
+            const int corridorSize = corridor.size();
+            const int startSearchIdx = corridorSize - 1;
+            const int endSearchIdx = corridorSize - maxCheck;
+
+            for (int i = startSearchIdx; i >= endSearchIdx; --i) {
                 if (corridor[i] == currentPoly) {
                     currentCorridorPolyIndex = i;
                     break;
@@ -115,9 +120,9 @@ void update_agent_navigation(int agentIndex, float deltaTime, uint64_t* rng_seed
                 }
             } else {
                 agent_data.alien_polys[agentIndex] = -1;
-                if (currentCorridorPolyIndex > 0) {
+                if (currentCorridorPolyIndex < (int)corridor.size() - 1) {
                     agent_data.path_frustrations[agentIndex] = 0;
-                    corridor.erase(corridor.begin(), corridor.begin() + currentCorridorPolyIndex);
+                    corridor.resize(currentCorridorPolyIndex + 1);
                 }
             }
         }

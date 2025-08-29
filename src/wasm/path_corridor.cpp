@@ -92,7 +92,6 @@ bool findCorridor(
                 temp = cameFrom_parent[temp];
                 outCorridor.push_back(temp);
             }
-            std::reverse(outCorridor.begin(), outCorridor.end());
             // std::cout << "[WA] " << iterations << " iterations" << std::endl;
             return true;
         }

@@ -85,8 +85,8 @@ export function raycastAndPatchCorridor(
         // Convert triangle corridor from raycast to a polygon corridor
         const raycastPolyCorridor: number[] = [];
         if (raycastResult.corridor.length > 0) {
-            for (const tri of raycastResult.corridor) {
-                const poly = navmesh.triangle_to_polygon[tri];
+            for (let i = raycastResult.corridor.length - 1; i >= 0; i--) {
+                const poly = navmesh.triangle_to_polygon[raycastResult.corridor[i]];
                 if (raycastPolyCorridor.length === 0 || raycastPolyCorridor[raycastPolyCorridor.length - 1] !== poly) {
                     raycastPolyCorridor.push(poly);
                 }
@@ -96,7 +96,7 @@ export function raycastAndPatchCorridor(
         // Find where the target polygon appears in the current corridor
         const targetPoly = navmesh.triangle_to_polygon[targetTri];
         let targetPolyIndex = -1;
-        for (let i = 0; i < agent.corridor.length; i++) {
+        for (let i = agent.corridor.length - 1; i >= 0; i--) {
             if (agent.corridor[i] === targetPoly) {
                 targetPolyIndex = i;
                 break;
@@ -104,11 +104,9 @@ export function raycastAndPatchCorridor(
         }
         
         if (targetPolyIndex !== -1) {
-            // Replace corridor up to target polygon with raycast polygon corridor
-            // Keep the rest of the corridor after target polygon
             agent.corridor = [
-                ...raycastPolyCorridor,
-                ...agent.corridor.slice(targetPolyIndex + 1)
+                ...agent.corridor.slice(0, targetPolyIndex),
+                ...raycastPolyCorridor
             ];
             return true;
         } else if (raycastPolyCorridor.length > 0) {

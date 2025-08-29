@@ -7,34 +7,52 @@
 
 extern Navmesh g_navmesh;
 
-static inline void append_tris_as_polys(const std::vector<int>& tris, std::vector<int>& out)
-{
-    for (int t : tris) {
-        const int p = g_navmesh.triangle_to_polygon[t];
-        if (out.empty() || out.back() != p) out.push_back(p);
+static inline void append_tris_as_polys(const std::vector<int>& tris, std::vector<int>& out) {
+    for (int i = tris.size() - 1; i >= 0; --i) {
+        const int p = g_navmesh.triangle_to_polygon[tris[i]];
+        if (out.empty() || out.back() != p) {
+            out.push_back(p);
+        }
     }
 }
 
+// Efficient two-corridor merge: first corridor must begin at the join polygon,
+// second continues from there back toward the agent. Writes result into outPolyCorr.
 static inline bool merge_corridors(
-    const std::vector<int>& triCorrA,
-    const std::vector<int>& triCorrB,
+    const std::vector<int>& triCorrFirst,
+    const std::vector<int>& triCorrSecond,
     const std::vector<int>& originalCorr,
     int joinTriangle,
     std::vector<int>& outPolyCorr
 ) {
     outPolyCorr.clear();
-    append_tris_as_polys(triCorrA, outPolyCorr);
-    append_tris_as_polys(triCorrB, outPolyCorr);
 
+    // Determine where to rejoin the original corridor (using polygon index of the join triangle)
     const int joinPoly = g_navmesh.triangle_to_polygon[joinTriangle];
-    int startIdx = (int)originalCorr.size();
-    for (int i = 0; i < (int)originalCorr.size(); ++i) {
-        if (originalCorr[i] == joinPoly) { startIdx = i + 1; break; }
+
+    int originalCorridorJoinIndex = -1;
+    for (int i = static_cast<int>(originalCorr.size()) - 1; i >= 0; --i) {
+        if (originalCorr[i] == joinPoly) {
+            originalCorridorJoinIndex = i;
+            break;
+        }
     }
-    for (int i = startIdx; i < (int)originalCorr.size(); ++i) {
-        const int p = originalCorr[i];
-        if (outPolyCorr.empty() || outPolyCorr.back() != p) outPolyCorr.push_back(p);
+
+    // Preserve the original corridor prefix up to (but excluding) the join polygon.
+    if (originalCorridorJoinIndex != -1) {
+        // Conservative reserve to reduce reallocations
+        outPolyCorr.reserve(
+            (originalCorridorJoinIndex > 0 ? originalCorridorJoinIndex : 0)
+            + static_cast<int>(triCorrFirst.size())
+            + static_cast<int>(triCorrSecond.size())
+        );
+        outPolyCorr.insert(outPolyCorr.end(), originalCorr.begin(), originalCorr.begin() + originalCorridorJoinIndex);
     }
+
+    // Then append the new (triangle) corridors converted to polygon corridors in the given order.
+    append_tris_as_polys(triCorrFirst, outPolyCorr);
+    append_tris_as_polys(triCorrSecond, outPolyCorr);
+
     return !outPolyCorr.empty();
 }
 
@@ -118,7 +136,7 @@ bool attempt_path_patch(
                                     agent_data.next_corners[agentIndex] = offsetPoint;
                                     agent_data.next_corner_tris[agentIndex] = offsetTri;
                                     std::vector<int> merged;
-                                    if (merge_corridors(std::get<2>(rc1), std::get<2>(rc2), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
+                                    if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
                                         agent_data.corridors[agentIndex] = std::move(merged);
                                         return true;
                                     }
@@ -128,7 +146,7 @@ bool attempt_path_patch(
                                 agent_data.next_corners[agentIndex] = offsetPoint;
                                 agent_data.next_corner_tris[agentIndex] = offsetTri;
                                 std::vector<int> merged;
-                                if (merge_corridors(std::get<2>(rc1), std::get<2>(rc3), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
+                                if (merge_corridors(std::get<2>(rc3), std::get<2>(rc1), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
                                     agent_data.corridors[agentIndex] = std::move(merged);
                                     return true;
                                 }
@@ -144,7 +162,7 @@ bool attempt_path_patch(
                                 agent_data.num_valid_corners[agentIndex] = 2;
 
                                 std::vector<int> merged;
-                                if (merge_corridors(std::get<2>(rc1), std::get<2>(rc2), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
+                                if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
                                     agent_data.corridors[agentIndex] = std::move(merged);
                                     return true;
                                 }
@@ -186,7 +204,7 @@ bool attempt_path_patch(
                             agent_data.num_valid_corners[agentIndex] = 2;
 
                             std::vector<int> merged;
-                            if (merge_corridors(std::get<2>(rc1), std::get<2>(rc2), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
+                            if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[agentIndex], agent_data.next_corner_tris2[agentIndex], merged)) {
                                 agent_data.corridors[agentIndex] = std::move(merged);
                                 return true;
                             }

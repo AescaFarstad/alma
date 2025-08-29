@@ -4,6 +4,7 @@ import { findCorners } from '../navmesh/pathCorners';
 import { getTriangleFromPoint } from '../navmesh/NavUtils';
 import { Wasm } from '../Wasm';
 import { findCorridor } from '../navmesh/pathCorridor';
+import { findCorridor3 } from '../navmesh/pathCorridor3';
 
 function calculateCorridorLength(navmesh: any, corridor: number[], startPoint: any, endPoint: any): number {
     if (corridor.length === 0) return 0;
@@ -129,6 +130,13 @@ export function usePathfinding(
         console.log('\n--- WASM Implementation ---');
         const wasmResult = Wasm.testFindCorridor(startPoint, endPoint, 80, 3);
 
+        // Test findCorridor3
+        console.log('\n--- TypeScript Implementation 3 ---');
+        const time3 = performance.now();
+        const tsCorridor3 = findCorridor3(navmesh, 80, 3, startPoint, endPoint, startPoly, endPoly);
+        const time4 = performance.now();
+        console.log(`[TS] findCorridor3: ${time4 - time3}ms`);
+
         // Visualize TypeScript result
         if (tsCorridor) {
           const corners = findCorners(navmesh, tsCorridor, startPoint, endPoint);
@@ -189,7 +197,35 @@ export function usePathfinding(
           sceneState.addPath(wasmCorridorId, wasmCornerPoints, startPoint, endPoint);
         }
 
-        if (!tsCorridor && !wasmResult) {
+        // Visualize TS3 result
+        if (tsCorridor3) {
+            const corners = findCorners(navmesh, tsCorridor3, startPoint, endPoint);
+            const cornerPoints = corners.map(c => c.point);
+
+            let pathLength = 0;
+            for (let k = 0; k < cornerPoints.length - 1; k++) {
+                const dx = cornerPoints[k + 1].x - cornerPoints[k].x;
+                const dy = cornerPoints[k + 1].y - cornerPoints[k].y;
+                pathLength += Math.sqrt(dx * dx + dy * dy);
+            }
+            pathLengths.push(Math.round(pathLength));
+
+            const triangleCorridor: number[] = [];
+            for (const polyId of tsCorridor3) {
+                const triStart = navmesh.poly_tris[polyId];
+                const triEnd = navmesh.poly_tris[polyId + 1];
+                for (let i = triStart; i < triEnd; i++) {
+                    triangleCorridor.push(i);
+                }
+            }
+
+            const corridorId = `ts3-${mark1.id}-${mark2.id}`;
+            sceneState.addCorridor(corridorId, triangleCorridor, startPoint, endPoint);
+            sceneState.addPath(corridorId, cornerPoints, startPoint, endPoint);
+            corridorCount++;
+        }
+
+        if (!tsCorridor && (!wasmResult || wasmResult.corridor.length === 0) && !tsCorridor3) {
           console.log(`No corridor found between marks ${mark1.id} and ${mark2.id}`);
         }
       }

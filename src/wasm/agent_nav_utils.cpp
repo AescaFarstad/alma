@@ -59,20 +59,30 @@ bool raycastAndPatchCorridor(
         auto& agentCorridor = agent_data.corridors[agentIndex];
         std::vector<int> raycastPolyCorridor;
         raycastPolyCorridor.reserve(agentCorridor.capacity());
-        for (const auto& tri : triCorridor) {
-            int poly = navmesh.triangle_to_polygon[tri];
+        for (int i = triCorridor.size() - 1; i >= 0; --i) {
+            int poly = navmesh.triangle_to_polygon[ triCorridor[i]];
             if (raycastPolyCorridor.empty() || raycastPolyCorridor.back() != poly) {
                 raycastPolyCorridor.push_back(poly);
             }
         }
 
         int targetPoly = navmesh.triangle_to_polygon[targetTri];
-        auto it = std::find(agentCorridor.begin(), agentCorridor.end(), targetPoly);
+        int targetPolyIndex = -1;
+        for (int i = agentCorridor.size() - 1; i >= 0; --i) {
+            if (agentCorridor[i] == targetPoly) {
+                targetPolyIndex = i;
+                break;
+            }
+        }
 
-        if (it != agentCorridor.end()) {
-            int targetPolyIndex = std::distance(agentCorridor.begin(), it);
-            raycastPolyCorridor.insert(raycastPolyCorridor.end(), agentCorridor.begin() + targetPolyIndex + 1, agentCorridor.end());
-            agent_data.corridors[agentIndex] = raycastPolyCorridor;
+        if (targetPolyIndex != -1) {
+            std::vector<int> newCorridor;
+            newCorridor.reserve(targetPolyIndex + 1 + raycastPolyCorridor.size());
+            newCorridor.insert(newCorridor.end(), agentCorridor.begin(), agentCorridor.begin() + targetPolyIndex);
+            newCorridor.insert(newCorridor.end(), raycastPolyCorridor.begin(), raycastPolyCorridor.end());
+
+            agent_data.corridors[agentIndex] = newCorridor;
+
             return true;
         } else if (!raycastPolyCorridor.empty()) {
             agent_data.corridors[agentIndex] = raycastPolyCorridor;
