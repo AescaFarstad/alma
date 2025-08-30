@@ -1,6 +1,7 @@
 import { Agents, MAX_AGENTS } from "../agents/Agents";
 import { WasmFacade } from "../WasmFacade";
 import { GameState } from "../GameState";
+import { EVENT_BUFFER_WORDS, EventBuffer } from "../EventBuffer";
 
 function calculateAgentGridMemory(): number {
     const CELL_SIZE = 256.0;
@@ -75,6 +76,9 @@ export function calculateAgentsMemory(): number {
 
     // At very end: frame_ids
     totalSize += 2 * MAX_AGENTS; // frame_ids (uint16)
+
+    // Events buffer (single stream, word-addressable)
+    totalSize += EVENT_BUFFER_WORDS * 4; // u32 words
 
     // C++ dynamic allocations
     totalSize += calculateAgentGridMemory();
@@ -210,10 +214,13 @@ export function initializeAgents(
     agents.frame_ids = new Uint16Array(buffer, currentOffset, MAX_AGENTS);
     currentOffset += MAX_AGENTS * 2;
 
+    const eventsOffset = currentOffset;
+    agents.events = new EventBuffer(buffer, eventsOffset, EVENT_BUFFER_WORDS);
+    currentOffset += EVENT_BUFFER_WORDS * 4;
+
     const bytesWritten = currentOffset - offset;
     
-    // Call wasm-side initializer
-    wasmModule._init_agents(offset, MAX_AGENTS, gs.rngSeed);
+       wasmModule._init_agents(offset, MAX_AGENTS, gs.rngSeed, eventsOffset, EVENT_BUFFER_WORDS);
     
     return bytesWritten;
 }

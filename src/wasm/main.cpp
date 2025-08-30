@@ -1,4 +1,6 @@
 #include <iostream>
+#include "wasm_log.h"
+#include <sstream>
 #include <cmath>
 #include <emscripten/emscripten.h>
 #include "data_structures.h"
@@ -18,6 +20,7 @@
 #include "model.h"
 #include "wasm_impulse.h"
 #include "benchmarks.h"
+#include "event_buffer.h"
 #include "path_corridor.h"
 
 // Global state for our agent simulation
@@ -83,7 +86,7 @@ EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf, bool debug) {
  * @param maxAgents The maximum number of agents the sharedBuffer can hold.
  * @param seed Seed to initialize deterministic RNG.
  */
-EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint32_t seed) {
+EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint32_t seed, uint32_t eventsBasePtr, uint32_t eventsCapWords) {
     agent_data.capacity = maxAgents;
     g_model.rng_seed = seed;
     math::set_rng_seed(static_cast<uint64_t>(seed));
@@ -91,11 +94,13 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
 
     // If constants buffer was not set by TS, log and continue (undefined behavior until fixed)
     if (!g_constants_buffer) {
-        std::cerr << "[WASM] constants buffer is not set. Call set_constants_buffer() before init_agents." << std::endl;
+        wasm_console_error("[WASM] constants buffer is not set. Call set_constants_buffer() before init_agents.");
     }
 
     // Initialize AgentSoA from the shared buffer
     initialize_shared_buffer_layout(sharedBuffer, maxAgents);
+
+    g_event_buffer.set(reinterpret_cast<uint8_t*>(eventsBasePtr), eventsCapWords);
     
     // Allocate dynamic data arrays
     agent_data.corridors = new std::vector<int>[maxAgents];
@@ -151,7 +156,10 @@ EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binaryS
     uint8_t* memoryStart = reinterpret_cast<uint8_t*>(offset);
     
     if (memoryStart == nullptr) {
-        std::cerr << "[WASM] Invalid memory offset: " << offset << std::endl;
+        {
+            std::ostringstream _oss; _oss << "[WASM] Invalid memory offset: " << offset;
+            wasm_console_error(_oss.str());
+        }
         return 0;
     }
     
@@ -341,4 +349,4 @@ EMSCRIPTEN_KEEPALIVE int test_find_corridor(float startX, float startY, float en
     return copyLength;
 }
 
-} 
+}

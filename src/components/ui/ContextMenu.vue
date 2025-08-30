@@ -167,9 +167,9 @@ const copyWAgentState = () => {
 
   // Find nearest WAgent
   for (const agent of gameState.wagents) {
-    const agentIndex = agent.agentIndex;
-    const agentX = wasm_agents.positions[agentIndex * 2];
-    const agentY = wasm_agents.positions[agentIndex * 2 + 1];
+    const idx = agent.idx;
+    const agentX = wasm_agents.positions[idx * 2];
+    const agentY = wasm_agents.positions[idx * 2 + 1];
 
     const distance = Math.sqrt(Math.pow(agentX - lng, 2) + Math.pow(agentY - lat, 2));
     if (distance < minDistance) {
@@ -179,7 +179,7 @@ const copyWAgentState = () => {
   }
 
   if (nearestAgent) {
-    const state = serialize_wagent(gameState, nearestAgent.agentIndex);
+    const state = serialize_wagent(gameState, nearestAgent.idx);
 
     if (state) {
       const agentState = customStringify(state);

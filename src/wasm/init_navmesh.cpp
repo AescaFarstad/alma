@@ -5,6 +5,7 @@
 #include "populate_building_index.h"
 #include "populate_blob_index.h"
 #include <iostream>
+#include "wasm_log.h"
 #include <cstring>
 #include <cmath>
 #include <emscripten.h>
@@ -17,7 +18,7 @@ extern Navmesh g_navmesh;
 
 uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uint32_t totalMemorySize, float cellSize, bool enableLogging) {
     if (memoryStart == nullptr) {
-        std::cerr << "[WASM] Memory start is null. Cannot initialize navmesh." << std::endl;
+        wasm_console_error("[WASM] Memory start is null. Cannot initialize navmesh.");
         return 0;
     }
     
@@ -177,7 +178,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
             }
             if (enableLogging) { PRINT_ALLOC("triangle_centroids", aux_triangle_centroids_bytes); }
         } else {
-            std::cerr << "[WASM] Not enough auxiliary memory for triangle centroids" << std::endl;
+            wasm_console_error("[WASM] Not enough auxiliary memory for triangle centroids");
             g_navmesh.triangle_centroids = nullptr;
         }
     } else {
@@ -216,7 +217,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
             }
             if (enableLogging) { PRINT_ALLOC("triangle_to_polygon", aux_triangle_to_polygon_bytes); }
         } else {
-            std::cerr << "[WASM] Not enough auxiliary memory for triangle_to_polygon mapping" << std::endl;
+            wasm_console_error("[WASM] Not enough auxiliary memory for triangle_to_polygon mapping");
             g_navmesh.triangle_to_polygon = nullptr;
         }
     } else {
@@ -256,7 +257,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
             }
             if (enableLogging) { PRINT_ALLOC("building_to_blob", aux_building_to_blob_bytes); }
         } else {
-            std::cerr << "[WASM] Not enough auxiliary memory for building_to_blob mapping" << std::endl;
+            wasm_console_error("[WASM] Not enough auxiliary memory for building_to_blob mapping");
             g_navmesh.building_to_blob = nullptr;
         }
     } else {

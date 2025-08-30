@@ -31,7 +31,9 @@ SRCS = main.cpp \
        populate_blob_index.cpp \
        point_in_triangle_bench.cpp \
        point_in_polygon_bench.cpp \
-       wasm_impulse.cpp
+       wasm_impulse.cpp \
+       event_buffer.cpp \
+       event_handler.cpp
 
 OBJDIR = ../../temp
 # Build all object files into OBJDIR to keep paths consistent

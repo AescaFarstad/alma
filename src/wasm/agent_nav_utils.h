@@ -5,7 +5,7 @@
 
 bool findPathToDestination(
     Navmesh& navmesh,
-    int agentIndex,
+    int idx,
     int startTri,
     int endTri,
     const char* errorContext
@@ -13,7 +13,7 @@ bool findPathToDestination(
 
 bool raycastAndPatchCorridor(
     Navmesh& navmesh,
-    int agentIndex,
+    int idx,
     const Point2& targetPoint,
     int targetTri
 ); 

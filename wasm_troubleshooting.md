@@ -103,7 +103,7 @@ this.agentDataViews['positions'] = new Float32Array(wasmHeap.buffer, this.shared
 Verify both TypeScript and WASM are reading the same memory:
 ```typescript
 // After creating an agent, both should show the same position
-console.log("TS view:", positions[agentIndex * 2], positions[agentIndex * 2 + 1]);
+console.log("TS view:", positions[idx * 2], positions[idx * 2 + 1]);
 console.log("Should match WASM agent position");
 ```
 
@@ -238,10 +238,10 @@ console.log(`Rendering ${count} agents:`, {
 
 ```typescript
 // Check if TypeScript and WASM see the same data
-function verifyMemorySync(agentIndex: number) {
-    const tsPos = [positions[agentIndex * 2], positions[agentIndex * 2 + 1]];
-    const tsAlive = isAlive[agentIndex];
-    console.log(`Agent ${agentIndex} - TS view:`, { position: tsPos, alive: tsAlive });
+function verifyMemorySync(idx: number) {
+    const tsPos = [positions[idx * 2], positions[idx * 2 + 1]];
+    const tsAlive = isAlive[idx];
+    console.log(`Agent ${idx} - TS view:`, { position: tsPos, alive: tsAlive });
     // Compare with WASM internal state if possible
 }
 ```

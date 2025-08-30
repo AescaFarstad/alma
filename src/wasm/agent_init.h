@@ -4,6 +4,6 @@
 #include "data_structures.h"
 
 void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents);
-void initialize_agent_defaults(int agentIndex, float x, float y);
+void initialize_agent_defaults(int idx, float x, float y);
 
 #endif // AGENT_INIT_H

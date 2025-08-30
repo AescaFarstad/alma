@@ -30,30 +30,21 @@ const tempLastVec: Point2 = { x: 0, y: 0 };
 
 export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: number): void {
     const navmesh = gs.navmesh;
-    
-    // State: Standing - Pick a new destination and find a path.
-    if (agent.state === AgentState.Standing || agent.predicamentRating > 7) {
-        if (agent.predicamentRating > 7)
-            console.error("Predicament rating is too high, resetting. ", copy(agent.coordinate), "corner:", copy(agent.nextCorner));
-        if (agent.currentTri === -1)
-            return;
-
-        
-        const endNode = getRandomTriangleInArea(navmesh, 0, 0, 30, gs.rngSeed);
-        gs.rngSeed = advanceSeed(gs.rngSeed);
-        
-        agent.endTarget = { x: navmesh.triangle_centroids[endNode * 2], y: navmesh.triangle_centroids[endNode * 2 + 1] }
-        agent.endTargetTri = endNode;
-        agent.predicamentRating = 0;
-        agent.corridor.length = 0;
-        
-        if (findPathToDestination(navmesh, agent, agent.currentTri, endNode, "from start")) {
-            agent.state = AgentState.Traveling;
-        }
-    }
+    if (agent.state != AgentState.Traveling && agent.state != AgentState.Escaping)
+        return;
 
     // State: Traveling - Follow the path, check for deviations.
-    else if (agent.state === AgentState.Traveling) {
+   if (agent.state === AgentState.Traveling) {
+            
+        if (agent.predicamentRating > 37){
+            console.error("Predicament rating is too high, resetting. ", copy(agent.coordinate), "corner:", copy(agent.nextCorner));
+            agent.state = AgentState.Standing;
+            agent.corridor.length = 0;
+            return
+        }
+
+        if (agent.corridor.length == 0)
+            findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "from start");
 
         // Check 1: Have we fallen off the navmesh?
         if (agent.currentTri === -1) {

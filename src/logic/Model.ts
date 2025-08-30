@@ -14,6 +14,7 @@ import { updateWAgentSpawners } from "./WAgentSpawner";
 import { updateAgentStatistic } from "./agents/AgentStatistic";
 import { updateAgentCollisions } from "./agents/AgentCollision";
 import { WasmFacade } from "./WasmFacade";
+import { handleEvents } from "./agents/EventHandler";
 
 /**
  * A global queue for commands. Components or other systems can push commands here.
@@ -76,26 +77,36 @@ export function update(gs: GameState, deltaTime: number): void {
     }
     
     if (deltaTime > 0) {
+        handleEvents(gs);
+        gs.wasm_agents.events.beginFrame();
+
         updateAvatar(gs.avatar, effectiveDeltaTime, gs.navmesh);
 
         updateSpawners(gs, effectiveDeltaTime);
         updateWAgentSpawners(gs.wAgentSpawners, effectiveDeltaTime, gs);
+
+        // ts agents
+        for (const agent of gs.agents) {
+            updateAgentNavigation(agent, gs, effectiveDeltaTime);
+        }
+        for (const agent of gs.agents) {
+            updateAgentPhys(agent, effectiveDeltaTime, gs);
+        }
+        for (const agent of gs.agents) {
+            updateAgentStatistic(agent, gs, effectiveDeltaTime);
+        }
+        gs.agentGrid.clearAndReindex(gs.agents);
+        if (gs.agents.length > 1) {
+            updateAgentCollisions(gs.agents, gs.agentGrid);
+        }
+
+        // wasm agents
+        for (const agent of gs.wagents) {
+            agent.brain.stack[agent.brain.stack.length - 1].update(gs, agent, effectiveDeltaTime);
+        }
+        gs.wasm_agents.events.commitFrame();
         WasmFacade._update_simulation(effectiveDeltaTime, gs.wagents.length);
-    }
-    for (const agent of gs.agents) {
-        updateAgentNavigation(agent, gs, effectiveDeltaTime);
-    }
-    for (const agent of gs.agents) {
-        updateAgentPhys(agent, effectiveDeltaTime, gs);
-    }
-    for (const agent of gs.agents) {
-        updateAgentStatistic(agent, gs, effectiveDeltaTime);
-    }
 
-    gs.agentGrid.clearAndReindex(gs.agents);
-
-    if (gs.agents.length > 1) {
-        updateAgentCollisions(gs.agents, gs.agentGrid);
     }
 
     dynamicScene.avatar = gs.avatar;
@@ -109,4 +120,4 @@ export function update(gs: GameState, deltaTime: number): void {
 
 
     syncUIState(gs);
-} 
+}

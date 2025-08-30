@@ -1,4 +1,5 @@
 import { Point2 } from "../core/math";
+import { Brain } from "./ai/Brain";
 
 export const STUCK_PASSIVE_X1 = 14;
 export const STUCK_DST_X2 = 18;
@@ -20,6 +21,7 @@ export enum AgentState {
 }
 
 export class Agent {
+    brain! : Brain;
     // Navigation
     corridor: number[] = [];
     currentTri: number = -1;

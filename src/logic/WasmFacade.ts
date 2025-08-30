@@ -2,7 +2,7 @@ import { Wasm } from "./Wasm";
 import { WasmImpulse } from "./wasm_impulse_codes";
 
 export interface WasmFacade {
-    _init_agents: (sharedBuffer: number, maxAgents: number, seed: number) => void;
+    _init_agents: (sharedBuffer: number, maxAgents: number, seed: number, eventsBasePtr: number, eventsCapWords: number) => void;
     _init_navmesh_from_bin: (offset: number, binarySize: number, totalMemorySize: number, cellSize: number, enableLogging: boolean) => number;
     _finalize_init: () => void;
     _add_agent: (x: number, y: number) => number;
@@ -76,4 +76,4 @@ export async function createWasmModule(): Promise<WasmFacade> {
   return wasmModule;
 }
 
-export { wasmModule as WasmFacade }; 
+export { wasmModule as WasmFacade };

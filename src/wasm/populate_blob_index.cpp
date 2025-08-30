@@ -1,6 +1,7 @@
 #include "populate_blob_index.h"
 #include "math_utils.h"
 #include <iostream>
+#include "wasm_log.h"
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -68,7 +69,7 @@ void populate_blob_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxiliary
 
     size_t itemsSize = alignTo(totalItems * sizeof(int32_t), SIMD_ALIGNMENT);
     if (auxOffset + itemsSize > auxiliaryMemorySize) {
-        std::cerr << "[WASM] Not enough auxiliary memory to populate blob index items" << std::endl;
+        wasm_console_error("[WASM] Not enough auxiliary memory to populate blob index items");
         return;
     }
     

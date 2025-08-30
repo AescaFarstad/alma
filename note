@@ -41,6 +41,8 @@ august 24
     fix concave polygons, point in poly, point in triangle optimisations, benchmarks, fixes, new polygonalization
 august 25-26
     debugging navigation, corners, offsets
+august 29-30
+    separate ai, Event buffer, reversed corridor
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -171,3 +173,12 @@ optimise corner finding
 dual_funnel tri is incorrect because it is set before teh offsetting fo the corner
 
 try corner offsetting during data generation
+
+ts random generates garbage
+
+
+c++ extension
+delete white space
+decrease indentation
+
+getLineSegmentIntersectionPoint float variant

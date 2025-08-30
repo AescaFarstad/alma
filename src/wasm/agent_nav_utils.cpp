@@ -12,7 +12,7 @@ extern Navmesh g_navmesh;
 
 bool findPathToDestination(
     Navmesh& navmesh,
-    int agentIndex,
+    int idx,
     int startTri,
     int endTri,
     const char* errorContext
@@ -20,19 +20,19 @@ bool findPathToDestination(
     int startPoly = navmesh.triangle_to_polygon[startTri];
     int endPoly = navmesh.triangle_to_polygon[endTri];
     
-    bool pathFound = findCorridor(navmesh, PATH_FREE_WIDTH, PATH_WIDTH_PENALTY_MULT, agent_data.positions[agentIndex], agent_data.end_targets[agentIndex], agent_data.corridors[agentIndex], startPoly, endPoly);
+    bool pathFound = findCorridor(navmesh, PATH_FREE_WIDTH, PATH_WIDTH_PENALTY_MULT, agent_data.positions[idx], agent_data.end_targets[idx], agent_data.corridors[idx], startPoly, endPoly);
     
     if (pathFound) {
-        DualCorner reusableDualCorner = find_next_corner(agent_data.positions[agentIndex], agent_data.corridors[agentIndex], agent_data.end_targets[agentIndex], CORNER_OFFSET);
+        DualCorner reusableDualCorner = find_next_corner(agent_data.positions[idx], agent_data.corridors[idx], agent_data.end_targets[idx], CORNER_OFFSET);
         
         if (reusableDualCorner.numValid > 0) {
-            agent_data.next_corners[agentIndex] = reusableDualCorner.corner1;
-            agent_data.next_corners2[agentIndex] = reusableDualCorner.corner2;
-            agent_data.next_corner_tris[agentIndex] = reusableDualCorner.tri1;
-            agent_data.next_corner_tris2[agentIndex] = reusableDualCorner.tri2;
-            agent_data.num_valid_corners[agentIndex] = reusableDualCorner.numValid;
-            agent_data.path_frustrations[agentIndex] = 0;
-            agent_data.last_visible_points_for_next_corner[agentIndex] = agent_data.positions[agentIndex];
+            agent_data.next_corners[idx] = reusableDualCorner.corner1;
+            agent_data.next_corners2[idx] = reusableDualCorner.corner2;
+            agent_data.next_corner_tris[idx] = reusableDualCorner.tri1;
+            agent_data.next_corner_tris2[idx] = reusableDualCorner.tri2;
+            agent_data.num_valid_corners[idx] = reusableDualCorner.numValid;
+            agent_data.path_frustrations[idx] = 0;
+            agent_data.last_visible_points_for_next_corner[idx] = agent_data.positions[idx];
             return true;
         } else {
             return false;
@@ -44,11 +44,11 @@ bool findPathToDestination(
 
 bool raycastAndPatchCorridor(
     Navmesh& navmesh,
-    int agentIndex,
+    int idx,
     const Point2& targetPoint,
     int targetTri
 ) {
-    auto raycastResult = raycastCorridor(agent_data.positions[agentIndex], targetPoint, agent_data.current_tris[agentIndex], targetTri);
+    auto raycastResult = raycastCorridor(agent_data.positions[idx], targetPoint, agent_data.current_tris[idx], targetTri);
 
     const Point2 hitP1 = std::get<0>(raycastResult);
     const Point2 hitP2 = std::get<1>(raycastResult);
@@ -56,7 +56,7 @@ bool raycastAndPatchCorridor(
     const bool hit = std::get<3>(raycastResult);
 
     if (!hit && !triCorridor.empty()) {
-        auto& agentCorridor = agent_data.corridors[agentIndex];
+        auto& agentCorridor = agent_data.corridors[idx];
         std::vector<int> raycastPolyCorridor;
         raycastPolyCorridor.reserve(agentCorridor.capacity());
         for (int i = triCorridor.size() - 1; i >= 0; --i) {
@@ -81,16 +81,16 @@ bool raycastAndPatchCorridor(
             newCorridor.insert(newCorridor.end(), agentCorridor.begin(), agentCorridor.begin() + targetPolyIndex);
             newCorridor.insert(newCorridor.end(), raycastPolyCorridor.begin(), raycastPolyCorridor.end());
 
-            agent_data.corridors[agentIndex] = newCorridor;
+            agent_data.corridors[idx] = newCorridor;
 
             return true;
         } else if (!raycastPolyCorridor.empty()) {
-            agent_data.corridors[agentIndex] = raycastPolyCorridor;
+            agent_data.corridors[idx] = raycastPolyCorridor;
             return true;
         }
     }
     else {
-        return attempt_path_patch(navmesh, agentIndex, hitP1, hitP2, triCorridor);
+        return attempt_path_patch(navmesh, idx, hitP1, hitP2, triCorridor);
     }
 
     return false;

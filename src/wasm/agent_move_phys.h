@@ -3,6 +3,6 @@
 
 #include "data_structures.h"
 
-void update_agent_phys(int agentIndex, float deltaTime);
+void update_agent_phys(int idx, float deltaTime);
 
 #endif // AGENT_MOVE_PHYS_H

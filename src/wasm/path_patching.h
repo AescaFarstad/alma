@@ -9,7 +9,7 @@
 // Returns true if it successfully patched the path and updated agent_data accordingly.
 bool attempt_path_patch(
     Navmesh& navmesh,
-    int agentIndex,
+    int idx,
     const Point2& hitP1,
     const Point2& hitP2,
     const std::vector<int>& raycastTriCorridor

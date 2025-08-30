@@ -2,45 +2,24 @@ import { agentsLimit, GameState } from "../GameState";
 import { copy, Point2 } from "../core/math";
 import { getTriangleFromPoint } from "../navmesh/NavUtils";
 import { Agent } from "./Agent";
+import { AgentConfigs, type AgentConfig } from "./AgentConfigs";
 
-export type Spawner = {
-    coordinate: Point2;
+export interface Spawner {
+    config : AgentConfig;
+    coordinate: { x: number, y: number };
     spawnCooldown: number;
     spawnTimer: number;
     spawnCount: number;
-};
+}
 
-// Create a default agent prototype with proper values (matching WAgentSpawner.ts)
-const defaultAgent = new Agent();
-defaultAgent.coordinate.x = 0;
-defaultAgent.coordinate.y = 0;
-defaultAgent.accel = 500;
-defaultAgent.resistance = 0.9;
-defaultAgent.maxFrustration = 4;
-defaultAgent.intelligence = 1;
-defaultAgent.arrivalDesiredSpeed = 1;
-defaultAgent.arrivalThresholdSq = 4;
-defaultAgent.display = "character_black_blue";
-defaultAgent.lookSpeed = 50;
-defaultAgent.maxSpeed = 500 / -Math.log(1 - defaultAgent.resistance);
-
+// Create an Agent instance from a plain object, computing maxSpeed if needed
 export function createAgentWithConfig(config: Partial<Agent>): Agent {
-    // Create shallow copy of defaultAgent = prototype
-    const prototype = JSON.parse(JSON.stringify(defaultAgent));
-    
-    // For each field in config copy it to the prototype
-    Object.assign(prototype, config);
-    
-    // Calculate maxSpeed based on final accel and resistance values
-    if (prototype.resistance >= 1) {
-        prototype.maxSpeed = 0;
-    } else if (prototype.resistance <= 0) {
-        prototype.maxSpeed = Infinity;
-    } else {
-        prototype.maxSpeed = prototype.accel / -Math.log(1 - prototype.resistance);
-    }
-    
-    return prototype;
+    const agent = new Agent();
+    Object.assign(agent, config);
+    if (agent.resistance >= 1) agent.maxSpeed = 0;
+    else if (agent.resistance <= 0) agent.maxSpeed = Infinity;
+    else agent.maxSpeed = agent.accel / -Math.log(1 - agent.resistance);
+    return agent;
 }
 
 export function updateSpawners(gs: GameState, dt: number) {
@@ -55,19 +34,16 @@ export function updateSpawners(gs: GameState, dt: number) {
 
             let currentTri = getTriangleFromPoint(gs.navmesh, spawner.coordinate);
 
-            // Create agent with default configuration
+            const baseConfig: AgentConfig = (spawner.spawnCount % 2 === 0)
+                ? AgentConfigs.benchmarkerStupid
+                : AgentConfigs.benchmarkerSmart;
+
             const newAgent = createAgentWithConfig({
+                ...baseConfig,
                 coordinate: copy(spawner.coordinate),
                 currentTri: currentTri,
-                display: "character_blonde_green"
+                display: "character_blonde_green",
             });
-            
-            // Apply alt configuration for even spawns
-            if (spawner.spawnCount % 2 === 0) {
-                newAgent.arrivalDesiredSpeed = 0.05;
-                newAgent.arrivalThresholdSq = 25;
-                newAgent.intelligence = 0;
-            }
             
             newAgent.lastValidTri = newAgent.currentTri;
             newAgent.debug = false;
@@ -77,8 +53,6 @@ export function updateSpawners(gs: GameState, dt: number) {
             // newAgent.state = AgentState.Traveling
             
             gs.agents.push(newAgent);
-            // Rare event: spawn
-            
         }
     }
 } 

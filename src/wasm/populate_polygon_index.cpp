@@ -1,6 +1,7 @@
 #include "populate_polygon_index.h"
 #include "math_utils.h"
 #include <iostream>
+#include "wasm_log.h"
 #include <vector>
 #include <algorithm>
 
@@ -67,7 +68,7 @@ void populate_polygon_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxili
 
     size_t itemsSize = alignTo(totalItems * sizeof(int32_t), SIMD_ALIGNMENT);
     if (auxOffset + itemsSize > auxiliaryMemorySize) {
-        std::cerr << "[WASM] Not enough auxiliary memory to populate polygon index items" << std::endl;
+        wasm_console_error("[WASM] Not enough auxiliary memory to populate polygon index items");
         return;
     }
     

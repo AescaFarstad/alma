@@ -125,48 +125,48 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
     offset += sizeof(uint16_t) * maxAgents;
 }
 
-void initialize_agent_defaults(int agentIndex, float x, float y) {
+void initialize_agent_defaults(int idx, float x, float y) {
     // Basic state
-    agent_data.positions[agentIndex] = {x, y};
-    agent_data.last_coordinates[agentIndex] = {x, y};
-    agent_data.velocities[agentIndex] = {0.0f, 0.0f};
-    agent_data.looks[agentIndex] = {1.0f, 0.0f};
-    agent_data.states[agentIndex] = AgentState::Standing;
-    agent_data.is_alive[agentIndex] = true;
+    agent_data.positions[idx] = {x, y};
+    agent_data.last_coordinates[idx] = {x, y};
+    agent_data.velocities[idx] = {0.0f, 0.0f};
+    agent_data.looks[idx] = {1.0f, 0.0f};
+    agent_data.states[idx] = AgentState::Standing;
+    agent_data.is_alive[idx] = true;
 
     // Navigation defaults
-    agent_data.current_tris[agentIndex] = -1;
-    agent_data.next_corners[agentIndex] = {0,0};
-    agent_data.next_corner_tris[agentIndex] = -1;
-    agent_data.next_corners2[agentIndex] = {0,0};
-    agent_data.next_corner_tris2[agentIndex] = -1;
-    agent_data.num_valid_corners[agentIndex] = 0;
-    agent_data.pre_escape_corners[agentIndex] = {0,0};
-    agent_data.pre_escape_corner_tris[agentIndex] = -1;
-    agent_data.end_targets[agentIndex] = {0,0};
-    agent_data.end_target_tris[agentIndex] = -1;
-    agent_data.last_valid_positions[agentIndex] = {x,y};
-    agent_data.last_valid_tris[agentIndex] = -1;
-    agent_data.stuck_ratings[agentIndex] = 0.0f;
-    agent_data.path_frustrations[agentIndex] = 0.0f;
-    agent_data.predicament_ratings[agentIndex] = 0.0f;
+    agent_data.current_tris[idx] = -1;
+    agent_data.next_corners[idx] = {0,0};
+    agent_data.next_corner_tris[idx] = -1;
+    agent_data.next_corners2[idx] = {0,0};
+    agent_data.next_corner_tris2[idx] = -1;
+    agent_data.num_valid_corners[idx] = 0;
+    agent_data.pre_escape_corners[idx] = {0,0};
+    agent_data.pre_escape_corner_tris[idx] = -1;
+    agent_data.end_targets[idx] = {0,0};
+    agent_data.end_target_tris[idx] = -1;
+    agent_data.last_valid_positions[idx] = {x,y};
+    agent_data.last_valid_tris[idx] = -1;
+    agent_data.stuck_ratings[idx] = 0.0f;
+    agent_data.path_frustrations[idx] = 0.0f;
+    agent_data.predicament_ratings[idx] = 0.0f;
     
     // Default parameters (can be overridden from JS)
-    agent_data.max_speeds[agentIndex] = 3.0f;
-    agent_data.accels[agentIndex] = 20.0f;
-    agent_data.resistances[agentIndex] = 0.1f;
-    agent_data.intelligences[agentIndex] = 0.5f;
-    agent_data.look_speeds[agentIndex] = 0.1f;
-    agent_data.max_frustrations[agentIndex] = 10.0f;
-    agent_data.arrival_desired_speeds[agentIndex] = 1.0f;
-    agent_data.arrival_threshold_sqs[agentIndex] = 4.0f;
+    agent_data.max_speeds[idx] = 3.0f;
+    agent_data.accels[idx] = 20.0f;
+    agent_data.resistances[idx] = 0.1f;
+    agent_data.intelligences[idx] = 0.5f;
+    agent_data.look_speeds[idx] = 0.1f;
+    agent_data.max_frustrations[idx] = 10.0f;
+    agent_data.arrival_desired_speeds[idx] = 1.0f;
+    agent_data.arrival_threshold_sqs[idx] = 4.0f;
     
     // Initialize corridor data
-    agent_data.corridors[agentIndex].clear();
-    agent_data.corridor_indices[agentIndex] = 0;
+    agent_data.corridors[idx].clear();
+    agent_data.corridor_indices[idx] = 0;
     
     // Initialize frame id
-    agent_data.frame_ids[agentIndex] = 0;
+    agent_data.frame_ids[idx] = 0;
 
-    reset_agent_stuck(agentIndex);
+    reset_agent_stuck(idx);
 }

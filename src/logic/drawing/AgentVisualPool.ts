@@ -225,7 +225,7 @@ export class AgentVisualPool {
     private updateAgentVisuals(
         element: AgentPixiElements, 
         agent: Agent, 
-        agentIndex: number,
+        idx: number,
         graphicsContainer: PIXI.Container,
         textContainer: PIXI.Container,
         olMap: OlMap
@@ -275,7 +275,7 @@ export class AgentVisualPool {
         
         // Update debug text with current speed
         if (this.SHOW_DEBUG_TEXT || agent.debug) {
-            this.updateDebugText(element, pos, agentIndex, agent, olMap);
+            this.updateDebugText(element, pos, idx, agent, olMap);
             this.ensureInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
         } else {
             this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
@@ -362,7 +362,7 @@ export class AgentVisualPool {
     private updateDebugText(
         element: AgentPixiElements, 
         pos: { x: number, y: number }, 
-        agentIndex: number, 
+        idx: number, 
         agent: Agent,
         olMap: OlMap
     ): void {

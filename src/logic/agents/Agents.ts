@@ -1,3 +1,4 @@
+import { EventBuffer } from "../EventBuffer";
 import { WAgent } from "../WAgent";
 
 // Maximum number of agents supported by the system
@@ -50,4 +51,6 @@ export class Agents {
 
   // At very end
   public frame_ids! : Uint16Array;
+
+  public events!: EventBuffer;
 }
