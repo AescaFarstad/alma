@@ -12,7 +12,7 @@ import { GameState } from "./GameState";
  * @param gameState The game state.
  */
 function syncEvents(_gameState: GameState): void {
-    // const lastProcessedId = gameState.uiState.lastProcessedEventId;
+  // const lastProcessedId = gameState.uiState.lastProcessedEventId;
 
 
 }
@@ -22,5 +22,5 @@ function syncEvents(_gameState: GameState): void {
  * This should be called every frame to keep the UI in sync.
  */
 export function sync(gameState: GameState): void {
-    syncEvents(gameState);
+  syncEvents(gameState);
 } 

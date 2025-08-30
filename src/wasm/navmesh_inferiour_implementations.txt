@@ -1,169 +1,169 @@
 
 
 bool test_point_inside_triangle_loop(const Point2& p, int tri_idx) {
-    // Unroll the loop to avoid modulo operator
-    // Check edge 0-1
-    int32_t v1_idx = g_navmesh.triangles[tri_idx * 3 + 0];
-    int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
+  // Unroll the loop to avoid modulo operator
+  // Check edge 0-1
+  int32_t v1_idx = g_navmesh.triangles[tri_idx * 3 + 0];
+  int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
 
-    const Point2& v1 = g_navmesh.vertices[v1_idx];
-    const Point2& v2 = g_navmesh.vertices[v2_idx];
+  const Point2& v1 = g_navmesh.vertices[v1_idx];
+  const Point2& v2 = g_navmesh.vertices[v2_idx];
 
-    bool flip = v1_idx > v2_idx;
-    float orientation = flip
-        ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
-        : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+  bool flip = v1_idx > v2_idx;
+  float orientation = flip
+    ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
+    : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
 
-    bool ok = flip ? (orientation <= 0) : (orientation >= 0);
-    if (!ok) {
-        return false;
-    }
+  bool ok = flip ? (orientation <= 0) : (orientation >= 0);
+  if (!ok) {
+    return false;
+  }
 
-    // Check edge 1-2
-    v1_idx = g_navmesh.triangles[tri_idx * 3 + 1];
-    v2_idx = g_navmesh.triangles[tri_idx * 3 + 2];
+  // Check edge 1-2
+  v1_idx = g_navmesh.triangles[tri_idx * 3 + 1];
+  v2_idx = g_navmesh.triangles[tri_idx * 3 + 2];
 
-    const Point2& v1_2 = g_navmesh.vertices[v1_idx];
-    const Point2& v2_2 = g_navmesh.vertices[v2_idx];
+  const Point2& v1_2 = g_navmesh.vertices[v1_idx];
+  const Point2& v2_2 = g_navmesh.vertices[v2_idx];
 
-    flip = v1_idx > v2_idx;
-    orientation = flip
-        ? (v1_2.x - v2_2.x) * (p.y - v2_2.y) - (v1_2.y - v2_2.y) * (p.x - v2_2.x)
-        : (v2_2.x - v1_2.x) * (p.y - v1_2.y) - (v2_2.y - v1_2.y) * (p.x - v1_2.x);
+  flip = v1_idx > v2_idx;
+  orientation = flip
+    ? (v1_2.x - v2_2.x) * (p.y - v2_2.y) - (v1_2.y - v2_2.y) * (p.x - v2_2.x)
+    : (v2_2.x - v1_2.x) * (p.y - v1_2.y) - (v2_2.y - v1_2.y) * (p.x - v1_2.x);
 
-    ok = flip ? (orientation <= 0) : (orientation >= 0);
-    if (!ok) {
-        return false;
-    }
+  ok = flip ? (orientation <= 0) : (orientation >= 0);
+  if (!ok) {
+    return false;
+  }
 
-    // Check edge 2-0 (last edge wraps back to 0)
-    v1_idx = g_navmesh.triangles[tri_idx * 3 + 2];
-    v2_idx = g_navmesh.triangles[tri_idx * 3 + 0];
+  // Check edge 2-0 (last edge wraps back to 0)
+  v1_idx = g_navmesh.triangles[tri_idx * 3 + 2];
+  v2_idx = g_navmesh.triangles[tri_idx * 3 + 0];
 
-    const Point2& v1_3 = g_navmesh.vertices[v1_idx];
-    const Point2& v2_3 = g_navmesh.vertices[v2_idx];
+  const Point2& v1_3 = g_navmesh.vertices[v1_idx];
+  const Point2& v2_3 = g_navmesh.vertices[v2_idx];
 
-    flip = v1_idx > v2_idx;
-    orientation = flip
-        ? (v1_3.x - v2_3.x) * (p.y - v2_3.y) - (v1_3.y - v2_3.y) * (p.x - v2_3.x)
-        : (v2_3.x - v1_3.x) * (p.y - v1_3.y) - (v2_3.y - v1_3.y) * (p.x - v1_3.x);
+  flip = v1_idx > v2_idx;
+  orientation = flip
+    ? (v1_3.x - v2_3.x) * (p.y - v2_3.y) - (v1_3.y - v2_3.y) * (p.x - v2_3.x)
+    : (v2_3.x - v1_3.x) * (p.y - v1_3.y) - (v2_3.y - v1_3.y) * (p.x - v1_3.x);
 
-    ok = flip ? (orientation <= 0) : (orientation >= 0);
-    if (!ok) {
-        return false;
-    }
+  ok = flip ? (orientation <= 0) : (orientation >= 0);
+  if (!ok) {
+    return false;
+  }
 
-    return true;
+  return true;
 }
 
 bool test_point_inside_poly(const Point2& p, int poly_idx) {
-    int32_t poly_start = g_navmesh.polygons[poly_idx];
-    int32_t poly_end = g_navmesh.polygons[poly_idx + 1];
-    int32_t poly_vert_count = poly_end - poly_start;
+  int32_t poly_start = g_navmesh.polygons[poly_idx];
+  int32_t poly_end = g_navmesh.polygons[poly_idx + 1];
+  int32_t poly_vert_count = poly_end - poly_start;
 
-    // Check all edges except the last one in the loop
-    for (int i = 0; i < poly_vert_count - 1; ++i) {
-        int32_t v1_idx = g_navmesh.poly_verts[poly_start + i];
-        int32_t v2_idx = g_navmesh.poly_verts[poly_start + i + 1];
-
-        const Point2& v1 = g_navmesh.vertices[v1_idx];
-        const Point2& v2 = g_navmesh.vertices[v2_idx];
-
-        bool flip = v1_idx > v2_idx;
-        float orientation = flip
-            ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
-            : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
-        
-        const bool ok = flip ? (orientation <= 0) : (orientation >= 0);
-        if (!ok) {
-            return false;
-        }
-    }
-
-    // Handle the last edge that wraps around (last vertex to first vertex)
-    int32_t v1_idx = g_navmesh.poly_verts[poly_start + poly_vert_count - 1];
-    int32_t v2_idx = g_navmesh.poly_verts[poly_start + 0];
+  // Check all edges except the last one in the loop
+  for (int i = 0; i < poly_vert_count - 1; ++i) {
+    int32_t v1_idx = g_navmesh.poly_verts[poly_start + i];
+    int32_t v2_idx = g_navmesh.poly_verts[poly_start + i + 1];
 
     const Point2& v1 = g_navmesh.vertices[v1_idx];
     const Point2& v2 = g_navmesh.vertices[v2_idx];
 
     bool flip = v1_idx > v2_idx;
     float orientation = flip
-        ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
-        : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+      ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
+      : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
     
     const bool ok = flip ? (orientation <= 0) : (orientation >= 0);
     if (!ok) {
-        return false;
+      return false;
     }
+  }
 
-    return true;
+  // Handle the last edge that wraps around (last vertex to first vertex)
+  int32_t v1_idx = g_navmesh.poly_verts[poly_start + poly_vert_count - 1];
+  int32_t v2_idx = g_navmesh.poly_verts[poly_start + 0];
+
+  const Point2& v1 = g_navmesh.vertices[v1_idx];
+  const Point2& v2 = g_navmesh.vertices[v2_idx];
+
+  bool flip = v1_idx > v2_idx;
+  float orientation = flip
+    ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
+    : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+  
+  const bool ok = flip ? (orientation <= 0) : (orientation >= 0);
+  if (!ok) {
+    return false;
+  }
+
+  return true;
 }
 
 
 
 bool test_point_inside_triangle(const Point2& p, int tri_idx) {
-    const int32_t v1_idx = g_navmesh.triangles[tri_idx * 3];
-    const int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
-    const int32_t v3_idx = g_navmesh.triangles[tri_idx * 3 + 2];
+  const int32_t v1_idx = g_navmesh.triangles[tri_idx * 3];
+  const int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
+  const int32_t v3_idx = g_navmesh.triangles[tri_idx * 3 + 2];
 
-    const Point2& v1 = g_navmesh.vertices[v1_idx];
-    const Point2& v2 = g_navmesh.vertices[v2_idx];
-    const Point2& v3 = g_navmesh.vertices[v3_idx];
+  const Point2& v1 = g_navmesh.vertices[v1_idx];
+  const Point2& v2 = g_navmesh.vertices[v2_idx];
+  const Point2& v3 = g_navmesh.vertices[v3_idx];
 
-    // Edge v1-v2
-    const bool flip12 = v1_idx > v2_idx;
-    const float o12 = flip12
-        ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
-        : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+  // Edge v1-v2
+  const bool flip12 = v1_idx > v2_idx;
+  const float o12 = flip12
+    ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
+    : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
 
-    // Edge v2-v3
-    const bool flip23 = v2_idx > v3_idx;
-    const float o23 = flip23
-        ? (v2.x - v3.x) * (p.y - v3.y) - (v2.y - v3.y) * (p.x - v3.x)
-        : (v3.x - v2.x) * (p.y - v2.y) - (v3.y - v2.y) * (p.x - v2.x);
+  // Edge v2-v3
+  const bool flip23 = v2_idx > v3_idx;
+  const float o23 = flip23
+    ? (v2.x - v3.x) * (p.y - v3.y) - (v2.y - v3.y) * (p.x - v3.x)
+    : (v3.x - v2.x) * (p.y - v2.y) - (v3.y - v2.y) * (p.x - v2.x);
 
-    // Edge v3-v1
-    const bool flip31 = v3_idx > v1_idx;
-    const float o31 = flip31
-        ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
-        : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-        
-    const bool ok12 = flip12 ? (o12 <= 0) : (o12 >= 0);
-    const bool ok23 = flip23 ? (o23 <= 0) : (o23 >= 0);
-    const bool ok31 = flip31 ? (o31 <= 0) : (o31 >= 0);
+  // Edge v3-v1
+  const bool flip31 = v3_idx > v1_idx;
+  const float o31 = flip31
+    ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
+    : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
     
-    return ok12 && ok23 && ok31;
+  const bool ok12 = flip12 ? (o12 <= 0) : (o12 >= 0);
+  const bool ok23 = flip23 ? (o23 <= 0) : (o23 >= 0);
+  const bool ok31 = flip31 ? (o31 <= 0) : (o31 >= 0);
+  
+  return ok12 && ok23 && ok31;
 }
 
 bool test_point_inside_triangle_ee(const Point2& p, int tri_idx) {
-    const int32_t v1_idx = g_navmesh.triangles[tri_idx * 3];
-    const int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
-    const int32_t v3_idx = g_navmesh.triangles[tri_idx * 3 + 2];
+  const int32_t v1_idx = g_navmesh.triangles[tri_idx * 3];
+  const int32_t v2_idx = g_navmesh.triangles[tri_idx * 3 + 1];
+  const int32_t v3_idx = g_navmesh.triangles[tri_idx * 3 + 2];
 
-    const Point2& v1 = g_navmesh.vertices[v1_idx];
-    const Point2& v2 = g_navmesh.vertices[v2_idx];
-    const Point2& v3 = g_navmesh.vertices[v3_idx];
+  const Point2& v1 = g_navmesh.vertices[v1_idx];
+  const Point2& v2 = g_navmesh.vertices[v2_idx];
+  const Point2& v3 = g_navmesh.vertices[v3_idx];
 
-    // Edge v1-v2
-    const bool flip12 = v1_idx > v2_idx;
-    const float o12 = flip12
-        ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
-        : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
-    if (!(flip12 ? (o12 <= 0) : (o12 >= 0))) return false;
+  // Edge v1-v2
+  const bool flip12 = v1_idx > v2_idx;
+  const float o12 = flip12
+    ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
+    : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
+  if (!(flip12 ? (o12 <= 0) : (o12 >= 0))) return false;
 
-    // Edge v2-v3
-    const bool flip23 = v2_idx > v3_idx;
-    const float o23 = flip23
-        ? (v2.x - v3.x) * (p.y - v3.y) - (v2.y - v3.y) * (p.x - v3.x)
-        : (v3.x - v2.x) * (p.y - v2.y) - (v3.y - v2.y) * (p.x - v2.x);
-    if (!(flip23 ? (o23 <= 0) : (o23 >= 0))) return false;
+  // Edge v2-v3
+  const bool flip23 = v2_idx > v3_idx;
+  const float o23 = flip23
+    ? (v2.x - v3.x) * (p.y - v3.y) - (v2.y - v3.y) * (p.x - v3.x)
+    : (v3.x - v2.x) * (p.y - v2.y) - (v3.y - v2.y) * (p.x - v2.x);
+  if (!(flip23 ? (o23 <= 0) : (o23 >= 0))) return false;
 
-    // Edge v3-v1
-    const bool flip31 = v3_idx > v1_idx;
-    const float o31 = flip31
-        ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
-        : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-        
-    return flip31 ? (o31 <= 0) : (o31 >= 0);
+  // Edge v3-v1
+  const bool flip31 = v3_idx > v1_idx;
+  const float o31 = flip31
+    ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
+    : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
+    
+  return flip31 ? (o31 <= 0) : (o31 >= 0);
 }

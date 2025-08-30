@@ -8,55 +8,55 @@
 const size_t SIMD_ALIGNMENT = 16;
 
 struct Navmesh {
-    // Core navigation mesh data
-    Point2* vertices;             // Array of Point2 vertices
-    int32_t* triangles;           // Layout: [t1_v1_idx, t1_v2_idx, t1_v3_idx, ...]
-    int32_t* neighbors;           // Layout: [t1_n1_idx, t1_n2_idx, t1_n3_idx, ...]
-    Point2* triangle_centroids;   // Array of Point2 triangle centroids
-    float bbox[4];                // [minX, minY, maxX, maxY] - Real/original bounding box
-    float buffered_bbox[4];       // [minX, minY, maxX, maxY] - Enlarged bounding box used for triangulation
-    
-    // Metadata
-    int32_t walkable_triangle_count;
-    int32_t walkable_polygon_count;
-    
-    // Extended polygon data
-    int32_t* polygons;
-    Point2* poly_centroids;
-    int32_t* poly_verts;
-    int32_t* poly_tris;
-    int32_t* poly_neighbors;
-    
-    // Building data
-    int32_t* buildings;
-    int32_t* building_verts;
-    int32_t* blob_buildings;
-    
-    // Auxiliary structures
-    int32_t* triangle_to_polygon;
-    int32_t* building_to_blob;
-    
-    // Array sizes for memory management
-    int32_t vertices_count;
-    int32_t triangles_count;
-    int32_t neighbors_count;
-    int32_t triangle_centroids_count;
-    int32_t polygons_count;
-    int32_t poly_centroids_count;
-    int32_t poly_verts_count;
-    int32_t poly_tris_count;
-    int32_t poly_neighbors_count;
-    int32_t buildings_count;
-    int32_t building_verts_count;
-    int32_t blob_buildings_count;
-    int32_t triangle_to_polygon_count;
-    int32_t building_to_blob_count;
-    
-    // Four spatial indices for fast queries
-    SpatialIndex triangle_index;   // For triangle queries
-    SpatialIndex polygon_index;    // For polygon queries  
-    SpatialIndex building_index;   // For building queries
-    SpatialIndex blob_index;       // For blob queries
+  // Core navigation mesh data
+  Point2* vertices;       // Array of Point2 vertices
+  int32_t* triangles;       // Layout: [t1_v1_idx, t1_v2_idx, t1_v3_idx, ...]
+  int32_t* neighbors;       // Layout: [t1_n1_idx, t1_n2_idx, t1_n3_idx, ...]
+  Point2* triangle_centroids;   // Array of Point2 triangle centroids
+  float bbox[4];        // [minX, minY, maxX, maxY] - Real/original bounding box
+  float buffered_bbox[4];     // [minX, minY, maxX, maxY] - Enlarged bounding box used for triangulation
+  
+  // Metadata
+  int32_t walkable_triangle_count;
+  int32_t walkable_polygon_count;
+  
+  // Extended polygon data
+  int32_t* polygons;
+  Point2* poly_centroids;
+  int32_t* poly_verts;
+  int32_t* poly_tris;
+  int32_t* poly_neighbors;
+  
+  // Building data
+  int32_t* buildings;
+  int32_t* building_verts;
+  int32_t* blob_buildings;
+  
+  // Auxiliary structures
+  int32_t* triangle_to_polygon;
+  int32_t* building_to_blob;
+  
+  // Array sizes for memory management
+  int32_t vertices_count;
+  int32_t triangles_count;
+  int32_t neighbors_count;
+  int32_t triangle_centroids_count;
+  int32_t polygons_count;
+  int32_t poly_centroids_count;
+  int32_t poly_verts_count;
+  int32_t poly_tris_count;
+  int32_t poly_neighbors_count;
+  int32_t buildings_count;
+  int32_t building_verts_count;
+  int32_t blob_buildings_count;
+  int32_t triangle_to_polygon_count;
+  int32_t building_to_blob_count;
+  
+  // Four spatial indices for fast queries
+  SpatialIndex triangle_index;   // For triangle queries
+  SpatialIndex polygon_index;  // For polygon queries  
+  SpatialIndex building_index;   // For building queries
+  SpatialIndex blob_index;     // For blob queries
 };
 
 /**
@@ -100,7 +100,7 @@ extern Navmesh g_navmesh;
 void initialize_navmesh_structure();
 
 inline size_t alignTo(size_t size, size_t alignment) {
-    return (size + alignment - 1) / alignment * alignment;
+  return (size + alignment - 1) / alignment * alignment;
 }
 
 #endif // NAVMESH_H 

@@ -1,15 +1,15 @@
 <template>
   <div class="time-controls">
-    <span class="current-timescale">{{ currentTimeScaleDisplay }}x</span>
-    <button
-      v-for="control in timeControlScales"
-      :key="control.label"
-      @click="queueTimeScaleCommand(control.value)"
-      :class="{ active: gameState && gameState.timeScale.current === control.value }"
-    >
-      {{ control.label }}
-    </button>
-    <button @click="queueTickOnceCommand()" class="tick-button">Tick</button>
+  <span class="current-timescale">{{ currentTimeScaleDisplay }}x</span>
+  <button
+    v-for="control in timeControlScales"
+    :key="control.label"
+    @click="queueTimeScaleCommand(control.value)"
+    :class="{ active: gameState && gameState.timeScale.current === control.value }"
+  >
+    {{ control.label }}
+  </button>
+  <button @click="queueTickOnceCommand()" class="tick-button">Tick</button>
   </div>
 </template>
 
@@ -34,7 +34,7 @@ const timeControlScales = [
 
 const currentTimeScaleDisplay = computed(() => {
   if (gameState) {
-    return gameState.timeScale.current.toFixed(2);
+  return gameState.timeScale.current.toFixed(2);
   }
   return '1.00';
 });
@@ -58,13 +58,13 @@ const queueTickOnceCommand = () => {
 }
 
 .time-controls button {
-    background-color: #555;
-    border: 1px solid #777;
+  background-color: #555;
+  border: 1px solid #777;
 }
 
 .time-controls button.active {
-    background-color: #777;
-    border-color: #999;
+  background-color: #777;
+  border-color: #999;
 }
 
 .current-timescale {

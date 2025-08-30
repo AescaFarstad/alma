@@ -67,9 +67,9 @@ offset += maxAgents * 2 * 4;
 **Check:**
 ```typescript
 console.log("Agent #0:", {
-    position: [positions[0], positions[1]],
-    isAlive: isAlive[0],
-    expected: "Should match WASM data"
+  position: [positions[0], positions[1]],
+  isAlive: isAlive[0],
+  expected: "Should match WASM data"
 });
 ```
 
@@ -122,12 +122,12 @@ Wrong order of operations during initialization.
 
 **Correct Order:**
 ```typescript
-1. allocateMemoryOnly()          // Get WASM pointers
-2. prepareNavmeshBufferData()    // Prepare data
+1. allocateMemoryOnly()      // Get WASM pointers
+2. prepareNavmeshBufferData()  // Prepare data
 3. copySharedBufferToWasmHeap()  // Copy to WASM heap
 4. copyNavmeshDataToWasmHeap()   // Copy to WASM heap  
-5. _init(ptrs...)                // Initialize WASM with pointers
-6. createAgentDataViews()        // Create views from WASM heap
+5. _init(ptrs...)        // Initialize WASM with pointers
+6. createAgentDataViews()    // Create views from WASM heap
 ```
 
 **Critical:** Data must be copied to WASM heap BEFORE calling `_init()` because WASM reads the data during initialization.
@@ -158,9 +158,9 @@ this.wasmSpritePool.setSheet(this.tsSpritePool.getSheet());
 **Check:**
 ```typescript
 console.log("Assets loaded:", {
-    hasSheet: !!spritePool.getSheet(),
-    assetsLoaded: spritePool.assetsLoaded,
-    availableTextures: spritePool.getSheet()?.textures ? Object.keys(spritePool.getSheet().textures) : []
+  hasSheet: !!spritePool.getSheet(),
+  assetsLoaded: spritePool.assetsLoaded,
+  availableTextures: spritePool.getSheet()?.textures ? Object.keys(spritePool.getSheet().textures) : []
 });
 ```
 
@@ -222,15 +222,15 @@ console.log(`Views created from WASM heap at pointer ${ptr}`);
 
 // Agent data verification
 console.log(`Agent #${id}:`, {
-    position: [x, y],
-    isAlive: alive,
-    requestedPos: [reqX, reqY]
+  position: [x, y],
+  isAlive: alive,
+  requestedPos: [reqX, reqY]
 });
 
 // Rendering pipeline
 console.log(`Rendering ${count} agents:`, {
-    firstPos: [pos[0], pos[1]],
-    assetsLoaded: loaded
+  firstPos: [pos[0], pos[1]],
+  assetsLoaded: loaded
 });
 ```
 
@@ -239,10 +239,10 @@ console.log(`Rendering ${count} agents:`, {
 ```typescript
 // Check if TypeScript and WASM see the same data
 function verifyMemorySync(idx: number) {
-    const tsPos = [positions[idx * 2], positions[idx * 2 + 1]];
-    const tsAlive = isAlive[idx];
-    console.log(`Agent ${idx} - TS view:`, { position: tsPos, alive: tsAlive });
-    // Compare with WASM internal state if possible
+  const tsPos = [positions[idx * 2], positions[idx * 2 + 1]];
+  const tsAlive = isAlive[idx];
+  console.log(`Agent ${idx} - TS view:`, { position: tsPos, alive: tsAlive });
+  // Compare with WASM internal state if possible
 }
 ```
 

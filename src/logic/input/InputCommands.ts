@@ -3,40 +3,40 @@
  * The `name` property is used to identify the command type.
  */
 export interface CmdInput {
-    name: string;
-    playerId: string;
+  name: string;
+  playerId: string;
 }
 
 export interface CmdTimeScale extends CmdInput {
-    name: "CmdTimeScale";
-    scale: number;
+  name: "CmdTimeScale";
+  scale: number;
 }
 
 export interface CmdTickOnce extends CmdInput {
-    name: "CmdTickOnce";
+  name: "CmdTickOnce";
 }
 
 export interface CmdInstallModule extends CmdInput {
-    name: 'CmdInstallModule';
-    buildingId: string;
-    slotIndex: number;
-    moduleId: string;
+  name: 'CmdInstallModule';
+  buildingId: string;
+  slotIndex: number;
+  moduleId: string;
 }
 
 export interface CmdAssignUnitToModule extends CmdInput {
-    name: 'CmdAssignUnitToModule';
-    playerId: string;
-    unitId: string;
-    buildingId: string;
-    slotIndex: number;
+  name: 'CmdAssignUnitToModule';
+  playerId: string;
+  unitId: string;
+  buildingId: string;
+  slotIndex: number;
 }
 
 export interface CmdHireUnit extends CmdInput {
-    name: 'CmdHireUnit';
-    playerId: string;
+  name: 'CmdHireUnit';
+  playerId: string;
 }
 
 export interface CmdQueryBuilding extends CmdInput {
-    name: 'CmdQueryBuilding';
-    mapId: number;
+  name: 'CmdQueryBuilding';
+  mapId: number;
 } 

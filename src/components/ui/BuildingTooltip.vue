@@ -1,24 +1,24 @@
 <template>
   <div class="tooltip-container">
-    <div v-if="building" class="tooltip-content">
-      <h4>Building Properties</h4>
-      <ul>
-        <li v-for="(value, key) in building" :key="key">
-          <strong>{{ key }}:</strong>
-          <span v-if="key as any === 'color'" class="color-box-container">
-            <span class="color-box" :style="{ backgroundColor: value as any }"></span>
-            {{ value }}
-          </span>
-          <span v-else>
-            {{ value }}
-          </span>
-        </li>
-        <li>
-          <strong>area:</strong>
-          <span>{{ area.toFixed(2) }}</span>
-        </li>
-      </ul>
-    </div>
+  <div v-if="building" class="tooltip-content">
+    <h4>Building Properties</h4>
+    <ul>
+    <li v-for="(value, key) in building" :key="key">
+      <strong>{{ key }}:</strong>
+      <span v-if="key as any === 'color'" class="color-box-container">
+      <span class="color-box" :style="{ backgroundColor: value as any }"></span>
+      {{ value }}
+      </span>
+      <span v-else>
+      {{ value }}
+      </span>
+    </li>
+    <li>
+      <strong>area:</strong>
+      <span>{{ area.toFixed(2) }}</span>
+    </li>
+    </ul>
+  </div>
   </div>
 </template>
 

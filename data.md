@@ -21,10 +21,10 @@ The pipeline consists of the following steps, executed in sequence:
 3.  **Deduplicate GeoJSON (`deduplicate_geojson.ts`)**: This step removes duplicate features from the GeoJSON files to clean up the data and reduce redundancy.
 
 4.  **Simplify GeoJSON (`simplify.ts`)**: This is a critical step that heavily processes the building data. It performs several operations:
-    *   **Manual Corrections**: It programmatically applies corrections, such as converting closed `LineString` geometries into valid `Polygon`s and uniting a predefined set of adjacent buildings into a single, logical structure.
-    *   **S6 Simplification**: It generates a `buildings_simplified.geojson` file. The geometries in this file are simplified using a series of `unround` and `flatten` operations. This output is a standard GeoJSON file containing only the simplified coordinates and building IDs, with all other properties stripped.
-    *   **Blob Unification**: It unites all corrected building geometries into larger "blobs". The result is saved to `blobs.txt`. Each line in this file represents one blob and contains the blob's index, a list of the original building IDs it contains, and the flat array of the blob's coordinates. This is used for a later processing step.
-    *   **S7 Simplification**: It produces a `buildings_s7.txt` file. This file contains building data simplified with a more complex algorithm involving dilation, erosion, and cornerizing. The output is a text file where each line contains the building ID, a JSON string of its properties, and the flattened array of its simplified coordinates.
+  *   **Manual Corrections**: It programmatically applies corrections, such as converting closed `LineString` geometries into valid `Polygon`s and uniting a predefined set of adjacent buildings into a single, logical structure.
+  *   **S6 Simplification**: It generates a `buildings_simplified.geojson` file. The geometries in this file are simplified using a series of `unround` and `flatten` operations. This output is a standard GeoJSON file containing only the simplified coordinates and building IDs, with all other properties stripped.
+  *   **Blob Unification**: It unites all corrected building geometries into larger "blobs". The result is saved to `blobs.txt`. Each line in this file represents one blob and contains the blob's index, a list of the original building IDs it contains, and the flat array of the blob's coordinates. This is used for a later processing step.
+  *   **S7 Simplification**: It produces a `buildings_s7.txt` file. This file contains building data simplified with a more complex algorithm involving dilation, erosion, and cornerizing. The output is a text file where each line contains the building ID, a JSON string of its properties, and the flattened array of its simplified coordinates.
 
 5.  **Build NavMesh (`build_navmesh.ts`)**: This script takes the simplified GeoJSON from the previous step and generates a navigation mesh, which is essential for pathfinding and unit movement within the game.
 
@@ -50,13 +50,13 @@ The core problem was that a standard tile pyramid (where the number of tiles is 
 // src/mapgen/generate_tiles.cjs
 
 const ZOOM_TILE_COUNTS = {
-    9: 1,   // 1x1 = 1 tile total (20km x 20km per tile)
-    10: 2,  // 2x2 = 4 tiles total (10km x 10km per tile)
-    11: 4,  // 4x4 = 16 tiles total (5km x 5km per tile)
-    12: 8,  // 8x8 = 64 tiles total (2.5km x 2.5km per tile)
-    13: 16, // 16x16 = 256 tiles total (1.25km x 1.25km per tile)
-    14: 32, // 32x32 = 1024 tiles total (625m x 625m per tile)
-    15: 64  // 64x64 = 4096 tiles total (312.5m x 312.5m per tile)
+  9: 1,   // 1x1 = 1 tile total (20km x 20km per tile)
+  10: 2,  // 2x2 = 4 tiles total (10km x 10km per tile)
+  11: 4,  // 4x4 = 16 tiles total (5km x 5km per tile)
+  12: 8,  // 8x8 = 64 tiles total (2.5km x 2.5km per tile)
+  13: 16, // 16x16 = 256 tiles total (1.25km x 1.25km per tile)
+  14: 32, // 32x32 = 1024 tiles total (625m x 625m per tile)
+  15: 64  // 64x64 = 4096 tiles total (312.5m x 312.5m per tile)
 };
 ```
 
@@ -78,34 +78,34 @@ When using a custom `resolutions` array, OpenLayers' "zoom" becomes an *index* i
 onMounted(() => {
   // Define a single source of truth for resolutions
   const resolutions = [
-    20000 / 512, // zoom 9 (index 0)
-    10000 / 512, // zoom 10 (index 1)
-    5000 / 512,  // zoom 11 (index 2)
-    // ...and so on
+  20000 / 512, // zoom 9 (index 0)
+  10000 / 512, // zoom 10 (index 1)
+  5000 / 512,  // zoom 11 (index 2)
+  // ...and so on
   ];
 
   const customTileGrid = new TileGrid({
-      extent: [-10000, -10000, 10000, 10000],
-      resolutions: resolutions,
-      tileSize: 512
+    extent: [-10000, -10000, 10000, 10000],
+    resolutions: resolutions,
+    tileSize: 512
   });
 
   mapInstance.map = new OlMap({
-    view: new View({
-      resolutions: resolutions, // Use the same resolutions
-      zoom: 2, // Initial zoom is index 2 (semantic zoom 11)
-      // ...
-    }),
+  view: new View({
+    resolutions: resolutions, // Use the same resolutions
+    zoom: 2, // Initial zoom is index 2 (semantic zoom 11)
+    // ...
+  }),
   });
   
   const buildingsSource = new VectorTileSource({
-      tileGrid: customTileGrid,
-      tileUrlFunction: (tileCoord) => {
-          const z = tileCoord[0] + 9; // Map index to semantic zoom
-          const x = tileCoord[1];
-          const y = tileCoord[2];
-          return `/tiles/buildings/${z}/${x}/${y}.pbf`;
-      },
+    tileGrid: customTileGrid,
+    tileUrlFunction: (tileCoord) => {
+      const z = tileCoord[0] + 9; // Map index to semantic zoom
+      const x = tileCoord[1];
+      const y = tileCoord[2];
+      return `/tiles/buildings/${z}/${x}/${y}.pbf`;
+    },
   });
   // ...
 });
@@ -174,11 +174,11 @@ For high-performance rendering, the best practice is to bypass the GeoJSON sourc
 
 A common challenge is deciding how to handle dynamic data. There are three primary methods, each suited for a different task.
 
-| Method                   | Use For...                                                                               | Example                                                                       | Performance           |
+| Method           | Use For...                                         | Example                                     | Performance       |
 | :----------------------- | :--------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------- | :-------------------- |
-| **`map.setFeatureState()`**  | Changing the **appearance of existing features** that are already in your vector tiles.  | Coloring buildings by team, highlighting districts, showing selected roads.   | **Excellent**         |
-| **`source.setData()`**     | Adding a **small-to-medium number of new features** that are not in your base tiles.     | A user's planned route, a few drones updating every 5s, search results.       | **Good** (for its use case) |
-| **Custom WebGL Layer**   | Adding a **large number of new features** that must update every frame.                    | Simulating hundreds of cars, weather particles, bullet projectiles.           | **Best** (for high-frequency) |
+| **`map.setFeatureState()`**  | Changing the **appearance of existing features** that are already in your vector tiles.  | Coloring buildings by team, highlighting districts, showing selected roads.   | **Excellent**     |
+| **`source.setData()`**   | Adding a **small-to-medium number of new features** that are not in your base tiles.   | A user's planned route, a few drones updating every 5s, search results.     | **Good** (for its use case) |
+| **Custom WebGL Layer**   | Adding a **large number of new features** that must update every frame.          | Simulating hundreds of cars, weather particles, bullet projectiles.       | **Best** (for high-frequency) |
 
 ### Use Case: Coloring Captured Buildings (`setFeatureState`)
 

@@ -15,71 +15,71 @@ import type { Map as OlMap } from 'ol';
  * This is the "dynamic_separate" mode.
  */
 export function createDynamicLayers(map: OlMap, projection: Projection) {
-    const buildings = getRawGeoJson('buildings');
-    const roads = getRawGeoJson('roads');
+  const buildings = getRawGeoJson('buildings');
+  const roads = getRawGeoJson('roads');
 
-    const geojsonFormat = new GeoJSON({
-    featureProjection: projection
-    });
-    
-    const buildingsSource = new VectorSource({
-        features: geojsonFormat.readFeatures(buildings),
-        useSpatialIndex: true
-    });
+  const geojsonFormat = new GeoJSON({
+  featureProjection: projection
+  });
+  
+  const buildingsSource = new VectorSource({
+    features: geojsonFormat.readFeatures(buildings),
+    useSpatialIndex: true
+  });
 
-    const roadsSource = new VectorSource({
-        features: geojsonFormat.readFeatures(roads),
-        useSpatialIndex: true
-    });
+  const roadsSource = new VectorSource({
+    features: geojsonFormat.readFeatures(roads),
+    useSpatialIndex: true
+  });
 
-    const tileGrid = createXYZ({
-        maxZoom: 18,
-    });
+  const tileGrid = createXYZ({
+    maxZoom: 18,
+  });
 
-    const buildingsTileSource = new VectorTileSource({
-        format: new GeoJSON() as any,
-        projection: projection,
-        tileGrid: tileGrid,
-        cacheSize: 4096,
-        url: 'local://buildings/{z}/{x}/{y}',
-        tileLoadFunction: (tile, _url) => {
-            const tileCoord = tile.getTileCoord();
-            const tileExtent = tileGrid.getTileCoordExtent(tileCoord);
-            const features = buildingsSource.getFeaturesInExtent(tileExtent);
-            (tile as VectorTile).setFeatures(features);
-        }
-    });
+  const buildingsTileSource = new VectorTileSource({
+    format: new GeoJSON() as any,
+    projection: projection,
+    tileGrid: tileGrid,
+    cacheSize: 4096,
+    url: 'local://buildings/{z}/{x}/{y}',
+    tileLoadFunction: (tile, _url) => {
+      const tileCoord = tile.getTileCoord();
+      const tileExtent = tileGrid.getTileCoordExtent(tileCoord);
+      const features = buildingsSource.getFeaturesInExtent(tileExtent);
+      (tile as VectorTile).setFeatures(features);
+    }
+  });
 
-    const roadsTileSource = new VectorTileSource({
-        format: new GeoJSON() as any,
-        projection: projection,
-        tileGrid: tileGrid,
-        cacheSize: 4096,
-        url: 'local://roads/{z}/{x}/{y}',
-        tileLoadFunction: (tile, _url) => {
-            const tileCoord = tile.getTileCoord();
-            const tileExtent = tileGrid.getTileCoordExtent(tileCoord);
-            const features = roadsSource.getFeaturesInExtent(tileExtent);
-            (tile as VectorTile).setFeatures(features);
-        }
-    });
+  const roadsTileSource = new VectorTileSource({
+    format: new GeoJSON() as any,
+    projection: projection,
+    tileGrid: tileGrid,
+    cacheSize: 4096,
+    url: 'local://roads/{z}/{x}/{y}',
+    tileLoadFunction: (tile, _url) => {
+      const tileCoord = tile.getTileCoord();
+      const tileExtent = tileGrid.getTileCoordExtent(tileCoord);
+      const features = roadsSource.getFeaturesInExtent(tileExtent);
+      (tile as VectorTile).setFeatures(features);
+    }
+  });
 
-    const buildingsLayer = new VectorTileLayer({
-        source: buildingsTileSource,
-        style: getBuildingStyle,
-        declutter: false,
-        renderBuffer: 256,
-        properties: { name: 'buildings' },
-    });
+  const buildingsLayer = new VectorTileLayer({
+    source: buildingsTileSource,
+    style: getBuildingStyle,
+    declutter: false,
+    renderBuffer: 256,
+    properties: { name: 'buildings' },
+  });
 
-    const roadsLayer = new VectorTileLayer({
-        source: roadsTileSource,
-        style: getRoadStyle,
-        declutter: false,
-        renderBuffer: 256,
-        properties: { name: 'roads' },
-    });
+  const roadsLayer = new VectorTileLayer({
+    source: roadsTileSource,
+    style: getRoadStyle,
+    declutter: false,
+    renderBuffer: 256,
+    properties: { name: 'roads' },
+  });
 
-    map.addLayer(buildingsLayer);
-    map.addLayer(roadsLayer);
+  map.addLayer(buildingsLayer);
+  map.addLayer(roadsLayer);
 }

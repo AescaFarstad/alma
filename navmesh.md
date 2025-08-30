@@ -44,11 +44,11 @@ This method completely eliminates the need for manual triangle filtering and pro
 The navmesh is saved to `navmesh.txt` with a custom format designed for efficient loading.
 
 -   `points:[x1,y1,x2,y2...]`
-    -   A single, flat, semicolon-delimited array of vertex coordinates.
+  -   A single, flat, semicolon-delimited array of vertex coordinates.
 
 -   `triangles:[tri1_v1_idx,tri1_v2_idx,tri1_v3_idx,...]`
-    -   A flat, semicolon-delimited array of indices that define the triangles.
-    -   **Important:** An index in this array refers to a **vertex index** (logical vertex index). To get the coordinates of vertex `vertex_idx`: `x = points[vertex_idx * 2]` and `y = points[vertex_idx * 2 + 1]`. 
+  -   A flat, semicolon-delimited array of indices that define the triangles.
+  -   **Important:** An index in this array refers to a **vertex index** (logical vertex index). To get the coordinates of vertex `vertex_idx`: `x = points[vertex_idx * 2]` and `y = points[vertex_idx * 2 + 1]`. 
 
 
 # Navmesh Representation
@@ -68,14 +68,14 @@ An `Int32Array` that defines the structure of the mesh. It is a flat list of **l
 Let's find the coordinates of the second vertex of the tenth triangle (`tri_idx = 9`).
 
 1.  **Find the start of the triangle's data:**
-    `start_index_in_triangles_array = tri_idx * 3 = 9 * 3 = 27`
+  `start_index_in_triangles_array = tri_idx * 3 = 9 * 3 = 27`
 
 2.  **Find the logical index of the second vertex:**
-    `v2_logical_idx = triangles[start_index_in_triangles_array + 1] = triangles[28]`
+  `v2_logical_idx = triangles[start_index_in_triangles_array + 1] = triangles[28]`
 
 3.  **Use the logical index to find the coordinates in the `points` array:**
-    `x = points[v2_logical_idx * 2]`
-    `y = points[v2_logical_idx * 2 + 1]`
+  `x = points[v2_logical_idx * 2]`
+  `y = points[v2_logical_idx * 2 + 1]`
 
 ### Other Data Arrays
 The `neighbors` and `centroids` arrays are both indexed by the **Triangle Index (`tri_idx`)**.
@@ -85,9 +85,9 @@ An `Int32Array` that stores the neighbors for each triangle.
 
 -   **Structure:** Every three consecutive entries represent the three neighbor triangle indices for a single triangle. A value of `-1` means there is no neighbor on that edge.
 -   **Accessing Neighbors:** For a triangle `tri_idx` with vertices `v1, v2, v3`:
-    -   Neighbor across edge `v1-v2` = `neighbors[tri_idx * 3]`
-    -   Neighbor across edge `v2-v3` = `neighbors[tri_idx * 3 + 1]`
-    -   Neighbor across edge `v3-v1` = `neighbors[tri_idx * 3 + 2]`
+  -   Neighbor across edge `v1-v2` = `neighbors[tri_idx * 3]`
+  -   Neighbor across edge `v2-v3` = `neighbors[tri_idx * 3 + 1]`
+  -   Neighbor across edge `v3-v1` = `neighbors[tri_idx * 3 + 2]`
 
 #### Centroids (`centroids`)
 A `Float32Array` that stores the pre-calculated centroid for each triangle.

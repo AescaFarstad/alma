@@ -1,15 +1,15 @@
 <template>
   <div v-if="visible" class="context-menu" :style="{ top: y + 'px', left: x + 'px' }">
-    <ul>
-      <li @click="addPointMark">Add Point Mark</li>
-      <li @click="moveNearestPointMark">Move nearest Point mark</li>
-      <li @click="copyCoordinates">Copy coords</li>
-      <li @click="copyCoordinatesJSON">Copy coords J</li>
-      <li @click="copyAgentState">Copy Agent State</li>
-      <li @click="copyWAgentState">Copy WAgent State</li>
-      <li @click="toggleAgentDebug">Toggle Agent Debug</li>
-      <li @click="drawTriangles">Draw Triangles</li>
-    </ul>
+  <ul>
+    <li @click="addPointMark">Add Point Mark</li>
+    <li @click="moveNearestPointMark">Move nearest Point mark</li>
+    <li @click="copyCoordinates">Copy coords</li>
+    <li @click="copyCoordinatesJSON">Copy coords J</li>
+    <li @click="copyAgentState">Copy Agent State</li>
+    <li @click="copyWAgentState">Copy WAgent State</li>
+    <li @click="toggleAgentDebug">Toggle Agent Debug</li>
+    <li @click="drawTriangles">Draw Triangles</li>
+  </ul>
   </div>
 </template>
 
@@ -40,7 +40,7 @@ const localContextMenuState = reactive({
 
 watch(() => props.coordinate, (newVal) => {
   if (newVal) {
-    localContextMenuState.coordinate = newVal;
+  localContextMenuState.coordinate = newVal;
   }
 });
 
@@ -66,7 +66,7 @@ const copyCoordinates = () => {
   const { lng, lat } = props.coordinate;
   const textToCopy = `${lng}, ${lat}`;
   navigator.clipboard.writeText(textToCopy).catch((err) => {
-    console.error('Could not copy text: ', err);
+  console.error('Could not copy text: ', err);
   });
   emit('hide');
 };
@@ -76,7 +76,7 @@ const copyCoordinatesJSON = () => {
   const { lng, lat } = props.coordinate;
   const textToCopy = `{ x: ${lng}, y: ${lat} }`;
   navigator.clipboard.writeText(textToCopy).catch((err) => {
-    console.error('Could not copy text: ', err);
+  console.error('Could not copy text: ', err);
   });
   emit('hide');
 };
@@ -85,32 +85,32 @@ function customStringify(obj: any): string {
   // Handle circular references but preserve full arrays
   const seen = new WeakSet();
   const replacer = (key: string, value: any) => {
-    if (typeof value === "object" && value !== null) {
-      if (seen.has(value)) {
-        return "[Circular Reference]";
-      }
-      seen.add(value);
+  if (typeof value === "object" && value !== null) {
+    if (seen.has(value)) {
+    return "[Circular Reference]";
     }
-    
-    // Only limit extremely long strings, not arrays
-    if (typeof value === "string" && value.length > 10000) {
-      return value.substring(0, 10000) + "... (truncated)";
-    }
-    
-    return value;
+    seen.add(value);
+  }
+  
+  // Only limit extremely long strings, not arrays
+  if (typeof value === "string" && value.length > 10000) {
+    return value.substring(0, 10000) + "... (truncated)";
+  }
+  
+  return value;
   };
   
   const json = JSON.stringify(obj, replacer, 2);
   const inlineSimpleArrays = json.replace(/(\[\s+)([\s\S]+?)(\s+\])/g, (match, open, content, close) => {
-    const flattened = content.trim().replace(/\s*\n\s*/g, ' ');
-    if (/^(\d+(,\s*)?)+$/.test(flattened) || /^(".*?"(,\s*)?)+$/.test(flattened)) {
-      return `[ ${flattened} ]`;
-    }
-    return match;
+  const flattened = content.trim().replace(/\s*\n\s*/g, ' ');
+  if (/^(\d+(,\s*)?)+$/.test(flattened) || /^(".*?"(,\s*)?)+$/.test(flattened)) {
+    return `[ ${flattened} ]`;
+  }
+  return match;
   });
   const inlineCoords = inlineSimpleArrays.replace(
-    /\{\s+"x": ([^,]+),\s+"y": ([^}]+)\s+\}/g,
-    (match, x, y) => `{ "x": ${x.trim()}, "y": ${y.trim()} }`
+  /\{\s+"x": ([^,]+),\s+"y": ([^}]+)\s+\}/g,
+  (match, x, y) => `{ "x": ${x.trim()}, "y": ${y.trim()} }`
   );
   return inlineCoords;
 }
@@ -123,29 +123,29 @@ const copyAgentState = () => {
   let minDistance = Infinity;
 
   for (const agent of gameState.agents) {
-    const distance = Math.sqrt(Math.pow(agent.coordinate.x - lng, 2) + Math.pow(agent.coordinate.y - lat, 2));
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearestAgent = agent;
-    }
+  const distance = Math.sqrt(Math.pow(agent.coordinate.x - lng, 2) + Math.pow(agent.coordinate.y - lat, 2));
+  if (distance < minDistance) {
+    minDistance = distance;
+    nearestAgent = agent;
+  }
   }
 
   if (nearestAgent) {
-    try {
-      // Create a complete copy using JSON serialization to capture ALL properties automatically
-      // This will include any new properties added to the Agent class without manual updates
-      const completeAgentState = JSON.parse(JSON.stringify(nearestAgent));
-      
-      const agentState = customStringify(completeAgentState);
-      navigator.clipboard.writeText(agentState).catch((err) => {
-        console.error('Could not copy agent state: ', err);
-      });
-    } catch (error) {
-      console.error('Error creating agent state copy:', error);
-      // Fallback: just copy basic info
-      const basicInfo = `Agent ID: ${nearestAgent.id}, Position: (${nearestAgent.coordinate.x}, ${nearestAgent.coordinate.y}), NextCorner: (${nearestAgent.nextCorner.x}, ${nearestAgent.nextCorner.y}), NextCornerTri: ${nearestAgent.nextCornerTri}`;
-      navigator.clipboard.writeText(basicInfo);
-    }
+  try {
+    // Create a complete copy using JSON serialization to capture ALL properties automatically
+    // This will include any new properties added to the Agent class without manual updates
+    const completeAgentState = JSON.parse(JSON.stringify(nearestAgent));
+    
+    const agentState = customStringify(completeAgentState);
+    navigator.clipboard.writeText(agentState).catch((err) => {
+    console.error('Could not copy agent state: ', err);
+    });
+  } catch (error) {
+    console.error('Error creating agent state copy:', error);
+    // Fallback: just copy basic info
+    const basicInfo = `Agent ID: ${nearestAgent.id}, Position: (${nearestAgent.coordinate.x}, ${nearestAgent.coordinate.y}), NextCorner: (${nearestAgent.nextCorner.x}, ${nearestAgent.nextCorner.y}), NextCornerTri: ${nearestAgent.nextCornerTri}`;
+    navigator.clipboard.writeText(basicInfo);
+  }
   }
 
   emit('hide');
@@ -160,33 +160,33 @@ const copyWAgentState = () => {
 
   const wasm_agents = gameState.wasm_agents;
   if (!wasm_agents.positions) {
-    console.error("WASM agents not initialized");
-    emit('hide');
-    return;
+  console.error("WASM agents not initialized");
+  emit('hide');
+  return;
   }
 
   // Find nearest WAgent
   for (const agent of gameState.wagents) {
-    const idx = agent.idx;
-    const agentX = wasm_agents.positions[idx * 2];
-    const agentY = wasm_agents.positions[idx * 2 + 1];
+  const idx = agent.idx;
+  const agentX = wasm_agents.positions[idx * 2];
+  const agentY = wasm_agents.positions[idx * 2 + 1];
 
-    const distance = Math.sqrt(Math.pow(agentX - lng, 2) + Math.pow(agentY - lat, 2));
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearestAgent = agent;
-    }
+  const distance = Math.sqrt(Math.pow(agentX - lng, 2) + Math.pow(agentY - lat, 2));
+  if (distance < minDistance) {
+    minDistance = distance;
+    nearestAgent = agent;
+  }
   }
 
   if (nearestAgent) {
-    const state = serialize_wagent(gameState, nearestAgent.idx);
+  const state = serialize_wagent(gameState, nearestAgent.idx);
 
-    if (state) {
-      const agentState = customStringify(state);
-      navigator.clipboard.writeText(agentState).catch((err) => {
-        console.error('Could not copy agent state: ', err);
-      });
-    }
+  if (state) {
+    const agentState = customStringify(state);
+    navigator.clipboard.writeText(agentState).catch((err) => {
+    console.error('Could not copy agent state: ', err);
+    });
+  }
   }
 
   emit('hide');
@@ -200,15 +200,15 @@ const toggleAgentDebug = () => {
   let minDistance = Infinity;
 
   for (const agent of gameState.agents) {
-    const distance = Math.sqrt(Math.pow(agent.coordinate.x - lng, 2) + Math.pow(agent.coordinate.y - lat, 2));
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearestAgent = agent;
-    }
+  const distance = Math.sqrt(Math.pow(agent.coordinate.x - lng, 2) + Math.pow(agent.coordinate.y - lat, 2));
+  if (distance < minDistance) {
+    minDistance = distance;
+    nearestAgent = agent;
+  }
   }
 
   if (nearestAgent) {
-    nearestAgent.debug = !nearestAgent.debug;
+  nearestAgent.debug = !nearestAgent.debug;
   }
 
   emit('hide');

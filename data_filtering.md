@@ -37,47 +37,47 @@ These rules refine the primary `building` tag based on other properties.
 *   **Barrier Check**: Remove features that have a non-empty value for the `barrier` or `bollard` property.
 *   **Healthcare Check:** If the feature has a `healthcare` or `healthcare:speciality` property, set the `building` property to `healthcare`.
 *   **Refinement of `building=yes`:** If the `building` property has the value `yes`, it must be re-categorized. The first matching rule in the following list determines the new value:
-    *   **Set to `commercial` if any of these properties exist:**
-        *   `amenity`, `brand`, `brand:en`, `brand:ru`, `brand:wikidata`, `brand:wikipedia`, `construction`, `cuisine`, `fuel:diesel`, `fuel:octane_95`, `fuel:octane_98`, `leisure`, `opening_hours`, `phone`, `phone_1`, `product`, `shop` or any property starting with `payment:`.
-    *   **Set to `amenity` if any of these properties exist:**
-        *   `community_centre`, `government`, `public_transport`, `railway`, `religion`, `sport`, `tourism`.
-    *   **Set to `industrial` if any of these properties exist:**
-        *   `industrial`, `power`.
+  *   **Set to `commercial` if any of these properties exist:**
+    *   `amenity`, `brand`, `brand:en`, `brand:ru`, `brand:wikidata`, `brand:wikipedia`, `construction`, `cuisine`, `fuel:diesel`, `fuel:octane_95`, `fuel:octane_98`, `leisure`, `opening_hours`, `phone`, `phone_1`, `product`, `shop` or any property starting with `payment:`.
+  *   **Set to `amenity` if any of these properties exist:**
+    *   `community_centre`, `government`, `public_transport`, `railway`, `religion`, `sport`, `tourism`.
+  *   **Set to `industrial` if any of these properties exist:**
+    *   `industrial`, `power`.
 
 
 **2.1.2. Property Normalization and Enrichment**
 These rules clean up and consolidate feature properties.
 
 *   **Address (`addr:*`) Consolidation:**
-    *   `addr:housenumber`:
-        1. If `addr:housenumber` is missing, copy the value from `addr2:housenumber` or `addr:housenumber2`.
-        2. If `addr:housenumber` and `addr:housenumber2` both exist and differ, they are combined as `{housenumber}/{housenumber2}`.
-        3. If `addr:housenumber` is missing, `addr:unit` is used.
-        4. If both `addr:housenumber` and `addr:unit` exist, they are combined as `{housenumber}-{unit}`.
-    *   `addr:street`: If `addr:street` is missing or empty, copy the value from `addr:street:ru`.
+  *   `addr:housenumber`:
+    1. If `addr:housenumber` is missing, copy the value from `addr2:housenumber` or `addr:housenumber2`.
+    2. If `addr:housenumber` and `addr:housenumber2` both exist and differ, they are combined as `{housenumber}/{housenumber2}`.
+    3. If `addr:housenumber` is missing, `addr:unit` is used.
+    4. If both `addr:housenumber` and `addr:unit` exist, they are combined as `{housenumber}-{unit}`.
+  *   `addr:street`: If `addr:street` is missing or empty, copy the value from `addr:street:ru`.
 
 *   **Name (`name`) Population (in order of priority):**
-    1.  If `name:ru` exists, its value **overwrites** any existing `name`.
-    2.  If `name` is empty, populate from the first available: `name:en`, `name:es`, `name:de`, `name:fr`, `name:kk`, `name:tr`, `name:tt`, `name:zh`, `name:cv`, `name:ko`, `name:alt`, `name:old`.
-    3.  If `name` is still empty, populate from the first available: `official_name:ru`, `official_name`, `official_name:kk`, `old_name`, `short_name`, `short_name:ru`, `short_name:en`, `short_name:de`.
-    4.  If `name` is still empty, populate from `wikimedia_commons`, stripping the `Category:` prefix.
-    5.  If `name` is still empty, populate from `wikipedia`, stripping any language prefixes (`ru:`, `en:`, `kk:`).
+  1.  If `name:ru` exists, its value **overwrites** any existing `name`.
+  2.  If `name` is empty, populate from the first available: `name:en`, `name:es`, `name:de`, `name:fr`, `name:kk`, `name:tr`, `name:tt`, `name:zh`, `name:cv`, `name:ko`, `name:alt`, `name:old`.
+  3.  If `name` is still empty, populate from the first available: `official_name:ru`, `official_name`, `official_name:kk`, `old_name`, `short_name`, `short_name:ru`, `short_name:en`, `short_name:de`.
+  4.  If `name` is still empty, populate from `wikimedia_commons`, stripping the `Category:` prefix.
+  5.  If `name` is still empty, populate from `wikipedia`, stripping any language prefixes (`ru:`, `en:`, `kk:`).
 
 *   **Building Attributes:**
-    *   `building:levels`: If `building:levels` does not exist, copy the value from `levels` or `level` (preferring `levels`).
-    *   `building:colour`: If `building:colour` does not exist, copy the value from `roof:colour`.
+  *   `building:levels`: If `building:levels` does not exist, copy the value from `levels` or `level` (preferring `levels`).
+  *   `building:colour`: If `building:colour` does not exist, copy the value from `roof:colour`.
 
 **2.1.3. `building` Category Condensation**
 Map the `building` property's value to one of the target categories. If a value fits multiple categories, the more specific one is preferred. Any unlisted value defaults to `amenity`.
 
-| Target Category | Source Values                                                                                                                                                                                                                                                         |
+| Target Category | Source Values                                                                                                                             |
 | :-------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **residential** | `apartments`, `house`, `residential`, `detached`, `dormitory`, `hut`, `yes` (if it survived refinement)                                                                                                                                                                  |
-| **commercial**  | `commercial`, `retail`, `office`, `service`, `hotel`, `warehouse`, `shop`, `kiosk`, `supermarket`                                                                                                                                                                       |
-| **education**   | `school`, `university`, `kindergarten`, `college`, `library`                                                                                                                                                                                                            |
-| **industrial**  | `industrial`, `garages`, `garage`, `hangar`, `shed`, `greenhouse`, `construction`                                                                                                                                                                                         |
-| **healthcare**  | `hospital`, `healthcare`                                                                                                                                                                                                                                                |
-| **amenity**     | `roof`, `civic`, `public`, `government`, `church`, `toilets`, `mosque`, `temple`, `museum`, `theater`, `community_centre`, `sports_centre`, `stadium`, `guardhouse`, `parking`, `bridge`, `ruins`, `no` (or any other unlisted value) |
+| **residential** | `apartments`, `house`, `residential`, `detached`, `dormitory`, `hut`, `yes` (if it survived refinement)                                                                                  |
+| **commercial**  | `commercial`, `retail`, `office`, `service`, `hotel`, `warehouse`, `shop`, `kiosk`, `supermarket`                                                                                     |
+| **education**   | `school`, `university`, `kindergarten`, `college`, `library`                                                                                                      |
+| **industrial**  | `industrial`, `garages`, `garage`, `hangar`, `shed`, `greenhouse`, `construction`                                                                                             |
+| **healthcare**  | `hospital`, `healthcare`                                                                                                                        |
+| **amenity**   | `roof`, `civic`, `public`, `government`, `church`, `toilets`, `mosque`, `temple`, `museum`, `theater`, `community_centre`, `sports_centre`, `stadium`, `guardhouse`, `parking`, `bridge`, `ruins`, `no` (or any other unlisted value) |
 
 
 **2.1.4. Final Property Pruning**
@@ -100,19 +100,19 @@ The following rules apply only to features where the `highway` property exists.
 
 **2.2.2. Property Normalization**
 *   **Name (`name`) Population (in order of priority):**
-    1.  If `int_name` exists, its value **overwrites** any existing `name`.
-    2.  If `name` is empty, populate from the first available: `name:ru`, `name:ru:word_stress`, `addr:street`, `name:en`, `name:kk`, `old_name:ru`, `old_name`, `old_name_1`, `alt_name`, `description`.
+  1.  If `int_name` exists, its value **overwrites** any existing `name`.
+  2.  If `name` is empty, populate from the first available: `name:ru`, `name:ru:word_stress`, `addr:street`, `name:en`, `name:kk`, `old_name:ru`, `old_name`, `old_name_1`, `alt_name`, `description`.
 
 **2.2.3. `highway` Category Condensation**
 Map the `highway` property's value to one of the target categories. Any unlisted value defaults to `footway`.
 
-| Target Category | Source Values                                                                                              |
+| Target Category | Source Values                                                |
 | :-------------- | :--------------------------------------------------------------------------------------------------------- |
-| **primary**     | `primary`, `primary_link`                                                                                  |
-| **secondary**   | `secondary`, `secondary_link`                                                                              |
-| **tertiary**    | `tertiary`, `tertiary_link`                                                                                |
-| **service**     | `service`, `residential`, `unclassified`, `living_street`, `track`, `turning_circle`, `raceway`, `construction` |
-| **footway**     | `footway`, `steps`, `cycleway`, `pedestrian`, `path`, `corridor`, `bridleway`, `platform` (and any unlisted value).
+| **primary**   | `primary`, `primary_link`                                          |
+| **secondary**   | `secondary`, `secondary_link`                                        |
+| **tertiary**  | `tertiary`, `tertiary_link`                                        |
+| **service**   | `service`, `residential`, `unclassified`, `living_street`, `track`, `turning_circle`, `raceway`, `construction` |
+| **footway**   | `footway`, `steps`, `cycleway`, `pedestrian`, `path`, `corridor`, `bridleway`, `platform` (and any unlisted value).
 
 **2.2.4. Final Property Pruning**
 Remove all properties from the feature except for:
@@ -132,7 +132,7 @@ This final stage is applied to all features remaining after the feature-specific
 
 **3.2. Add Derived Members to `building` features**
 *   **`inscribedCenter`**: This is added to `building` features **after** coordinate transformation.
-    *   *Calculation*: Calculated as the geometric average of all vertices in the feature's transformed geometry.
+  *   *Calculation*: Calculated as the geometric average of all vertices in the feature's transformed geometry.
 
 **3.3. Final Feature Filtering**
 *   Remove any feature whose `properties` object is empty after all processing steps.

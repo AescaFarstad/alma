@@ -45,26 +45,26 @@ This document outlines the data flow and architecture for rendering objects on t
 ## Data Flow
 
 1.  **Initialization**:
-    - `main.ts` creates a single, reactive `sceneState` object and `provides` it to the Vue app.
-    - `Map.vue` `injects` this `sceneState` and passes it to the `PixiLayer` during its creation.
-    - `Pixie.ts` starts its continuous `tick()` loop.
+  - `main.ts` creates a single, reactive `sceneState` object and `provides` it to the Vue app.
+  - `Map.vue` `injects` this `sceneState` and passes it to the `PixiLayer` during its creation.
+  - `Pixie.ts` starts its continuous `tick()` loop.
 
 2.  **UI Interaction** (e.g., user clicks a building in `Map.vue`):
-    - The `click` handler in `Map.vue` calls the appropriate method directly on the injected `sceneState` object, for instance, `sceneState.selectBuilding(123)`.
+  - The `click` handler in `Map.vue` calls the appropriate method directly on the injected `sceneState` object, for instance, `sceneState.selectBuilding(123)`.
 
 3.  **State Update (`SceneState.ts`)**:
-    - The `selectBuilding` method in the `SceneState` instance adds the ID to its `selectedBuildingIds` Set and sets its own `isDirty` flag to `true`.
+  - The `selectBuilding` method in the `SceneState` instance adds the ID to its `selectedBuildingIds` Set and sets its own `isDirty` flag to `true`.
 
 4.  **Render Loop Detection (`Pixie.ts`)**:
-    - On its very next animation frame, the `tick()` loop in `Pixie.ts` checks `sceneState.isDirty` and finds it is `true`.
+  - On its very next animation frame, the `tick()` loop in `Pixie.ts` checks `sceneState.isDirty` and finds it is `true`.
 
 5.  **Scene Rebuilding (`Pixie.ts` & `DrawScene.ts`)**:
-    - Because the scene is dirty, `Pixie.ts` calls `DrawScene.buildPrimitives()`.
-    - `DrawScene` clears the old data in `PrimitiveState` and repopulates it with fresh geometry based on the current IDs in `sceneState.selectedBuildingIds`.
-    - `Pixie.ts` then sets `sceneState.isDirty` back to `false`.
+  - Because the scene is dirty, `Pixie.ts` calls `DrawScene.buildPrimitives()`.
+  - `DrawScene` clears the old data in `PrimitiveState` and repopulates it with fresh geometry based on the current IDs in `sceneState.selectedBuildingIds`.
+  - `Pixie.ts` then sets `sceneState.isDirty` back to `false`.
 
 6.  **Rendering (`Pixie.ts` & `DrawPrimitives.ts`)**:
-    - In the same `tick`, `DrawPrimitives.draw()` is called, rendering the newly updated primitives to the screen.
+  - In the same `tick`, `DrawPrimitives.draw()` is called, rendering the newly updated primitives to the screen.
 
 This cycle ensures that rendering is decoupled from UI events and happens automatically whenever the scene state is modified. 
 
@@ -86,4 +86,4 @@ This dual-pipeline approach ensures that static geometry is not wastefully redra
 ## Consideration
 
 1. **Coordinates**:
-    - Even though this game uses geoJSON and real-world data, the actual coordinates are linear cartesian coordinates where 1 unit = 1 meter.
+  - Even though this game uses geoJSON and real-world data, the actual coordinates are linear cartesian coordinates where 1 unit = 1 meter.

@@ -16,8 +16,8 @@ This document proposes a redesigned architecture that centralizes control, enfor
 1.  **Centralized Orchestration:** A single module (`WasmInit.ts`) will be responsible for orchestrating the entire WASM initialization sequence.
 2.  **Single Contiguous Memory Allocation:** All persistent simulation data (Constants, Navmesh, Agents) will reside in a single, contiguous memory block in the WASM heap to maximize data locality.
 3.  **Strict Separation of Concerns:**
-    -   **Initialization (`...Init.ts`)** logic will be completely separate from **runtime data access (`.ts`)** and **execution logic (`WasmFacade.ts`)**.
-    -   Modules will have a single, clear responsibility.
+  -   **Initialization (`...Init.ts`)** logic will be completely separate from **runtime data access (`.ts`)** and **execution logic (`WasmFacade.ts`)**.
+  -   Modules will have a single, clear responsibility.
 4.  **Explicit Dependencies:** Modules will be explicitly configured with the data they need, eliminating reliance on global state.
 5.  **Efficiency:** The process will avoid redundant work.
 
@@ -49,9 +49,9 @@ The goal of this phase is to ask each initializer module exactly how much memory
 1.  **Single Contiguous Allocation:** `WasmInit.ts` makes **one call** to `_wasm_alloc(totalMemoryRequired)` to reserve the final memory block.
 2.  **Sequential Initialization:** `WasmInit.ts` iterates through the initializers again, this time calling an `initialize()` method on each. It passes the main buffer and a starting offset and whatever else the module needs.
 3.  **Module Responsibility:** Inside its `initialize` method, each module is responsible for:
-    -   **Writing Data:** Copying initialization data (like `navmeshBin`) into its designated slice of the buffer.
-    -   **Calling WASM:** Invoking any necessary C++ functions to process the data.
-    -   **Initializing Views:** Setting up the typed `ArrayBufferView`s in the corresponding runtime modules (e.g., `Navmesh.ts`, `Agents.ts`).
+  -   **Writing Data:** Copying initialization data (like `navmeshBin`) into its designated slice of the buffer.
+  -   **Calling WASM:** Invoking any necessary C++ functions to process the data.
+  -   **Initializing Views:** Setting up the typed `ArrayBufferView`s in the corresponding runtime modules (e.g., `Navmesh.ts`, `Agents.ts`).
 4.  **Finalize:** After all modules are initialized, the system reports teh actuall used memory size. The runtime modules are fully configured and can be used by the rest of the application.
 
 ## 5. Rendering Data Handling

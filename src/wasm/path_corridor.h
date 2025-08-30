@@ -6,14 +6,14 @@
 #include <vector>
 
 bool findCorridor(
-    Navmesh& navmesh,
-    float FREE_WIDTH,
-    float STRAY_MULT,
-    const Point2& startPoint,
-    const Point2& endPoint,
-    std::vector<int>& outCorridor,
-    int startPolyHint = -1,
-    int endPolyHint = -1
+  Navmesh& navmesh,
+  float FREE_WIDTH,
+  float STRAY_MULT,
+  const Point2& startPoint,
+  const Point2& endPoint,
+  std::vector<int>& outCorridor,
+  int startPolyHint = -1,
+  int endPolyHint = -1
 );
 
 #endif // PATH_CORRIDOR_H 

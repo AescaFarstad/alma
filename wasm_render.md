@@ -60,31 +60,31 @@ Add `src/wasm/sprite_renderer.h/.cpp` with:
 
 - Context setup
   - `sprite_renderer_init(const char* canvas_query_selector)`
-    - `emscripten_webgl_create_context` with WebGL2 attrs: `alpha=true`, `premultipliedAlpha=true`, `antialias=true`, `preserveDrawingBuffer=false`
-    - `emscripten_webgl_make_context_current`
+  - `emscripten_webgl_create_context` with WebGL2 attrs: `alpha=true`, `premultipliedAlpha=true`, `antialias=true`, `preserveDrawingBuffer=false`
+  - `emscripten_webgl_make_context_current`
   - Store DPR and canvas CSS size; set GL viewport accordingly.
 
 - GPU resources
   - Static quad VBO (unit quad), EBO
   - Dynamic instance VBO for per-agent attributes (updated every frame)
   - Shader program:
-    - Vertex: expands unit quad by instance position/rotation/scale
-    - Fragment: samples atlas texture (no tint in iteration 1)
+  - Vertex: expands unit quad by instance position/rotation/scale
+  - Fragment: samples atlas texture (no tint in iteration 1)
   - Texture: atlas RGBA8
 
 - Per-frame single-call API (iteration 1)
   - `void render(float dt, const float* m3x3, int pixelWidth, int pixelHeight, float devicePixelRatio);`
-    - Performs agent simulation step (or call existing `update(dt)` internally)
-    - Updates camera/viewport state
-    - Builds instance buffer from SoA (`positions`, `looks`, `is_alive`)
-    - Issues a single `glDrawElementsInstanced`
+  - Performs agent simulation step (or call existing `update(dt)` internally)
+  - Updates camera/viewport state
+  - Builds instance buffer from SoA (`positions`, `looks`, `is_alive`)
+  - Issues a single `glDrawElementsInstanced`
 
 - Integration with SoA
   - Iterate `i = 0..active_agents-1` where `agent_data.is_alive[i]`
   - Instance attributes per agent (iteration 1):
-    - `pos.x, pos.y`
-    - `cosθ, sinθ` from `look`
-    - `scale` — use a global constant to match Pixi scale
+  - `pos.x, pos.y`
+  - `cosθ, sinθ` from `look`
+  - `scale` — use a global constant to match Pixi scale
 
 - WebGL2 requirements
   - Use VAOs, vertex attrib divisors, instanced draw calls
@@ -97,10 +97,10 @@ Add `src/wasm/sprite_renderer.h/.cpp` with:
 Vertex:
 ```glsl
 #version 300 es
-layout(location=0) in vec2 a_pos;        // quad unit vertex: (-0.5..+0.5)
-layout(location=1) in vec2 i_worldXY;    // instance
-layout(location=2) in vec2 i_cosSin;     // instance
-layout(location=3) in float i_scale;     // instance
+layout(location=0) in vec2 a_pos;    // quad unit vertex: (-0.5..+0.5)
+layout(location=1) in vec2 i_worldXY;  // instance
+layout(location=2) in vec2 i_cosSin;   // instance
+layout(location=3) in float i_scale;   // instance
 
 uniform mat3 u_worldToClip; // 3x3 affine to NDC
 out vec2 v_uv;
@@ -108,8 +108,8 @@ out vec2 v_uv;
 void main() {
   vec2 local = a_pos * i_scale; // uniform scale
   vec2 rotated = vec2(
-    local.x * i_cosSin.x - local.y * i_cosSin.y,
-    local.x * i_cosSin.y + local.y * i_cosSin.x
+  local.x * i_cosSin.x - local.y * i_cosSin.y,
+  local.x * i_cosSin.y + local.y * i_cosSin.x
   );
   vec2 world = i_worldXY + rotated;
 
@@ -141,7 +141,7 @@ void main() {
 
 1. Canvas management
    - In `PixieLayer.init()`, create an additional canvas element `wasmCanvas` (below Pixi canvas), CSS:
-     - `position:absolute; top:0; left:0; pointer-events:none; z-index` aligned with Pixi
+   - `position:absolute; top:0; left:0; pointer-events:none; z-index` aligned with Pixi
    - Keep references and handle resize via the existing `ResizeObserver` and `sync()`
 
 2. WASM renderer initialization
@@ -151,9 +151,9 @@ void main() {
 
 3. Render/update loop (single call)
    - In `PixieLayer.tick()` (same RAF as Pixi/OL):
-     - Compute world→clip 3×3 matrix from OL view
-     - Query canvas pixel size and DPR
-     - Call `_render(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`; this updates sim and renders agents within the same frame
+   - Compute world→clip 3×3 matrix from OL view
+   - Query canvas pixel size and DPR
+   - Call `_render(dt, m3x3, widthPx*dpr, heightPx*dpr, dpr)`; this updates sim and renders agents within the same frame
    - JS does not perform any rendering steps or per-agent work
 
 ---
@@ -165,10 +165,10 @@ void main() {
   - `-O3 -sASSERTIONS=0 -sALLOW_MEMORY_GROWTH=1`
 - Export functions:
   - `EXPORTED_FUNCTIONS=[
-      "_init","_update","_add_agent","_get_active_agent_count",
-      "_sprite_renderer_init", "_sprite_upload_atlas_rgba",
-      "_render"
-    ]`
+    "_init","_update","_add_agent","_get_active_agent_count",
+    "_sprite_renderer_init", "_sprite_upload_atlas_rgba",
+    "_render"
+  ]`
 - If OffscreenCanvas is evaluated later, ensure no extra buffering introduces frame latency; keep main-thread rendering for perfect sync.
 
 ---

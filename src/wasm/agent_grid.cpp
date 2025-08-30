@@ -21,67 +21,67 @@ extern AgentSoA agent_data;
 
 // Halton sequence generator
 float halton(int index, int base) {
-    float result = 0.0f;
-    float f = 1.0f / base;
-    int i = index;
-    while (i > 0) {
-        result += f * (i % base);
-        i = floor(i / base);
-        f /= base;
-    }
-    return result;
+  float result = 0.0f;
+  float f = 1.0f / base;
+  int i = index;
+  while (i > 0) {
+    result += f * (i % base);
+    i = floor(i / base);
+    f /= base;
+  }
+  return result;
 }
 
 void generate_halton_offset() {
-    const float halfCell = CELL_SIZE * 0.5f;
-    halton_offset.x = halton(frame_counter, 2) * CELL_SIZE - halfCell;
-    halton_offset.y = halton(frame_counter, 3) * CELL_SIZE - halfCell;
+  const float halfCell = CELL_SIZE * 0.5f;
+  halton_offset.x = halton(frame_counter, 2) * CELL_SIZE - halfCell;
+  halton_offset.y = halton(frame_counter, 3) * CELL_SIZE - halfCell;
 }
 
 void initialize_agent_grid(int max_agents) {
-    agent_grid.cell_data.resize(TOTAL_CELLS * MAX_AGENTS_PER_CELL);
-    agent_grid.cell_offsets.resize(TOTAL_CELLS);
-    agent_grid.cell_counts.resize(TOTAL_CELLS);
+  agent_grid.cell_data.resize(TOTAL_CELLS * MAX_AGENTS_PER_CELL);
+  agent_grid.cell_offsets.resize(TOTAL_CELLS);
+  agent_grid.cell_counts.resize(TOTAL_CELLS);
 
-    for (int i = 0; i < TOTAL_CELLS; i++) {
-        agent_grid.cell_offsets[i] = i * MAX_AGENTS_PER_CELL;
-    }
+  for (int i = 0; i < TOTAL_CELLS; i++) {
+    agent_grid.cell_offsets[i] = i * MAX_AGENTS_PER_CELL;
+  }
 }
 
 void clear_and_reindex_grid(int num_agents) {
-    std::fill(agent_grid.cell_counts.begin(), agent_grid.cell_counts.end(), 0);
+  std::fill(agent_grid.cell_counts.begin(), agent_grid.cell_counts.end(), 0);
 
-    generate_halton_offset();
+  generate_halton_offset();
 
-    for (int i = 0; i < num_agents; i++) {
-        if (!agent_data.is_alive[i]) continue;
-        
-        Point2 pos = agent_data.positions[i];
-        int cell_index = get_cell_index(pos);
+  for (int i = 0; i < num_agents; i++) {
+    if (!agent_data.is_alive[i]) continue;
+    
+    Point2 pos = agent_data.positions[i];
+    int cell_index = get_cell_index(pos);
 
-        if (cell_index >= 0 && cell_index < TOTAL_CELLS) {
-            int count = agent_grid.cell_counts[cell_index];
-            if (count < MAX_AGENTS_PER_CELL) {
-                int offset = agent_grid.cell_offsets[cell_index] + count;
-                agent_grid.cell_data[offset] = i;
-                agent_grid.cell_counts[cell_index]++;
-            }
-        }
+    if (cell_index >= 0 && cell_index < TOTAL_CELLS) {
+      int count = agent_grid.cell_counts[cell_index];
+      if (count < MAX_AGENTS_PER_CELL) {
+        int offset = agent_grid.cell_offsets[cell_index] + count;
+        agent_grid.cell_data[offset] = i;
+        agent_grid.cell_counts[cell_index]++;
+      }
     }
+  }
 
-    frame_counter++;
+  frame_counter++;
 }
 
 int get_cell_index(Point2 position) {
-    float offset_x = position.x + halton_offset.x;
-    float offset_y = position.y + halton_offset.y;
+  float offset_x = position.x + halton_offset.x;
+  float offset_y = position.y + halton_offset.y;
 
-    int grid_x = static_cast<int>(floor((offset_x - WORLD_MIN_X) / CELL_SIZE));
-    int grid_y = static_cast<int>(floor((offset_y - WORLD_MIN_Y) / CELL_SIZE));
+  int grid_x = static_cast<int>(floor((offset_x - WORLD_MIN_X) / CELL_SIZE));
+  int grid_y = static_cast<int>(floor((offset_y - WORLD_MIN_Y) / CELL_SIZE));
 
-    if (grid_x < 0 || grid_x >= GRID_WIDTH || grid_y < 0 || grid_y >= GRID_HEIGHT) {
-        return -1;
-    }
+  if (grid_x < 0 || grid_x >= GRID_WIDTH || grid_y < 0 || grid_y >= GRID_HEIGHT) {
+    return -1;
+  }
 
-    return grid_y * GRID_WIDTH + grid_x;
+  return grid_y * GRID_WIDTH + grid_x;
 } 

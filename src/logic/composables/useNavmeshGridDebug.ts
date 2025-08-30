@@ -5,71 +5,71 @@ import { ACBLUE, ACYELLOW, ACBLACK } from '../drawing/SceneState';
 import { getTrianglesInCell } from '../navmesh/NavUtils';
 
 export function useNavmeshGridDebug(gameState?: GameState, sceneState?: SceneState) {
-    if (!gameState || !sceneState) {
-        return {
-            drawNavGrid: () => {
-                console.warn("Gamestate or scenestate not available for navmesh debug")
-            }
-        }
+  if (!gameState || !sceneState) {
+    return {
+      drawNavGrid: () => {
+        console.warn("Gamestate or scenestate not available for navmesh debug")
+      }
+    }
+  }
+
+  const { navmesh } = gameState;
+
+  const drawNavGrid = (pattern: number) => {
+    if (!navmesh) {
+      console.warn('Navmesh not loaded');
+      return;
     }
 
-    const { navmesh } = gameState;
+    const { gridWidth, gridHeight, cellSize, minX, minY } = navmesh.triangleIndex;
 
-    const drawNavGrid = (pattern: number) => {
-        if (!navmesh) {
-            console.warn('Navmesh not loaded');
-            return;
+    for (let cy = 0; cy < gridHeight; cy++) {
+      for (let cx = 0; cx < gridWidth; cx++) {
+        const cellMinX = minX + cx * cellSize;
+        const cellMinY = minY + cy * cellSize;
+        const cellMaxX = cellMinX + cellSize;
+        const cellMaxY = cellMinY + cellSize;
+
+        sceneState.addDebugLine({ x: cellMinX, y: cellMinY }, { x: cellMaxX, y: cellMinY }, ACBLACK);
+        sceneState.addDebugLine({ x: cellMaxX, y: cellMinY }, { x: cellMaxX, y: cellMaxY }, ACBLACK);
+        sceneState.addDebugLine({ x: cellMaxX, y: cellMaxY }, { x: cellMinX, y: cellMaxY }, ACBLACK);
+        sceneState.addDebugLine({ x: cellMinX, y: cellMaxY }, { x: cellMinX, y: cellMinY }, ACBLACK);
+
+        let color: 'yellow' | 'blue' | null = null;
+
+        if (pattern === 1) {
+          if ((cx % 2 === 0 && cy % 2 === 0)) {
+            color = ACYELLOW;
+          } else if ((cx % 2 !== 0 && cy % 2 !== 0)) {
+            color = ACBLUE;
+          }
+        } else if (pattern === 2) {
+          if ((cx % 2 !== 0 && cy % 2 === 0)) {
+            color = ACYELLOW;
+          } else if ((cx % 2 === 0 && cy % 2 !== 0)) {
+            color = ACBLUE;
+          }
         }
 
-        const { gridWidth, gridHeight, cellSize, minX, minY } = navmesh.triangleIndex;
+        if (!color) continue;
 
-        for (let cy = 0; cy < gridHeight; cy++) {
-            for (let cx = 0; cx < gridWidth; cx++) {
-                const cellMinX = minX + cx * cellSize;
-                const cellMinY = minY + cy * cellSize;
-                const cellMaxX = cellMinX + cellSize;
-                const cellMaxY = cellMinY + cellSize;
+        const cellTriangles = getTrianglesInCell(navmesh, cx, cy);
+        for (const triIdx of cellTriangles) {
+          const triVertexStartIndex = triIdx * 3;
+          const p1Index = navmesh.triangles[triVertexStartIndex];
+          const p2Index = navmesh.triangles[triVertexStartIndex + 1];
+          const p3Index = navmesh.triangles[triVertexStartIndex + 2];
 
-                sceneState.addDebugLine({ x: cellMinX, y: cellMinY }, { x: cellMaxX, y: cellMinY }, ACBLACK);
-                sceneState.addDebugLine({ x: cellMaxX, y: cellMinY }, { x: cellMaxX, y: cellMaxY }, ACBLACK);
-                sceneState.addDebugLine({ x: cellMaxX, y: cellMaxY }, { x: cellMinX, y: cellMaxY }, ACBLACK);
-                sceneState.addDebugLine({ x: cellMinX, y: cellMaxY }, { x: cellMinX, y: cellMinY }, ACBLACK);
-
-                let color: 'yellow' | 'blue' | null = null;
-
-                if (pattern === 1) {
-                    if ((cx % 2 === 0 && cy % 2 === 0)) {
-                        color = ACYELLOW;
-                    } else if ((cx % 2 !== 0 && cy % 2 !== 0)) {
-                        color = ACBLUE;
-                    }
-                } else if (pattern === 2) {
-                    if ((cx % 2 !== 0 && cy % 2 === 0)) {
-                        color = ACYELLOW;
-                    } else if ((cx % 2 === 0 && cy % 2 !== 0)) {
-                        color = ACBLUE;
-                    }
-                }
-
-                if (!color) continue;
-
-                const cellTriangles = getTrianglesInCell(navmesh, cx, cy);
-                for (const triIdx of cellTriangles) {
-                    const triVertexStartIndex = triIdx * 3;
-                    const p1Index = navmesh.triangles[triVertexStartIndex];
-                    const p2Index = navmesh.triangles[triVertexStartIndex + 1];
-                    const p3Index = navmesh.triangles[triVertexStartIndex + 2];
-
-                    const triPoints: Point2[] = [
-                        { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] },
-                        { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] },
-                        { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] },
-                    ];
-                    sceneState.addDebugArea(triPoints, color);
-                }
-            }
+          const triPoints: Point2[] = [
+            { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] },
+            { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] },
+            { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] },
+          ];
+          sceneState.addDebugArea(triPoints, color);
         }
-    };
+      }
+    }
+  };
 
-    return { drawNavGrid };
+  return { drawNavGrid };
 } 

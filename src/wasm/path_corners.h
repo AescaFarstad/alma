@@ -5,31 +5,31 @@
 #include <vector>
 
 struct Corner {
-    Point2 point;
-    int tri;
+  Point2 point;
+  int tri;
 };
 
 struct DualCorner {
-    Point2 corner1;
-    int tri1;
-    int vIdx1;
-    Point2 corner2;
-    int tri2;
-    int vIdx2;
-    int numValid;
+  Point2 corner1;
+  int tri1;
+  int vIdx1;
+  Point2 corner2;
+  int tri2;
+  int vIdx2;
+  int numValid;
 };
 
 std::vector<Corner> findCorners(
-    const std::vector<int>& corridor,
-    const Point2& startPoint,
-    const Point2& endPoint
+  const std::vector<int>& corridor,
+  const Point2& startPoint,
+  const Point2& endPoint
 );
 
 DualCorner find_next_corner(
-    Point2 pos,
-    const std::vector<int>& corridor,
-    Point2 end_pos,
-    float offset
+  Point2 pos,
+  const std::vector<int>& corridor,
+  Point2 end_pos,
+  float offset
 );
 
 #endif // PATH_CORNERS_H 

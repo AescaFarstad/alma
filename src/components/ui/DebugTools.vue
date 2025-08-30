@@ -1,27 +1,27 @@
 <template>
   <div id="debug-tools">
-    <div class="debug-section">
-      <input type="text" v-model="coordinates" placeholder="" />
-      <button @click="pasteCoordinates">Paste</button>
-      <button @click="flyToCoordinates">Fly</button>
-      <button @click="findTriangle">Tri</button>
-      <button @click="drawPoint">Draw</button>
-      <button @click="debugPoint">Debug</button>
-    </div>
-    <div class="debug-section">
-      <input type="text" v-model="triangleIndex" placeholder="Triangle Index" />
-      <button @click="pasteTriangleIndex">Paste</button>
-      <button @click="flyToTriangle">Fly</button>
-      <button @click="logTriangle">Log</button>
-      <button @click="() => drawTriangle()">Draw</button>
-    </div>
-    <div class="debug-section">
-      <input type="text" v-model="polygonIndex" placeholder="Polygon Index" />
-      <button @click="pastePolygonIndex">Paste</button>
-      <button @click="flyToPolygon">Fly</button>
-      <button @click="logPolygon">Log</button>
-      <button @click="() => drawPolygon()">Draw</button>
-    </div>
+  <div class="debug-section">
+    <input type="text" v-model="coordinates" placeholder="" />
+    <button @click="pasteCoordinates">Paste</button>
+    <button @click="flyToCoordinates">Fly</button>
+    <button @click="findTriangle">Tri</button>
+    <button @click="drawPoint">Draw</button>
+    <button @click="debugPoint">Debug</button>
+  </div>
+  <div class="debug-section">
+    <input type="text" v-model="triangleIndex" placeholder="Triangle Index" />
+    <button @click="pasteTriangleIndex">Paste</button>
+    <button @click="flyToTriangle">Fly</button>
+    <button @click="logTriangle">Log</button>
+    <button @click="() => drawTriangle()">Draw</button>
+  </div>
+  <div class="debug-section">
+    <input type="text" v-model="polygonIndex" placeholder="Polygon Index" />
+    <button @click="pastePolygonIndex">Paste</button>
+    <button @click="flyToPolygon">Fly</button>
+    <button @click="logPolygon">Log</button>
+    <button @click="() => drawPolygon()">Draw</button>
+  </div>
   </div>
 </template>
 
@@ -54,28 +54,28 @@ const pastePolygonIndex = async () => {
 const parseCoordinatesFromString = (input: string): { x: number, y: number } | null => {
   const trimmedInput = input.trim();
   try {
-    const parsed = JSON.parse(trimmedInput);
+  const parsed = JSON.parse(trimmedInput);
+  if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+    return { x: parsed.x, y: parsed.y };
+  }
+  } catch (e) {
+  if (trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) {
+    try {
+    const jsonString = trimmedInput.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
+    const parsed = JSON.parse(jsonString);
     if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
       return { x: parsed.x, y: parsed.y };
     }
-  } catch (e) {
-    if (trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) {
-      try {
-        const jsonString = trimmedInput.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
-        const parsed = JSON.parse(jsonString);
-        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-          return { x: parsed.x, y: parsed.y };
-        }
-      } catch (e2) {
-        // Fall through to CSV parsing
-      }
+    } catch (e2) {
+    // Fall through to CSV parsing
     }
+  }
   }
 
   const parts = trimmedInput.split(',').map(s => parseFloat(s.trim()));
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-    const [x, y] = parts;
-    return { x, y };
+  const [x, y] = parts;
+  return { x, y };
   }
   return null;
 };
@@ -83,9 +83,9 @@ const parseCoordinatesFromString = (input: string): { x: number, y: number } | n
 const flyToCoordinates = () => {
   const coords = parseCoordinatesFromString(coordinates.value);
   if (coords && mapInstance.map) {
-    const view = mapInstance.map.getView();
-    view.setCenter([coords.x, coords.y]);
-    view.setZoom(9);
+  const view = mapInstance.map.getView();
+  view.setCenter([coords.x, coords.y]);
+  view.setZoom(9);
   }
 };
 
@@ -93,19 +93,19 @@ const drawPoint = () => {
   if (!sceneState) return;
   const coords = parseCoordinatesFromString(coordinates.value);
   if (coords) {
-    sceneState.addDebugPoint(coords, ACINDIGO);
+  sceneState.addDebugPoint(coords, ACINDIGO);
   }
 };
 
 const debugPoint = () => {
   if (!gameState?.navmesh || !sceneState) {
-    console.error("Navmesh or SceneState not available");
-    return;
+  console.error("Navmesh or SceneState not available");
+  return;
   }
   const coords = parseCoordinatesFromString(coordinates.value);
   if (!coords) {
-    console.error("Invalid coordinates");
-    return;
+  console.error("Invalid coordinates");
+  return;
   }
   sceneState.addDebugPoint(coords, ACBROWN);
 
@@ -113,28 +113,28 @@ const debugPoint = () => {
   const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
   console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
   if (triIndex !== -1) {
-    triangleIndex.value = triIndex.toString();
+  triangleIndex.value = triIndex.toString();
   }
 
   // 2. log the polygon index and specifying if it is walkable
   const polyIndex = getPolygonFromPoint(gameState.navmesh, coords);
   if (polyIndex === -1) {
-    console.log("Point is not within any polygon.");
-    return;
+  console.log("Point is not within any polygon.");
+  return;
   }
 
   const navmesh = gameState.navmesh;
   const isPolyWalkable = (pIndex: number): boolean => {
-    if (!gameState?.navmesh) return false;
-    const navmesh = gameState.navmesh;
-    const pTriStart = navmesh.poly_tris[pIndex];
-    const pTriEnd = navmesh.poly_tris[pIndex + 1];
-    for (let i = pTriStart; i < pTriEnd; i++) {
-      if (i >= navmesh.walkable_triangle_count) {
-        return false;
-      }
+  if (!gameState?.navmesh) return false;
+  const navmesh = gameState.navmesh;
+  const pTriStart = navmesh.poly_tris[pIndex];
+  const pTriEnd = navmesh.poly_tris[pIndex + 1];
+  for (let i = pTriStart; i < pTriEnd; i++) {
+    if (i >= navmesh.walkable_triangle_count) {
+    return false;
     }
-    return true;
+  }
+  return true;
   }
   
   const polyTriStart = navmesh.poly_tris[polyIndex];
@@ -142,7 +142,7 @@ const debugPoint = () => {
   
   const polyTriangleIndexes = [];
   for (let i = polyTriStart; i < polyTriEnd; i++) {
-    polyTriangleIndexes.push(i);
+  polyTriangleIndexes.push(i);
   }
   console.log(`Polygon index: ${polyIndex}, Walkable: ${isPolyWalkable(polyIndex)}`);
 
@@ -156,23 +156,23 @@ const debugPoint = () => {
   const polyVertEnd = navmesh.polygons[polyIndex + 1];
   const neighborPolys = new Set<number>();
   for (let i = polyVertStart; i < polyVertEnd; i++) {
-    const neighborIndex = navmesh.poly_neighbors[i];
-    if (neighborIndex !== -1 && !neighborPolys.has(neighborIndex)) {
-      neighborPolys.add(neighborIndex);
-      console.log(`Neighbor polygon index: ${neighborIndex}, Walkable: ${isPolyWalkable(neighborIndex)}`);
-      const vertIndex = navmesh.poly_verts[i];
-      const color = vertIndex % 2 === 0 ? ACYELLOW : ACGREEN;
-      drawPolygon(neighborIndex, color);
-    }
+  const neighborIndex = navmesh.poly_neighbors[i];
+  if (neighborIndex !== -1 && !neighborPolys.has(neighborIndex)) {
+    neighborPolys.add(neighborIndex);
+    console.log(`Neighbor polygon index: ${neighborIndex}, Walkable: ${isPolyWalkable(neighborIndex)}`);
+    const vertIndex = navmesh.poly_verts[i];
+    const color = vertIndex % 2 === 0 ? ACYELLOW : ACGREEN;
+    drawPolygon(neighborIndex, color);
+  }
   }
 
   // 5. draw all triangles of the affected polygons
   const drawTrianglesForPolygon = (pIndex: number) => {
-    const pTriStart = navmesh.poly_tris[pIndex];
-    const pTriEnd = navmesh.poly_tris[pIndex + 1];
-    for (let i = pTriStart; i < pTriEnd; i++) {
-      drawTriangle(i, ACGREEN, false);
-    }
+  const pTriStart = navmesh.poly_tris[pIndex];
+  const pTriEnd = navmesh.poly_tris[pIndex + 1];
+  for (let i = pTriStart; i < pTriEnd; i++) {
+    drawTriangle(i, ACGREEN, false);
+  }
   };
 
   drawTrianglesForPolygon(polyIndex);
@@ -181,38 +181,38 @@ const debugPoint = () => {
 
 const findTriangle = () => {
   if (!gameState?.navmesh) {
-    console.error("Navmesh not loaded");
-    return;
+  console.error("Navmesh not loaded");
+  return;
   }
   const coords = parseCoordinatesFromString(coordinates.value);
   if (coords) {
-    const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
-    console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
-    if (triIndex !== -1) {
-      triangleIndex.value = triIndex.toString();
-    }
+  const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
+  console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
+  if (triIndex !== -1) {
+    triangleIndex.value = triIndex.toString();
+  }
   }
 };
 
 const flyToTriangle = () => {
   const triIndex = parseInt(triangleIndex.value, 10);
   if (isNaN(triIndex) || !gameState?.navmesh || !mapInstance.map) {
-    return;
+  return;
   }
   const centroidX = gameState.navmesh.triangle_centroids[triIndex * 2];
   const centroidY = gameState.navmesh.triangle_centroids[triIndex * 2 + 1];
 
   if (centroidX && centroidY) {
-    const view = mapInstance.map.getView();
-    view.setCenter([centroidX, centroidY]);
-    view.setZoom(9);
+  const view = mapInstance.map.getView();
+  view.setCenter([centroidX, centroidY]);
+  view.setZoom(9);
   }
 };
 
 const logTriangle = () => {
   const triIndex = parseInt(triangleIndex.value, 10);
   if (isNaN(triIndex) || !gameState?.navmesh) {
-    return;
+  return;
   }
   const navmesh = gameState.navmesh;
   const triVertexStartIndex = triIndex * 3;
@@ -225,9 +225,9 @@ const logTriangle = () => {
   const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
   
   const neighbors = [
-    navmesh.neighbors[triIndex * 3],
-    navmesh.neighbors[triIndex * 3 + 1],
-    navmesh.neighbors[triIndex * 3 + 2]
+  navmesh.neighbors[triIndex * 3],
+  navmesh.neighbors[triIndex * 3 + 1],
+  navmesh.neighbors[triIndex * 3 + 2]
   ];
 
   console.log(`Triangle ${triIndex} vertices:`, { p1, p2, p3 });
@@ -237,7 +237,7 @@ const logTriangle = () => {
 const drawTriangle = (triIndexToDraw?: number, color = ACGREEN, withLabels = true) => {
   const triIndex = triIndexToDraw ?? parseInt(triangleIndex.value, 10);
   if (isNaN(triIndex) || !gameState?.navmesh || !sceneState) {
-    return;
+  return;
   }
   
   const navmesh = gameState.navmesh;
@@ -254,36 +254,36 @@ const drawTriangle = (triIndexToDraw?: number, color = ACGREEN, withLabels = tru
   sceneState.addDebugLine(p2, p3, color);
   sceneState.addDebugLine(p3, p1, color);
   if (withLabels) {
-    sceneState.addDebugText(p1, 'v1', color)
-    sceneState.addDebugText(p2, 'v2', color)
-    sceneState.addDebugText(p3, 'v3', color)
+  sceneState.addDebugText(p1, 'v1', color)
+  sceneState.addDebugText(p2, 'v2', color)
+  sceneState.addDebugText(p3, 'v3', color)
   }
 };
 
 const flyToPolygon = () => {
   const polyIndex = parseInt(polygonIndex.value, 10);
   if (isNaN(polyIndex) || !gameState?.navmesh || !mapInstance.map) {
-    return;
+  return;
   }
   const centroidX = gameState.navmesh.poly_centroids[polyIndex * 2];
   const centroidY = gameState.navmesh.poly_centroids[polyIndex * 2 + 1];
 
   if (centroidX !== undefined && centroidY !== undefined) {
-    const view = mapInstance.map.getView();
-    view.setCenter([centroidX, centroidY]);
-    view.setZoom(9);
+  const view = mapInstance.map.getView();
+  view.setCenter([centroidX, centroidY]);
+  view.setZoom(9);
   }
 };
 
 const logPolygon = () => {
   const polyIndex = parseInt(polygonIndex.value, 10);
   if (isNaN(polyIndex) || !gameState?.navmesh) {
-    return;
+  return;
   }
   const navmesh = gameState.navmesh;
   if (polyIndex >= navmesh.polygons.length - 1) {
-    console.error(`Polygon index ${polyIndex} is out of bounds.`);
-    return;
+  console.error(`Polygon index ${polyIndex} is out of bounds.`);
+  return;
   }
 
   const polyVertStart = navmesh.polygons[polyIndex];
@@ -291,17 +291,17 @@ const logPolygon = () => {
 
   const vertexIndices = [];
   for (let i = polyVertStart; i < polyVertEnd; i++) {
-    vertexIndices.push(navmesh.poly_verts[i]);
+  vertexIndices.push(navmesh.poly_verts[i]);
   }
 
   const vertices = vertexIndices.map(index => ({
-    x: navmesh.vertices[index * 2],
-    y: navmesh.vertices[index * 2 + 1]
+  x: navmesh.vertices[index * 2],
+  y: navmesh.vertices[index * 2 + 1]
   }));
 
   const neighbors = [];
   for (let i = polyVertStart; i < polyVertEnd; i++) {
-    neighbors.push(navmesh.poly_neighbors[i]);
+  neighbors.push(navmesh.poly_neighbors[i]);
   }
 
   console.log(`Polygon ${polyIndex} vertices:`, vertices);
@@ -312,12 +312,12 @@ const logPolygon = () => {
 const drawPolygon = (polyIndexToDraw?: number, color = ACGREEN) => {
   const polyIndex = polyIndexToDraw ?? parseInt(polygonIndex.value, 10);
   if (isNaN(polyIndex) || !gameState?.navmesh || !sceneState) {
-    return;
+  return;
   }
   const navmesh = gameState.navmesh;
   if (polyIndex >= navmesh.polygons.length - 1) {
-    console.error(`Polygon index ${polyIndex} is out of bounds.`);
-    return;
+  console.error(`Polygon index ${polyIndex} is out of bounds.`);
+  return;
   }
 
   const polyVertStart = navmesh.polygons[polyIndex];
@@ -325,11 +325,11 @@ const drawPolygon = (polyIndexToDraw?: number, color = ACGREEN) => {
 
   const vertices = [];
   for (let i = polyVertStart; i < polyVertEnd; i++) {
-    const vertIndex = navmesh.poly_verts[i];
-    vertices.push({
-      x: navmesh.vertices[vertIndex * 2],
-      y: navmesh.vertices[vertIndex * 2 + 1]
-    });
+  const vertIndex = navmesh.poly_verts[i];
+  vertices.push({
+    x: navmesh.vertices[vertIndex * 2],
+    y: navmesh.vertices[vertIndex * 2 + 1]
+  });
   }
 
   sceneState.addDebugArea(vertices, color);
@@ -368,17 +368,17 @@ const drawPolygon = (polyIndexToDraw?: number, color = ACGREEN) => {
 }
 
 #debug-tools button {
-    background-color: #4f4f4f;
-    color: #f5f5f5;
-    border: none;
-    border-radius: 3px;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 500;
+  background-color: #4f4f4f;
+  color: #f5f5f5;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
 }
 
 #debug-tools button:hover {
-    background-color: #616161;
+  background-color: #616161;
 }
 </style> 

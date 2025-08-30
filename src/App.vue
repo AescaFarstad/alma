@@ -1,25 +1,25 @@
 <template>
   <div id="map-container" tabindex="0">
-    <Map ref="mapComponent" @map-event="handleMapEvent" :layer-visibility="layerVisibility" />
-    <Overlay
-      @map-event="handleMapEvent"
-      :mouse-coordinates="mouseCoordinates"
-      :map-bounds="mapBounds"
-      :selected-feature-info="selectedFeatureInfo"
-      :map-center="mapCenter"
-      :measurement-distance="measurementDistance"
-      :zoom-level="zoomLevel"
-      :avatar="avatar"
-      :agent-count="agentCount"
-    />
-    <ContextMenu
-      :visible="contextMenu.visible"
-      :x="contextMenu.x"
-      :y="contextMenu.y"
-      :coordinate="contextMenu.coordinate"
-      @hide="hideContextMenu"
-    />
-    <SelectedPointMarks />
+  <Map ref="mapComponent" @map-event="handleMapEvent" :layer-visibility="layerVisibility" />
+  <Overlay
+    @map-event="handleMapEvent"
+    :mouse-coordinates="mouseCoordinates"
+    :map-bounds="mapBounds"
+    :selected-feature-info="selectedFeatureInfo"
+    :map-center="mapCenter"
+    :measurement-distance="measurementDistance"
+    :zoom-level="zoomLevel"
+    :avatar="avatar"
+    :agent-count="agentCount"
+  />
+  <ContextMenu
+    :visible="contextMenu.visible"
+    :x="contextMenu.x"
+    :y="contextMenu.y"
+    :coordinate="contextMenu.coordinate"
+    @hide="hideContextMenu"
+  />
+  <SelectedPointMarks />
   </div>
 </template>
 
@@ -90,63 +90,63 @@ const hideContextMenu = () => {
 const handleMapEvent = (event: { type: string, payload: any }) => {
   // Handle map-ready event
   if (event.type === 'map-ready') {
-    mapReady.value = true;
+  mapReady.value = true;
   }
   
   // Handle pixie layer ready event
   if (event.type === 'pixie-layer-ready') {
-    pixieLayerRef.value = event.payload.pixieLayer;
+  pixieLayerRef.value = event.payload.pixieLayer;
   }
   const eventHandlers: Record<string, (payload: any) => void> = {
-    'show-context-menu': (payload) => {
-      contextMenu.visible = true;
-      contextMenu.x = payload.x;
-      contextMenu.y = payload.y;
-      contextMenu.coordinate = payload.coordinate;
-    },
-    'map-clicked': () => {
-      contextMenu.visible = false;
-    },
-    'bounds-updated': (payload) => {
-      const sw = payload._sw;
-      const ne = payload._ne;
-      mapBounds.value = `${sw.lng.toFixed()}, ${sw.lat.toFixed()} | ${ne.lng.toFixed()}, ${ne.lat.toFixed()}`;
-    },
-    'feature-selected': (payload) => {
-      selectedFeatureInfo.value = payload;
-    },
-    'mouse-moved': (payload) => {
-      mouseCoordinates.value = payload;
-      updateMeasurementLine();
-    },
-    'command': (payload) => {
-      globalInputQueue.push(payload as CmdInput);
-    },
-    'map-ready': () => {
-      mapReady.value = true;
-    },
-    'center-updated': (payload) => {
-      mapCenter.value = payload;
-    },
-    'zoom-updated': (newZoom) => {
-      zoomLevel.value = newZoom;
-      if (lastRedrawZoomLevel.value === null) {
-        lastRedrawZoomLevel.value = newZoom;
-        if (sceneState) {
-          sceneState.isDirty = true;
-        }
-      } else {
-        if (sceneState && Math.abs(newZoom - lastRedrawZoomLevel.value) > 0.5) {
-          sceneState.isDirty = true;
-          lastRedrawZoomLevel.value = newZoom;
-        }
-      }
-    },
+  'show-context-menu': (payload) => {
+    contextMenu.visible = true;
+    contextMenu.x = payload.x;
+    contextMenu.y = payload.y;
+    contextMenu.coordinate = payload.coordinate;
+  },
+  'map-clicked': () => {
+    contextMenu.visible = false;
+  },
+  'bounds-updated': (payload) => {
+    const sw = payload._sw;
+    const ne = payload._ne;
+    mapBounds.value = `${sw.lng.toFixed()}, ${sw.lat.toFixed()} | ${ne.lng.toFixed()}, ${ne.lat.toFixed()}`;
+  },
+  'feature-selected': (payload) => {
+    selectedFeatureInfo.value = payload;
+  },
+  'mouse-moved': (payload) => {
+    mouseCoordinates.value = payload;
+    updateMeasurementLine();
+  },
+  'command': (payload) => {
+    globalInputQueue.push(payload as CmdInput);
+  },
+  'map-ready': () => {
+    mapReady.value = true;
+  },
+  'center-updated': (payload) => {
+    mapCenter.value = payload;
+  },
+  'zoom-updated': (newZoom) => {
+    zoomLevel.value = newZoom;
+    if (lastRedrawZoomLevel.value === null) {
+    lastRedrawZoomLevel.value = newZoom;
+    if (sceneState) {
+      sceneState.isDirty = true;
+    }
+    } else {
+    if (sceneState && Math.abs(newZoom - lastRedrawZoomLevel.value) > 0.5) {
+      sceneState.isDirty = true;
+      lastRedrawZoomLevel.value = newZoom;
+    }
+    }
+  },
   };
 
   const handler = eventHandlers[event.type];
   if (handler) {
-    handler(event.payload);
+  handler(event.payload);
   }
 };
 

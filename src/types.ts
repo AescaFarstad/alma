@@ -11,9 +11,9 @@ export interface MapBounds {
 export type { MouseCoordinates as MouseCoords };
 
 export type BuildingProperties = {
-    building: string;
-    levels?: string;
-    name?: string;
-    num?: string;
-    osm_id: string;
+  building: string;
+  levels?: string;
+  name?: string;
+  num?: string;
+  osm_id: string;
 }; 

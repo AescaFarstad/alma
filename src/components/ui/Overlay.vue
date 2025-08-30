@@ -1,47 +1,47 @@
 <template>
   <div id="ui-overlay">
-    <div id="left-panel">
-      <SelectedBuildings />
-      <DebugTools />
-      <AddAgentDebug />
-    </div>
-    <div id="controls">
-      <!-- <button @click="handleButtonClick($event, () => toggleLayer('buildings'))">Buildings</button>
-      <button @click="handleButtonClick($event, () => toggleLayer('roads'))">Roads</button>
-      <button @click="handleButtonClick($event, () => toggleLayer('footpaths'))">Footpaths</button> -->
-      <button @click="handleButtonClick($event, () => toggleTsAgents())">{{ tsAgentsEnabled ? 'Hide' : 'Show' }} TS Agents</button>
-      <button @click="handleButtonClick($event, () => toggleWasmAgents())">{{ wasmAgentsEnabled ? 'Hide' : 'Show' }} WAgents</button>
-      <button @click="handleButtonClick($event, () => toggleAgentRenderMode())">{{ agentRenderMode === 'visual' ? 'Visual' : 'Sprite' }} Mode</button>
-      <button @click="handleButtonClick($event, () => toggleWasmRender())">{{ wasmRenderEnabled ? 'Hide' : 'Show' }} WASM</button>
-      <button @click="handleButtonClick($event, () => drawNavmesh())">Navmesh</button>
-      <button @click="handleButtonClick($event, () => findCorridors())">pathfind</button>
-      <!-- <button @click="handleButtonClick($event, () => buildPath())">Build Path</button> -->
-      <button @click="handleButtonClick($event, () => drawNavGrid(1))">Grid 1</button>
-      <button @click="handleButtonClick($event, () => drawNavGrid(2))">Grid 2</button>
-      <button @click="handleButtonClick($event, () => spawnAgentFromJSON())">Spawn</button>
-      <!-- <button @click="handleButtonClick($event, () => copyAgentState())">Copy Agent State</button> -->
-      <!-- <button @click="handleButtonClick($event, () => runPitBenchmark())">Test PiT</button> -->
-      <TimeControls />
-    </div>
-    <div id="fps-display" v-if="fpsMetrics">
-      {{ fpsMetrics.currentFPS }}|{{ fpsMetrics.averageFPS }}|{{ fpsMetrics.longAverageFPS }}|{{ fpsMetrics.maxFrameTime }}|{{ gameState?.gameTime.toFixed(1) }}
-    </div>
-    <div id="agent-counter" v-if="props.agentCount !== null">
-      Agents: {{ props.agentCount }}
-    </div>
-    <div id="info-panel">
-      <div>{{ props.mouseCoordinates.lng.toFixed(1) }}, {{ props.mouseCoordinates.lat.toFixed(1) }}</div>
-      <div>{{ formatBounds(props.mapBounds) }}</div>
-      <div v-if="props.zoomLevel !== null">Zoom: {{ props.zoomLevel.toFixed(2) }}</div>
-    </div>
-    <div id="measurement-panel" v-if="props.measurementDistance">
-      {{ props.measurementDistance.toFixed(1) }}m
-    </div>
-    <div id="feature-info-panel" v-if="props.selectedFeatureInfo">
-      <h3>Feature Information</h3>
-      <pre>{{ props.selectedFeatureInfo }}</pre>
-    </div>
-    <AvatarState :avatar="props.avatar" />
+  <div id="left-panel">
+    <SelectedBuildings />
+    <DebugTools />
+    <AddAgentDebug />
+  </div>
+  <div id="controls">
+    <!-- <button @click="handleButtonClick($event, () => toggleLayer('buildings'))">Buildings</button>
+    <button @click="handleButtonClick($event, () => toggleLayer('roads'))">Roads</button>
+    <button @click="handleButtonClick($event, () => toggleLayer('footpaths'))">Footpaths</button> -->
+    <button @click="handleButtonClick($event, () => toggleTsAgents())">{{ tsAgentsEnabled ? 'Hide' : 'Show' }} TS Agents</button>
+    <button @click="handleButtonClick($event, () => toggleWasmAgents())">{{ wasmAgentsEnabled ? 'Hide' : 'Show' }} WAgents</button>
+    <button @click="handleButtonClick($event, () => toggleAgentRenderMode())">{{ agentRenderMode === 'visual' ? 'Visual' : 'Sprite' }} Mode</button>
+    <button @click="handleButtonClick($event, () => toggleWasmRender())">{{ wasmRenderEnabled ? 'Hide' : 'Show' }} WASM</button>
+    <button @click="handleButtonClick($event, () => drawNavmesh())">Navmesh</button>
+    <button @click="handleButtonClick($event, () => findCorridors())">pathfind</button>
+    <!-- <button @click="handleButtonClick($event, () => buildPath())">Build Path</button> -->
+    <button @click="handleButtonClick($event, () => drawNavGrid(1))">Grid 1</button>
+    <button @click="handleButtonClick($event, () => drawNavGrid(2))">Grid 2</button>
+    <button @click="handleButtonClick($event, () => spawnAgentFromJSON())">Spawn</button>
+    <!-- <button @click="handleButtonClick($event, () => copyAgentState())">Copy Agent State</button> -->
+    <!-- <button @click="handleButtonClick($event, () => runPitBenchmark())">Test PiT</button> -->
+    <TimeControls />
+  </div>
+  <div id="fps-display" v-if="fpsMetrics">
+    {{ fpsMetrics.currentFPS }}|{{ fpsMetrics.averageFPS }}|{{ fpsMetrics.longAverageFPS }}|{{ fpsMetrics.maxFrameTime }}|{{ gameState?.gameTime.toFixed(1) }}
+  </div>
+  <div id="agent-counter" v-if="props.agentCount !== null">
+    Agents: {{ props.agentCount }}
+  </div>
+  <div id="info-panel">
+    <div>{{ props.mouseCoordinates.lng.toFixed(1) }}, {{ props.mouseCoordinates.lat.toFixed(1) }}</div>
+    <div>{{ formatBounds(props.mapBounds) }}</div>
+    <div v-if="props.zoomLevel !== null">Zoom: {{ props.zoomLevel.toFixed(2) }}</div>
+  </div>
+  <div id="measurement-panel" v-if="props.measurementDistance">
+    {{ props.measurementDistance.toFixed(1) }}m
+  </div>
+  <div id="feature-info-panel" v-if="props.selectedFeatureInfo">
+    <h3>Feature Information</h3>
+    <pre>{{ props.selectedFeatureInfo }}</pre>
+  </div>
+  <AvatarState :avatar="props.avatar" />
   </div>
 </template>
 
@@ -84,63 +84,63 @@ const spawnAgentFromJSON = () => {
   if (!gameState) return;
   
   try {
-    // Create agent from the JSON data
-    const newAgent = createAgentWithConfig(agentData as any);
-    
-    // Add to the agents array
-    gameState.agents.push(newAgent);
-    
-    console.log('Spawned agent from JSON:', newAgent);
+  // Create agent from the JSON data
+  const newAgent = createAgentWithConfig(agentData as any);
+  
+  // Add to the agents array
+  gameState.agents.push(newAgent);
+  
+  console.log('Spawned agent from JSON:', newAgent);
   } catch (error) {
-    console.error('Failed to spawn agent from JSON:', error);
+  console.error('Failed to spawn agent from JSON:', error);
   }
 };
 
 const copyAgentState = () => {
   if (gameState && gameState.agents.length > 0) {
-    const agentState = JSON.stringify(gameState.agents, null, 2);
-    navigator.clipboard.writeText(agentState);
+  const agentState = JSON.stringify(gameState.agents, null, 2);
+  navigator.clipboard.writeText(agentState);
   }
 };
 
 const runPitBenchmark = () => {
   if (gameState) {
-    runPointInTriangleBenchmark(gameState);
+  runPointInTriangleBenchmark(gameState);
   }
 };
 
 const props = defineProps({
   mouseCoordinates: {
-    type: Object,
-    default: null
+  type: Object,
+  default: null
   },
   mapBounds: {
-    type: String,
-    default: ''
+  type: String,
+  default: ''
   },
   mapCenter: {
-    type: Object as PropType<{ lng: number, lat: number } | null>,
-    default: null
+  type: Object as PropType<{ lng: number, lat: number } | null>,
+  default: null
   },
   selectedFeatureInfo: {
-    type: Object,
-    default: null
+  type: Object,
+  default: null
   },
   measurementDistance: {
-    type: Number as PropType<number | null>,
-    default: null
+  type: Number as PropType<number | null>,
+  default: null
   },
   zoomLevel: {
-    type: Number as PropType<number | null>,
-    default: null
+  type: Number as PropType<number | null>,
+  default: null
   },
   avatar: {
-    type: Object as PropType<Avatar | null>,
-    default: null
+  type: Object as PropType<Avatar | null>,
+  default: null
   },
   agentCount: {
-    type: Number as PropType<number | null>,
-    default: null
+  type: Number as PropType<number | null>,
+  default: null
   }
 });
 
@@ -158,30 +158,30 @@ const toggleLayer = (layerId: 'buildings' | 'roads' | 'footpaths') => {
 const toggleAgentRenderMode = () => {
   agentRenderMode.value = agentRenderMode.value === 'visual' ? 'sprite' : 'visual';
   if (pixieLayer?.value) {
-    pixieLayer.value.setAgentRenderingMode(agentRenderMode.value);
+  pixieLayer.value.setAgentRenderingMode(agentRenderMode.value);
   }
 };
 
 const toggleTsAgents = () => {
   tsAgentsEnabled.value = !tsAgentsEnabled.value;
   if (pixieLayer?.value) {
-    pixieLayer.value.setTsAgentRenderingEnabled(tsAgentsEnabled.value);
+  pixieLayer.value.setTsAgentRenderingEnabled(tsAgentsEnabled.value);
   }
 };
 
 const toggleWasmAgents = () => {
   wasmAgentsEnabled.value = !wasmAgentsEnabled.value;
   if (pixieLayer?.value) {
-    pixieLayer.value.setWasmAgentRenderingEnabled(wasmAgentsEnabled.value);
+  pixieLayer.value.setWasmAgentRenderingEnabled(wasmAgentsEnabled.value);
   }
 };
 
 const toggleWasmRender = () => {
   if (wasmRenderEnabled) {
-    wasmRenderEnabled.value = !wasmRenderEnabled.value;
-    if (!wasmRenderEnabled.value && WasmFacade._sprite_renderer_clear) {
-      WasmFacade._sprite_renderer_clear();
-    }
+  wasmRenderEnabled.value = !wasmRenderEnabled.value;
+  if (!wasmRenderEnabled.value && WasmFacade._sprite_renderer_clear) {
+    WasmFacade._sprite_renderer_clear();
+  }
   }
 };
 
@@ -243,19 +243,19 @@ const formatBounds = (bounds: string) => {
 }
 
 #controls button {
-    background-color: #4f4f4f;
-    color: #f5f5f5;
-    border: none;
-    border-radius: 3px;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    font-weight: 500;
-    font-size: 11px;
+  background-color: #4f4f4f;
+  color: #f5f5f5;
+  border: none;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  font-weight: 500;
+  font-size: 11px;
 }
 
 #controls button:hover {
-    background-color: #616161;
+  background-color: #616161;
 }
 
 #fps-display {

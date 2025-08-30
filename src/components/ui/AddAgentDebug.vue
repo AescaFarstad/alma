@@ -1,7 +1,7 @@
 <template>
   <div class="add-agent-debug">
-    <input type="text" v-model="agentJson" placeholder="" />
-    <button @click="addAgent">Add Agent</button>
+  <input type="text" v-model="agentJson" placeholder="" />
+  <button @click="addAgent">Add Agent</button>
   </div>
 </template>
 
@@ -15,18 +15,18 @@ const gameState = inject<GameState>('gameState');
 
 const addAgent = () => {
   if (!gameState) {
-    console.error("GameState not injected");
-    return;
+  console.error("GameState not injected");
+  return;
   }
   try {
-    const agentData = JSON.parse(agentJson.value);
-    const newAgent = Object.assign(new Agent(), agentData);
-    newAgent.debugLog = [];
-    gameState.agents.push(newAgent);
-    agentJson.value = ''; // Clear input after adding
+  const agentData = JSON.parse(agentJson.value);
+  const newAgent = Object.assign(new Agent(), agentData);
+  newAgent.debugLog = [];
+  gameState.agents.push(newAgent);
+  agentJson.value = ''; // Clear input after adding
   } catch (error) {
-    console.error("Error parsing agent JSON or adding agent:", error);
-    alert("Invalid Agent JSON!");
+  console.error("Error parsing agent JSON or adding agent:", error);
+  alert("Invalid Agent JSON!");
   }
 };
 </script>

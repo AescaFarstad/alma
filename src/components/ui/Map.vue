@@ -15,8 +15,8 @@ import { DynamicScene } from '../../logic/drawing/DynamicScene';
 
 const props = defineProps({
   layerVisibility: {
-    type: Object,
-    required: true,
+  type: Object,
+  required: true,
   },
 });
 
@@ -34,21 +34,21 @@ onMounted(async () => {
   if (!mapElement.value) return;
 
   const { map } = await setupMapView(
-    mapElement.value,
-    TILE_MODE,
-    props.layerVisibility
+  mapElement.value,
+  TILE_MODE,
+  props.layerVisibility
   );
   mapInstance.map = map;
   
   const { init } = useMapInteractions(mapInstance.map, gameState, sceneState, pixieLayer, emit);
 
   if (gameState && sceneState && dynamicScene) {
-    const newPixieLayer = new PixiLayer(mapInstance.map, gameState, sceneState, dynamicScene);
-    await newPixieLayer.init();
-    pixieLayer.value = newPixieLayer;
-    
-    // Emit the pixieLayer reference to App.vue
-    emit('map-event', { type: 'pixie-layer-ready', payload: { pixieLayer: newPixieLayer } });
+  const newPixieLayer = new PixiLayer(mapInstance.map, gameState, sceneState, dynamicScene);
+  await newPixieLayer.init();
+  pixieLayer.value = newPixieLayer;
+  
+  // Emit the pixieLayer reference to App.vue
+  emit('map-event', { type: 'pixie-layer-ready', payload: { pixieLayer: newPixieLayer } });
   }
 
   // Initialize the interactions after everything is set up
@@ -58,15 +58,15 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-    if (pixieLayer.value) {
-      pixieLayer.value.stop();
-      pixieLayer.value.destroy();
-      pixieLayer.value = null;
-    }
-    if (mapInstance.map) {
-        mapInstance.map.setTarget(undefined);
-        mapInstance.map = null;
-    }
+  if (pixieLayer.value) {
+    pixieLayer.value.stop();
+    pixieLayer.value.destroy();
+    pixieLayer.value = null;
+  }
+  if (mapInstance.map) {
+    mapInstance.map.setTarget(undefined);
+    mapInstance.map = null;
+  }
 });
 
 defineExpose({

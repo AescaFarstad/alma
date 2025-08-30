@@ -6,34 +6,34 @@ CXX = em++
 CXXFLAGS = -std=c++17 -O3 -msimd128 -flto -fno-exceptions -fno-rtti -ffast-math -fno-signed-zeros -fno-trapping-math -freciprocal-math -ffinite-math-only -MMD -MP
 
 SRCS = main.cpp \
-       model.cpp \
-       math_utils.cpp \
-       init_navmesh.cpp \
-       navmesh.cpp \
-       spatial_index.cpp \
-       nav_utils.cpp \
-       raycasting.cpp \
-       fast_priority_queue.cpp \
-       path_corridor.cpp \
-       path_corners.cpp \
-       path_patching.cpp \
-       agent_move_phys.cpp \
-       agent_navigation.cpp \
-       agent_nav_utils.cpp \
-       agent_grid.cpp \
-       agent_collision.cpp \
-       agent_statistic.cpp \
-       agent_init.cpp \
-       sprite_renderer.cpp \
-       populate_triangle_index.cpp \
-       populate_polygon_index.cpp \
-       populate_building_index.cpp \
-       populate_blob_index.cpp \
-       point_in_triangle_bench.cpp \
-       point_in_polygon_bench.cpp \
-       wasm_impulse.cpp \
-       event_buffer.cpp \
-       event_handler.cpp
+     model.cpp \
+     math_utils.cpp \
+     init_navmesh.cpp \
+     navmesh.cpp \
+     spatial_index.cpp \
+     nav_utils.cpp \
+     raycasting.cpp \
+     fast_priority_queue.cpp \
+     path_corridor.cpp \
+     path_corners.cpp \
+     path_patching.cpp \
+     agent_move_phys.cpp \
+     agent_navigation.cpp \
+     agent_nav_utils.cpp \
+     agent_grid.cpp \
+     agent_collision.cpp \
+     agent_statistic.cpp \
+     agent_init.cpp \
+     sprite_renderer.cpp \
+     populate_triangle_index.cpp \
+     populate_polygon_index.cpp \
+     populate_building_index.cpp \
+     populate_blob_index.cpp \
+     point_in_triangle_bench.cpp \
+     point_in_polygon_bench.cpp \
+     wasm_impulse.cpp \
+     event_buffer.cpp \
+     event_handler.cpp
 
 OBJDIR = ../../temp
 # Build all object files into OBJDIR to keep paths consistent

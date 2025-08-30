@@ -1,20 +1,20 @@
 <template>
   <div v-if="selectedPointMarks.length > 0" class="selected-point-marks-container">
-    <div class="info-box">
-      <h4>Selected Point Marks</h4>
-      <ul>
-        <li v-for="markId in selectedPointMarks" :key="markId">
-          Point Mark #{{ markId }}
-        </li>
-      </ul>
-      <div class="button-container">
-        <button @click="deleteSelectedPointMarks" class="delete-button">Delete Selected</button>
-        <button @click="deleteAllPointMarks" class="delete-all-button">Delete All</button>
-        <button @click="selectAllPointMarks" class="select-all-button">Select All</button>
-        <button @click="copySelectedAsJSON" class="copy-button">Copy Selected</button>
-        <button @click="copyAllAsJSON" class="copy-all-button">Copy All</button>
-      </div>
+  <div class="info-box">
+    <h4>Selected Point Marks</h4>
+    <ul>
+    <li v-for="markId in selectedPointMarks" :key="markId">
+      Point Mark #{{ markId }}
+    </li>
+    </ul>
+    <div class="button-container">
+    <button @click="deleteSelectedPointMarks" class="delete-button">Delete Selected</button>
+    <button @click="deleteAllPointMarks" class="delete-all-button">Delete All</button>
+    <button @click="selectAllPointMarks" class="select-all-button">Select All</button>
+    <button @click="copySelectedAsJSON" class="copy-button">Copy Selected</button>
+    <button @click="copyAllAsJSON" class="copy-all-button">Copy All</button>
     </div>
+  </div>
   </div>
 </template>
 
@@ -45,9 +45,9 @@ const allPointMarks = computed(() => gameState?.pointMarks || []);
 const getSelectedPointMarkCoords = computed(() => {
   if (!gameState) return [];
   return selectedPointMarks.value
-    .map((id: number) => gameState.pointMarks.find((mark: PointMark) => mark.id === id))
-    .filter((mark?: PointMark): mark is PointMark => mark !== undefined)
-    .map((mark: PointMark) => ({ x: mark.x, y: mark.y }));
+  .map((id: number) => gameState.pointMarks.find((mark: PointMark) => mark.id === id))
+  .filter((mark?: PointMark): mark is PointMark => mark !== undefined)
+  .map((mark: PointMark) => ({ x: mark.x, y: mark.y }));
 });
 
 const getAllPointMarkCoords = computed(() => {
@@ -56,22 +56,22 @@ const getAllPointMarkCoords = computed(() => {
 
 const copyToClipboard = async (data: { x: number; y: number }[]) => {
   try {
-    const jsonString = JSON.stringify(data);
-    await navigator.clipboard.writeText(jsonString);
+  const jsonString = JSON.stringify(data);
+  await navigator.clipboard.writeText(jsonString);
   } catch (err) {
-    console.error('Failed to copy to clipboard:', err);
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = JSON.stringify(data);
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-    } catch (fallbackErr) {
-      console.error('Fallback copy failed:', fallbackErr);
-    }
-    document.body.removeChild(textArea);
+  console.error('Failed to copy to clipboard:', err);
+  // Fallback for older browsers
+  const textArea = document.createElement('textarea');
+  textArea.value = JSON.stringify(data);
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  try {
+    document.execCommand('copy');
+  } catch (fallbackErr) {
+    console.error('Fallback copy failed:', fallbackErr);
+  }
+  document.body.removeChild(textArea);
   }
 };
 

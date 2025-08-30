@@ -18,11 +18,11 @@ An impassable boundary is generated to fully enclose the playable area. This pre
 
 1.  **Define Geometry:** An outer bounding box for the entire map is determined. Let its vertices be `x1` (top-left), `x2` (top-right), `x3` (bottom-right), and `x4` (bottom-left). Four new points (`N`, `E`, `S`, `W`) are projected outwards from the midpoint of each of the box's four edges. The projection distance for each point is equal to the length of the adjacent edge.
 2.  **Define Blobs:** Two large, non-convex, impassable polygons ("blobs") are defined using these vertices. These two blobs completely encompass the original box.
-    -   **Blob 1 (East):** A 6-vertex polygon defined by the hull `(x1, N, E, S, x3, x2)`.
-    -   **Blob 2 (West):** A 6-vertex polygon defined by the hull `(x3, S, W, N, x1, x4)`.
+  -   **Blob 1 (East):** A 6-vertex polygon defined by the hull `(x1, N, E, S, x3, x2)`.
+  -   **Blob 2 (West):** A 6-vertex polygon defined by the hull `(x3, S, W, N, x1, x4)`.
 3.  **Explicit Triangulation:** The interiors of these blobs must be triangulated into a specific set of 8 triangles (4 per blob), as shown in the reference diagram. This is not left to an algorithm. All triangles follow counter-clockwise (CCW) winding order.
-    -   **Blob 1 Triangles:** `(x1, N, x2)`, `(x2, E, x3)`, `(N, E, x2)`, `(E, S, x3)`
-    -   **Blob 2 Triangles:** `(x3, S, x4)`, `(x4, W, x1)`, `(S, W, x4)`, `(W, N, x1)`
+  -   **Blob 1 Triangles:** `(x1, N, x2)`, `(x2, E, x3)`, `(N, E, x2)`, `(E, S, x3)`
+  -   **Blob 2 Triangles:** `(x3, S, x4)`, `(x4, W, x1)`, `(S, W, x4)`, `(W, N, x1)`
 4.  **Create Fake Buildings:** Two corresponding "fake" building entries are created, named `outside1` and `outside2`, one for each boundary blob.
 5.  **Inject into Pipeline:** The boundary triangles are injected during the triangulation process and become part of the impassable triangles. The boundary blobs themselves are NOT added to the hole polygons used for Constrained Delaunay Triangulation. Instead, the pre-calculated boundary triangles are added directly to the impassable triangle set before the 'Step 3: Combine all triangles and create unified vertex/triangle arrays' step.
 
@@ -112,65 +112,65 @@ To manage complexity, the navmesh generation pipeline will be broken down into s
 
 `src/
 └── mapgen/
-    ├── build_navmesh.ts       # Main orchestrator script
-    ├── navmesh_struct.ts      # Type definitions for navmesh data structures
-    ├── populate_navmesh.ts    # Populates the navmesh data arrays from intermediate results
-    ├── finalize_navmesh.ts    # Final processing steps (e.g., re-sorting, neighbor mapping)
-    ├── triangulate.ts         # Core triangulation logic
-    ├── hertel_mehlhorn.ts     # Hertel-Mehlhorn polygonization
-    ├── k_opt.ts               # k-opt polygon optimization
-    ├── nav_data_io.ts         # Handles loading inputs and writing final navmesh file
-    ├── nav_summary.ts         # Prints summary and finalizes statistics
-    ├── nav_draw.ts            # Generates a visualization of the navmesh
-    └── navmesh_validation.ts  # Performs validation checks on the generated navmesh
+  ├── build_navmesh.ts     # Main orchestrator script
+  ├── navmesh_struct.ts    # Type definitions for navmesh data structures
+  ├── populate_navmesh.ts  # Populates the navmesh data arrays from intermediate results
+  ├── finalize_navmesh.ts  # Final processing steps (e.g., re-sorting, neighbor mapping)
+  ├── triangulate.ts     # Core triangulation logic
+  ├── hertel_mehlhorn.ts   # Hertel-Mehlhorn polygonization
+  ├── k_opt.ts         # k-opt polygon optimization
+  ├── nav_data_io.ts     # Handles loading inputs and writing final navmesh file
+  ├── nav_summary.ts     # Prints summary and finalizes statistics
+  ├── nav_draw.ts      # Generates a visualization of the navmesh
+  └── navmesh_validation.ts  # Performs validation checks on the generated navmesh
 `
 ### 5.2. Module Responsibilities
 
 1.  **`build_navmesh.ts` (Orchestrator)**
-    -   Parses command-line arguments.
-    -   Calls the I/O module to load blob and building data.
-    -   Invokes the triangulation module for both walkable areas and blob interiors.
-    -   Calls the polygonization and optimization modules in sequence for the walkable areas.
-    -   Calls the population and finalization modules to build the final data structure.
-    -   Calls the I/O module to save the final, complete navmesh data structure.
+  -   Parses command-line arguments.
+  -   Calls the I/O module to load blob and building data.
+  -   Invokes the triangulation module for both walkable areas and blob interiors.
+  -   Calls the polygonization and optimization modules in sequence for the walkable areas.
+  -   Calls the population and finalization modules to build the final data structure.
+  -   Calls the I/O module to save the final, complete navmesh data structure.
 
 2.  **`triangulate.ts`**
-    -   Contains the core logic for performing the Constrained Delaunay Triangulation.
-    -   Will encapsulate the usage of the `poly2tri` library.
-    -   The main triangulation loop from the current `build_navmesh.ts` will be moved here.
+  -   Contains the core logic for performing the Constrained Delaunay Triangulation.
+  -   Will encapsulate the usage of the `poly2tri` library.
+  -   The main triangulation loop from the current `build_navmesh.ts` will be moved here.
 
 3.  **`hertel_mehlhorn.ts`**
-    -   Implements the greedy Hertel-Mehlhorn algorithm to merge triangles into convex polygons.
+  -   Implements the greedy Hertel-Mehlhorn algorithm to merge triangles into convex polygons.
 
 4.  **`k_opt.ts` (and other optimizers)**
-    -   Each file will implement a specific optimization heuristic (like k-opt or random restarts) to be run on the polygon set produced by the initial merge.
+  -   Each file will implement a specific optimization heuristic (like k-opt or random restarts) to be run on the polygon set produced by the initial merge.
 
 5.  **`nav_data_io.ts`**
-    -   Handles all file system interactions.
-    -   **Input:** Will contain the logic for reading and parsing the `blobs.txt` file and the original building GeoJSON data.
-    -   **Output:** Will contain the logic for serializing all the final navmesh data structures into the flat-array format and writing it to a file. It will also output the buildings geoJSON file.
+  -   Handles all file system interactions.
+  -   **Input:** Will contain the logic for reading and parsing the `blobs.txt` file and the original building GeoJSON data.
+  -   **Output:** Will contain the logic for serializing all the final navmesh data structures into the flat-array format and writing it to a file. It will also output the buildings geoJSON file.
 
 6.  **`nav_draw.ts`**
-    -   Generates a 2000x2000 PNG image visualizing the generated navmesh.
-    -   Draws all triangles with black outlines.
-    -   Fills impassable blobs with solid black.
-    -   Colors each walkable polygon with a unique color, ensuring no two adjacent polygons share the same color.
-    -   The coordinate system is centered in the image.
+  -   Generates a 2000x2000 PNG image visualizing the generated navmesh.
+  -   Draws all triangles with black outlines.
+  -   Fills impassable blobs with solid black.
+  -   Colors each walkable polygon with a unique color, ensuring no two adjacent polygons share the same color.
+  -   The coordinate system is centered in the image.
 
 7.  **`populate_navmesh.ts`**
-    -   A collection of functions responsible for taking the raw output from triangulation and polygonization (vertices, triangles, polygons) and populating the final, flat `NavmeshData` arrays.
+  -   A collection of functions responsible for taking the raw output from triangulation and polygonization (vertices, triangles, polygons) and populating the final, flat `NavmeshData` arrays.
 
 8.  **`finalize_navmesh.ts`**
-    -   Performs the final data processing steps that can only occur after the main data has been populated. This includes re-sorting triangles by polygon ID and re-mapping triangle neighbor indices to match the new sorted order.
+  -   Performs the final data processing steps that can only occur after the main data has been populated. This includes re-sorting triangles by polygon ID and re-mapping triangle neighbor indices to match the new sorted order.
 
 9.  **`nav_summary.ts`**
-    -   Calculates and prints a final summary of the generated navmesh, including statistics on vertices, triangles, and polygons.
+  -   Calculates and prints a final summary of the generated navmesh, including statistics on vertices, triangles, and polygons.
 
 10. **`navmesh_struct.ts`**
-    -   Contains the TypeScript type and interface definitions for the core navmesh data structures, ensuring type safety across the generation pipeline.
+  -   Contains the TypeScript type and interface definitions for the core navmesh data structures, ensuring type safety across the generation pipeline.
 
 11. **`navmesh_validation.ts`**
-    -   Contains validation logic to ensure the integrity of the generated navmesh data.
-    -   Currently includes a check to ensure no two vertices are too close to each other, using a spatial grid for efficiency.
+  -   Contains validation logic to ensure the integrity of the generated navmesh data.
+  -   Currently includes a check to ensure no two vertices are too close to each other, using a spatial grid for efficiency.
 
 This modular approach will make the pipeline much easier to develop, debug, and maintain as we implement the full feature set of the new navmesh system. 

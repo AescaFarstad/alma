@@ -14,124 +14,124 @@ import { Point2, Line, subtract, distance, lineLineIntersection, distancePointTo
  * @returns A new array of points for the geometry with improved corners.
  */
 export function cornerize(
-    simplifiedPoints: Point2[],
-    originalPoints: Point2[],
-    shortSegmentThreshold: number,
-    cornerProximityThreshold: number
+  simplifiedPoints: Point2[],
+  originalPoints: Point2[],
+  shortSegmentThreshold: number,
+  cornerProximityThreshold: number
 ): Point2[] {
-    // sceneState.clearDebugVisuals();
-    let n = simplifiedPoints.length;
-    let list = [...simplifiedPoints]
-    if (n < 4) {
-        return list; // Not enough points to form a pattern of 4
-    }
-    const minProximity = cornerProximityThreshold * (Math.SQRT2 + 0.01);
+  // sceneState.clearDebugVisuals();
+  let n = simplifiedPoints.length;
+  let list = [...simplifiedPoints]
+  if (n < 4) {
+    return list; // Not enough points to form a pattern of 4
+  }
+  const minProximity = cornerProximityThreshold * (Math.SQRT2 + 0.01);
 
-    for (let i = 0; i < n; i++) {
+  for (let i = 0; i < n; i++) {
 
-        const a_idx = i;
-        const b_idx = (i + 1) % n;
-        const c_idx = (i + 2) % n;
-        const d_idx = (i + 3) % n;
+    const a_idx = i;
+    const b_idx = (i + 1) % n;
+    const c_idx = (i + 2) % n;
+    const d_idx = (i + 3) % n;
 
-        const pA = list[a_idx];
-        const pB = list[b_idx];
-        const pC = list[c_idx];
-        const pD = list[d_idx];
-        
-        // If B and C are very close, they might form a "rounded" corner
-        // that should be a single sharp point.
-        const dst = distance(pB, pC);
-        if (dst < shortSegmentThreshold && dst > minProximity) {
-            // sceneState.addDebugPoint(pB, ACWHITE);
-            // sceneState.addDebugPoint(pC, ACBLACK);
-            const lineAB: Line = { point: pA, direction: subtract(pB, pA) };
-            const lineDC: Line = { point: pD, direction: subtract(pC, pD) };
-            const R = lineLineIntersection(lineAB, lineDC);
+    const pA = list[a_idx];
+    const pB = list[b_idx];
+    const pC = list[c_idx];
+    const pD = list[d_idx];
+    
+    // If B and C are very close, they might form a "rounded" corner
+    // that should be a single sharp point.
+    const dst = distance(pB, pC);
+    if (dst < shortSegmentThreshold && dst > minProximity) {
+      // sceneState.addDebugPoint(pB, ACWHITE);
+      // sceneState.addDebugPoint(pC, ACBLACK);
+      const lineAB: Line = { point: pA, direction: subtract(pB, pA) };
+      const lineDC: Line = { point: pD, direction: subtract(pC, pD) };
+      const R = lineLineIntersection(lineAB, lineDC);
 
-            if (R && distance(R, pB) < shortSegmentThreshold + minProximity) {
-                let tooCloseToSegment = false;
-                for (let j = 0; j < n; j++) {
-                    if (j === b_idx || j === c_idx) {
-                        continue;
-                    }
-                    const segStart = list[j];
-                    const segEnd = list[(j + 1) % n];
-                    if (distancePointToSegment(R, segStart, segEnd) < shortSegmentThreshold / 2) {
-                        tooCloseToSegment = true;
-                        break;
-                    }
-                }
-                if (tooCloseToSegment) {
-                    continue;
-                }
-                // Check if the potential new corner R is close to any vertex
-                // of the original shape.
-                let closestOriginalPoint: Point2 | null = null;
-                let minDistance = cornerProximityThreshold;
-
-                for (const originalPoint of originalPoints) {
-                    const d = distance(R, originalPoint);
-                    if (d < minDistance && distance(pB, originalPoint) > cornerProximityThreshold && distance(pC, originalPoint) > cornerProximityThreshold) {
-                        minDistance = d;
-                        closestOriginalPoint = originalPoint;
-                    }
-                }
-
-                if (closestOriginalPoint) {
-                    // let isDuplicate = false;
-                    // for (let j = 0; j < n; j++) {
-                    //     if (j === b_idx || j === c_idx) continue;
-                    //     if (distance(R, list[j]) < 1e-4) {
-                    //         isDuplicate = true;
-                    //         break;
-                    //     }
-                    // }
-                    // if (isDuplicate) {
-                    //     continue;
-                    // }
-                    // console.log(`INC at ${i}`)
-                    // A B C D => A R D
-                    list.splice(b_idx, 1);
-                    list[b_idx] = R;
-                    n--;
-                    continue;
-                }
-            }
-
-            const centerBC = { x: (pB.x + pC.x) / 2, y: (pB.y + pC.y) / 2 };
-            const vecBC = subtract(pC, pB);
-            const vec_rot90 = { x: -vecBC.y, y: vecBC.x };
-            const half_vec_rot90 = { x: vec_rot90.x / 2, y: vec_rot90.y / 2 };
-            
-            const J = { x: centerBC.x - half_vec_rot90.x, y: centerBC.y - half_vec_rot90.y };
-            const K = { x: centerBC.x + half_vec_rot90.x, y: centerBC.y + half_vec_rot90.y };
-
-            let closeToJ = false;
-            let closeToK = false;
-
-            for (const originalPoint of originalPoints) {
-                if (distance(pB, originalPoint) < cornerProximityThreshold || distance(pC, originalPoint) < cornerProximityThreshold)
-                    continue;
-                if (!closeToJ && distance(J, originalPoint) < cornerProximityThreshold) {
-                    closeToJ = true;
-                }
-                if (!closeToK && distance(K, originalPoint) < cornerProximityThreshold) {
-                    closeToK = true;
-                }
-                if (closeToJ && closeToK) break; 
-            }
-
-            if (closeToJ && !closeToK) {
-                // console.log(`move at ${i}`)
-                list[b_idx] = J;
-                continue;
-            } else if (!closeToJ && closeToK) {
-                // console.log(`move at ${i}`)
-                list[c_idx] = K;
-                continue;
-            }
+      if (R && distance(R, pB) < shortSegmentThreshold + minProximity) {
+        let tooCloseToSegment = false;
+        for (let j = 0; j < n; j++) {
+          if (j === b_idx || j === c_idx) {
+            continue;
+          }
+          const segStart = list[j];
+          const segEnd = list[(j + 1) % n];
+          if (distancePointToSegment(R, segStart, segEnd) < shortSegmentThreshold / 2) {
+            tooCloseToSegment = true;
+            break;
+          }
         }
+        if (tooCloseToSegment) {
+          continue;
+        }
+        // Check if the potential new corner R is close to any vertex
+        // of the original shape.
+        let closestOriginalPoint: Point2 | null = null;
+        let minDistance = cornerProximityThreshold;
+
+        for (const originalPoint of originalPoints) {
+          const d = distance(R, originalPoint);
+          if (d < minDistance && distance(pB, originalPoint) > cornerProximityThreshold && distance(pC, originalPoint) > cornerProximityThreshold) {
+            minDistance = d;
+            closestOriginalPoint = originalPoint;
+          }
+        }
+
+        if (closestOriginalPoint) {
+          // let isDuplicate = false;
+          // for (let j = 0; j < n; j++) {
+          //   if (j === b_idx || j === c_idx) continue;
+          //   if (distance(R, list[j]) < 1e-4) {
+          //     isDuplicate = true;
+          //     break;
+          //   }
+          // }
+          // if (isDuplicate) {
+          //   continue;
+          // }
+          // console.log(`INC at ${i}`)
+          // A B C D => A R D
+          list.splice(b_idx, 1);
+          list[b_idx] = R;
+          n--;
+          continue;
+        }
+      }
+
+      const centerBC = { x: (pB.x + pC.x) / 2, y: (pB.y + pC.y) / 2 };
+      const vecBC = subtract(pC, pB);
+      const vec_rot90 = { x: -vecBC.y, y: vecBC.x };
+      const half_vec_rot90 = { x: vec_rot90.x / 2, y: vec_rot90.y / 2 };
+      
+      const J = { x: centerBC.x - half_vec_rot90.x, y: centerBC.y - half_vec_rot90.y };
+      const K = { x: centerBC.x + half_vec_rot90.x, y: centerBC.y + half_vec_rot90.y };
+
+      let closeToJ = false;
+      let closeToK = false;
+
+      for (const originalPoint of originalPoints) {
+        if (distance(pB, originalPoint) < cornerProximityThreshold || distance(pC, originalPoint) < cornerProximityThreshold)
+          continue;
+        if (!closeToJ && distance(J, originalPoint) < cornerProximityThreshold) {
+          closeToJ = true;
+        }
+        if (!closeToK && distance(K, originalPoint) < cornerProximityThreshold) {
+          closeToK = true;
+        }
+        if (closeToJ && closeToK) break; 
+      }
+
+      if (closeToJ && !closeToK) {
+        // console.log(`move at ${i}`)
+        list[b_idx] = J;
+        continue;
+      } else if (!closeToJ && closeToK) {
+        // console.log(`move at ${i}`)
+        list[c_idx] = K;
+        continue;
+      }
     }
-    return list;
+  }
+  return list;
 } 
