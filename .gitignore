@@ -18,6 +18,8 @@ public/wasm_module.wasm
 public/tiles
 dist-ssr
 *.local
+src/wasm/.cache
+compile_commands.json
 
 # Editor directories and files
 .idea

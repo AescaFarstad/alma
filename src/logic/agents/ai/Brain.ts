@@ -8,6 +8,7 @@ import { cmdSetCorridor, CorridorAction } from "../EventHandler";
 import { raycastCorridor } from "../../Raycasting";
 import { Point2, set, getLineSegmentIntersectionPoint, lineLineIntersect } from "../../core/math";
 import { NavConst } from "../NavConst";
+import { sceneState, ACBLACK, ACYELLOW, ACRED } from "../../drawing/SceneState";
 
 export class Brain{
   constructor(public stack : Array<BrainCell>) {}
@@ -68,9 +69,9 @@ export class WanderDirCell implements BrainCell{
 
       const maxDist = 150;
       set(raycastEndPoint, raycastPoint.x + dx * maxDist, raycastPoint.y + dy * maxDist);
-      let startTri = data.current_tris[a.idx];
-      if (startTri < 0) startTri = getTriangleFromPoint(navmesh, raycastPoint);
-      const rc = raycastCorridor(navmesh, raycastPoint, raycastEndPoint, startTri);
+      // Debug: raycast segment (black)
+      sceneState.addDebugLine({ x: raycastPoint.x, y: raycastPoint.y }, { x: raycastEndPoint.x, y: raycastEndPoint.y }, ACBLACK);
+      const rc = raycastCorridor(navmesh, raycastPoint, raycastEndPoint, data.current_tris[a.idx]);
       if (!rc.corridor || rc.corridor.length === 0) return;
 
       // Poly corridor from tri corridor, assembled backwards (end->start) and dedup consecutive
@@ -93,9 +94,14 @@ export class WanderDirCell implements BrainCell{
         const v1y = navmesh.vertices[rc.hitV1_idx * 2 + 1];
         const v2x = navmesh.vertices[rc.hitV2_idx * 2];
         const v2y = navmesh.vertices[rc.hitV2_idx * 2 + 1];
+        console.log(`hit edge: ${v1x.toFixed(2)}, ${v1y.toFixed(2)}, ${v2x.toFixed(2)}, ${v2y.toFixed(2)}`);
+        // Debug: hit edge (yellow)
+        sceneState.addDebugLine({ x: v1x, y: v1y }, { x: v2x, y: v2y }, ACYELLOW);
         const p = lineLineIntersect(
           raycastPoint.x, raycastPoint.y, raycastEndPoint.x, raycastEndPoint.y,
           v1x, v1y, v2x, v2y);
+        // Debug: intersection point (red)
+        if (p) sceneState.addDebugPoint({ x: p.x, y: p.y }, ACRED);
         const len = Math.hypot(dx, dy) || 1;
         endX = p!.x - (dx / len) * NavConst.CORNER_OFFSET;
         endY = p!.y - (dy / len) * NavConst.CORNER_OFFSET;

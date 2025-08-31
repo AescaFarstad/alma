@@ -1,25 +1,16 @@
 #include <iostream>
 #include "wasm_log.h"
 #include <sstream>
-#include <cmath>
 #include <emscripten/emscripten.h>
 #include "data_structures.h"
 #include "agent_init.h"
 #include "math_utils.h"
-#include "agent_move_phys.h"
-#include "agent_navigation.h"
 #include "agent_grid.h"
-#include "agent_collision.h"
-#include "agent_statistic.h"
 #include "constants_layout.h"
 #include "init_navmesh.h"
 #include "navmesh.h"
-#include "nav_utils.h"
 #include <vector>
-#include "sprite_renderer.h"
 #include "model.h"
-#include "wasm_impulse.h"
-#include "benchmarks.h"
 #include "event_buffer.h"
 #include "path_corridor.h"
 
@@ -78,6 +69,13 @@ EMSCRIPTEN_KEEPALIVE void set_constants_buffer(uint8_t* buf, bool debug) {
     printf("PATH_WIDTH_PENALTY_MULT: %f\n", PATH_WIDTH_PENALTY_MULT);
     printf("---------------------------\n");
   }
+}
+
+// Selected WASM agent index (controlled from TS); -1 means none
+int g_selected_wagent_idx = -1;
+
+EMSCRIPTEN_KEEPALIVE void set_selected_wagent_idx(int idx) {
+  g_selected_wagent_idx = idx;
 }
 
 /**
@@ -346,6 +344,25 @@ EMSCRIPTEN_KEEPALIVE int test_find_corridor(float startX, float startY, float en
     resultPtr[i] = corridor[i];
   }
   
+  return copyLength;
+}
+
+/**
+ * @brief Copy the current corridor of the given agent into a JS-provided buffer.
+ * @param agent_idx Agent index.
+ * @param resultPtr Pointer to memory where corridor will be written (uint32_t ints).
+ * @param maxLength Maximum number of elements to copy.
+ * @return Number of elements written. 0 if invalid index, empty corridor, or bad args.
+ */
+EMSCRIPTEN_KEEPALIVE int get_agent_corridor(uint32_t agent_idx, uint32_t* resultPtr, int maxLength) {
+  if (!resultPtr || maxLength <= 0) return 0;
+  if (agent_idx >= static_cast<uint32_t>(agent_data.capacity)) return 0;
+  const auto &corr = agent_data.corridors[agent_idx];
+  if (corr.empty()) return 0;
+  const int copyLength = std::min(static_cast<int>(corr.size()), maxLength);
+  for (int i = 0; i < copyLength; ++i) {
+    resultPtr[i] = static_cast<uint32_t>(corr[i]);
+  }
   return copyLength;
 }
 

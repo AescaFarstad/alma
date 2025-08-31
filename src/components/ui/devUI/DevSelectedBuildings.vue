@@ -39,30 +39,32 @@
     </div>
     </li>
   </ul>
-  <building-tooltip 
-    v-if="tooltip.visible" 
-    :building="tooltip.building" 
-    :area="tooltip.area"
-    :style="{ top: `${tooltip.y}px`, left: `${tooltip.x}px` }" />
+  <teleport to="body">
+    <building-tooltip 
+      v-if="tooltip.visible" 
+      :building="tooltip.building" 
+      :area="tooltip.area"
+      :style="{ top: `${tooltip.y}px`, left: `${tooltip.x}px` }" />
+  </teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, inject, reactive } from 'vue';
-import type { GameState } from '../../logic/GameState';
-import { mapInstance } from '../../map_instance';
-import { SceneState } from '../../logic/drawing/SceneState';
+import type { GameState } from '../../../logic/GameState';
+import { mapInstance } from '../../../map_instance';
+import { SceneState } from '../../../logic/drawing/SceneState';
 import BuildingTooltip from './BuildingTooltip.vue';
-import { getConvexHull } from '../../mapgen/simplification/convexHull';
-import type { Point2 } from '../../logic/core/math';
-import { unround } from '../../mapgen/simplification/unrounding';
-import { flatten } from '../../mapgen/simplification/flattening';
-import { simplifyWithDilationErosion } from '../../mapgen/simplification/dilationErosion';
-import { uniteGeometries, type BuildingWithPolygon } from '../../mapgen/simplification/unite';
-import { getBuildingGeometry, getPolygonVertices, getBuildingArea } from '../../mapgen/simplification/geometryUtils';
-import { cornerize } from '../../mapgen/simplification/cornerize';
-import { pullAway } from '../../mapgen/simplification/pullAway';
-import { BuildingProperties } from '../../types';
+import { getConvexHull } from '../../../mapgen/simplification/convexHull';
+import type { Point2 } from '../../../logic/core/math';
+import { unround } from '../../../mapgen/simplification/unrounding';
+import { flatten } from '../../../mapgen/simplification/flattening';
+import { simplifyWithDilationErosion } from '../../../mapgen/simplification/dilationErosion';
+import { uniteGeometries, type BuildingWithPolygon } from '../../../mapgen/simplification/unite';
+import { getBuildingGeometry, getPolygonVertices, getBuildingArea } from '../../../mapgen/simplification/geometryUtils';
+import { cornerize } from '../../../mapgen/simplification/cornerize';
+import { pullAway } from '../../../mapgen/simplification/pullAway';
+import { BuildingProperties } from '../../../types';
 
 type BuildingDisplayData = { 
   id: number;

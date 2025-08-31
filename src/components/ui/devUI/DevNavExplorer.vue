@@ -6,7 +6,7 @@
     <button @click="flyToCoordinates">Fly</button>
     <button @click="findTriangle">Tri</button>
     <button @click="drawPoint">Draw</button>
-    <button @click="debugPoint">Debug</button>
+    <button @click="debugPoint">Dbg</button>
   </div>
   <div class="debug-section">
     <input type="text" v-model="triangleIndex" placeholder="Triangle Index" />
@@ -27,10 +27,10 @@
 
 <script setup lang="ts">
 import { ref, inject } from 'vue';
-import { mapInstance } from '../../map_instance';
-import type { GameState } from '../../logic/GameState';
-import { SceneState, ACGREEN, ACINDIGO, ACBLUE, ACYELLOW, ACBROWN } from '../../logic/drawing/SceneState';
-import { getTriangleFromPoint, getPolygonFromPoint } from '../../logic/navmesh/NavUtils';
+import { mapInstance } from '../../../map_instance';
+import type { GameState } from '../../../logic/GameState';
+import { SceneState, ACGREEN, ACINDIGO, ACBLUE, ACYELLOW, ACBROWN } from '../../../logic/drawing/SceneState';
+import { getTriangleFromPoint, getPolygonFromPoint } from '../../../logic/navmesh/NavUtils';
 
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
@@ -364,7 +364,7 @@ const drawPolygon = (polyIndexToDraw?: number, color = ACGREEN) => {
   color: #f0f0f0;
   border-radius: 2px;
   padding: 4px;
-  width: 150px;
+  width: 120px;
 }
 
 #debug-tools button {

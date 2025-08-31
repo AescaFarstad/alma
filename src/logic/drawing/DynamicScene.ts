@@ -7,11 +7,15 @@ export class DynamicScene {
   public laserBlasts: LaserBlast[] = [];
   public avatar: Avatar | null = null;
   public agents: Agent[] = [];
+  public selectedWAgentIdx: number | null = null;
+  public selectedWAgentCorridor: number[] | null = null;
 
   public clear() {
     this.laserBlasts = [];
     this.avatar = null;
     this.agents = [];
+    this.selectedWAgentIdx = null;
+    this.selectedWAgentCorridor = null;
   }
 }
 

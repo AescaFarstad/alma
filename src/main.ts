@@ -10,6 +10,7 @@ import { WasmInit } from './logic/initializers/WasmInit';
 import { Wasm } from './logic/Wasm';
 import { runPointInTriangleBenchmark } from './logic/debug/PointInTriangleBenchmark';
 import { WasmFacade } from './logic/WasmFacade';
+import { dispatchFrameUpdate } from './logic/FrameUpdate';
 
 
 async function initializeGame() {
@@ -73,6 +74,8 @@ async function initializeGame() {
 
     const totalAgents = gameState.agents.length + gameState.wagents.length;
     agentCount.value = totalAgents;
+
+    dispatchFrameUpdate(deltaTime, timestamp / 1000);
 
     requestAnimationFrame(gameLoop);
   }

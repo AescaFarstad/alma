@@ -4,15 +4,11 @@
 #include "path_corners.h"
 #include "constants_layout.h"
 #include "wasm_log.h"
+#include "event_handler.h"
 
 extern EventBuffer g_event_buffer;
 extern AgentSoA agent_data;
 extern Navmesh g_navmesh;
-
-enum AgentEventType : uint16_t {
-  EVT_NONE = 0,
-  CMD_SET_CORRIDOR = 1,
-};
 
 enum CorridorAction : uint32_t {
   SET_ONLY = 1,

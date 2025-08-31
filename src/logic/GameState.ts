@@ -43,7 +43,7 @@ export type LaserBlast = {
 };
 const spawnersCooldown = 0.01;
 // export const wagentsLimit = 24000;
-export const wagentsLimit = 92;
+export const wagentsLimit = 0;
 export const agentsLimit = 2;
 export class GameState { // This is a POD class. No functions allowed.
   public lib : Lib;
@@ -80,7 +80,7 @@ export class GameState { // This is a POD class. No functions allowed.
   public rngSeedW: number;
 
   constructor() {
-    const config = AgentConfigs.walker1;
+    const config = AgentConfigs.crazy;
     const config2 = AgentConfigs.walker2;
     // this.pointMarks = [
     //   {id:1, x:1039.2013310648636, y:1363.7068431395105, selected: true},
@@ -94,7 +94,7 @@ export class GameState { // This is a POD class. No functions allowed.
     // Initialize WAgent spawners
     this.wAgentSpawners = [
       { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
-      { config: config2, coordinate: { x: -322, y: 338 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
+      // { config: config2, coordinate: { x: -322, y: 338 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
       // { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
       // { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
       // { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.5, spawnCount: 0 },

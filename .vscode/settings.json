@@ -1,3 +1,10 @@
 {
-  "kiroAgent.configureMCP": "Disabled"
+  "kiroAgent.configureMCP": "Disabled",
+  "cmake.ignoreCMakeListsMissing": true,
+  "clangd.arguments": [
+    "--compile-commands-dir=src/wasm",
+    "--background-index",
+    "--query-driver=/mnt/WoB/WOB/web_rep/emsdk/**/em++*,/mnt/WoB/WOB/web_rep/emsdk/**/emcc*"
+  ],
+  "C_Cpp.intelliSenseEngine": "Disabled"
 }

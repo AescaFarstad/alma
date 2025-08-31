@@ -1,7 +1,6 @@
 import type { Navmesh } from './navmesh/Navmesh';
 import { Point2, isToRight } from './core/math';
 import { getTriangleFromPoint, testPointInsideTriangle } from './navmesh/NavUtils';
-import { GameState } from './GameState';
 
 export type RaycastWithCorridorResult = {
   hitV1_idx: number;
@@ -16,8 +15,9 @@ export type RaycastHitOnlyResult = {
 };
 
 const triPoints: [Point2, Point2, Point2] = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
-// Global temporary variable to store the hit edge index to avoid allocation and intersection calculations
-let hitEdgeIndex = -1;
+// Global temporaries to store hit info, avoiding allocations
+let hitEdgeIndex = -1; // edge on last walkable triangle that blocks
+let hitTriIdx = -1;    // index of the blocking unwalkable triangle
 
 /**
  * Raycast with corridor tracking - returns both hit information and the corridor of triangles traversed
@@ -33,33 +33,34 @@ export function raycastCorridor(
   endTriIdx?: number,
 ): RaycastWithCorridorResult {
   hitEdgeIndex = -1;
+  hitTriIdx = -1;
   
   const corridor = traceStraightCorridor(navmesh, startPoint, endPoint, startTriIdx, endTriIdx);
 
   if (corridor === null) {
     return {hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor: []};
   }
-
-  const lastTriIdx = corridor[corridor.length-2];
+  // Last walkable triangle we are in
+  const lastWalkTriIdx = corridor[corridor.length - 1];
   
   // If endTriIdx is provided, trust it - no need for point-in-triangle check
   if (endTriIdx !== undefined) {
-    if (lastTriIdx === endTriIdx) {
+    if (lastWalkTriIdx === endTriIdx) {
       return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor };
     }
   } else {
     // Fallback to point-in-triangle check when endTriIdx is not provided
-    if(testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, lastTriIdx)) {
+    if (testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, lastWalkTriIdx)) {
       return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor };
     }
   }
   
-  // If we hit a wall, return the hit edge
-  if (hitEdgeIndex !== -1) {
-    const triVertexStartIndex = lastTriIdx * 3;
+  // If we hit a wall, return the blocking edge and blocking triangle
+  if (hitEdgeIndex !== -1 && hitTriIdx !== -1) {
+    const triVertexStartIndex = lastWalkTriIdx * 3;
     const hitV1_idx = navmesh.triangles[triVertexStartIndex + hitEdgeIndex];
     const hitV2_idx = navmesh.triangles[triVertexStartIndex + ((hitEdgeIndex + 1) % 3)];
-    return {hitV1_idx, hitV2_idx, hitTri_idx: corridor[corridor.length-1], corridor};
+    return {hitV1_idx, hitV2_idx, hitTri_idx: hitTriIdx, corridor};
   }
 
   return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor }; // Fallback
@@ -132,6 +133,7 @@ function traceStraightCorridor(
   const corridor: number[] = [currentTriIdx];
   const MAX_ITERATIONS = 5000; // Safety break
   let previousTriIdx = -1;
+  hitTriIdx = -1;
 
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
     // If endTriIdx is provided, trust it and check if we've reached the target triangle
@@ -175,8 +177,8 @@ function traceStraightCorridor(
       
       if (nextTriIdx >= navmesh.walkable_triangle_count) {
         hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
-        corridor.push(nextTriIdx); //store the hit triangle
-        return corridor; // Hit a wall
+        hitTriIdx = nextTriIdx;     // Store the blocking unwalkable triangle
+        return corridor;            // Corridor remains fully walkable
       }
     } else {
       // After the first triangle, we can use a faster method.
@@ -200,17 +202,18 @@ function traceStraightCorridor(
           // Ray crosses the edge between p_entry2 and p_apex.
           exitEdgeIdx = (entryEdgeIdx + 1) % 3;
         } else {
-                  // Otherwise, it crosses the other edge (between p_apex and p_entry1).
-        exitEdgeIdx = (entryEdgeIdx + 2) % 3;
-      }
-      nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+          // Otherwise, it crosses the other edge (between p_apex and p_entry1).
+          exitEdgeIdx = (entryEdgeIdx + 2) % 3;
+        }
+        nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
 
-      if (nextTriIdx >= navmesh.walkable_triangle_count) {
-        hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
-        return corridor; // Hit a wall
+        if (nextTriIdx >= navmesh.walkable_triangle_count) {
+          hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
+          hitTriIdx = nextTriIdx;     // Store the blocking unwalkable triangle
+          return corridor;            // Hit a wall; corridor stays walkable
+        }
       }
-    }
-    // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
+      // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
     }
 
     if (nextTriIdx !== -1) {
@@ -316,16 +319,16 @@ function traceStraightCorridorHitOnly(
           // Ray crosses the edge between p_entry2 and p_apex.
           exitEdgeIdx = (entryEdgeIdx + 1) % 3;
         } else {
-                  // Otherwise, it crosses the other edge (between p_apex and p_entry1).
-        exitEdgeIdx = (entryEdgeIdx + 2) % 3;
-      }
-      nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
+          // Otherwise, it crosses the other edge (between p_apex and p_entry1).
+          exitEdgeIdx = (entryEdgeIdx + 2) % 3;
+        }
+        nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
 
-      if (nextTriIdx >= navmesh.walkable_triangle_count) {
-        hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
-        return currentTriIdx; // Hit a wall
+        if (nextTriIdx >= navmesh.walkable_triangle_count) {
+          hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
+          return currentTriIdx; // Hit a wall
+        }
       }
-    }
     // If entryEdgeIdx is -1, something is wrong, nextTriIdx remains -1 and we'll exit below.
     }
 

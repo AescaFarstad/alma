@@ -3,6 +3,7 @@
   <Map ref="mapComponent" @map-event="handleMapEvent" :layer-visibility="layerVisibility" />
   <Overlay
     @map-event="handleMapEvent"
+    @hide-context-menu="hideContextMenu"
     :mouse-coordinates="mouseCoordinates"
     :map-bounds="mapBounds"
     :selected-feature-info="selectedFeatureInfo"
@@ -11,42 +12,25 @@
     :zoom-level="zoomLevel"
     :avatar="avatar"
     :agent-count="agentCount"
+    :context-menu="contextMenu"
   />
-  <ContextMenu
-    :visible="contextMenu.visible"
-    :x="contextMenu.x"
-    :y="contextMenu.y"
-    :coordinate="contextMenu.coordinate"
-    @hide="hideContextMenu"
-  />
-  <SelectedPointMarks />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, provide, inject, reactive, type Ref } from 'vue';
 import Map from './components/ui/Map.vue';
-import Overlay from './components/ui/Overlay.vue';
-import ContextMenu from './components/ui/ContextMenu.vue';
-import SelectedPointMarks from './components/ui/SelectedPointMarks.vue';
+import Overlay from './components/ui/devUI/Overlay.vue';
 import { globalInputQueue } from './logic/Model';
 import type { MouseCoordinates } from './types.ts';
 import type { CmdInput } from './logic/input/InputCommands';
-import { mapInstance } from './map_instance';
-import VectorTileLayer from 'ol/layer/VectorTile';
 import type { GameState } from './logic/GameState';
 import type { FPSMetrics } from './logic/FPSCounter';
-import Feature from 'ol/Feature';
 import { PixiLayer } from './logic/Pixie';
 import { SceneState } from './logic/drawing/SceneState';
-import { usePathfinding } from './logic/composables/usePathfinding';
-import { useNavmeshDebug } from './logic/composables/useNavmeshDebug';
-import { useNavmeshGridDebug } from './logic/composables/useNavmeshGridDebug';
 import { useMeasurement } from './logic/composables/useMeasurement';
 import { usePointMarks } from './logic/composables/usePointMarks';
 import { useAvatarState } from './logic/composables/useAvatarState';
-import { useNavmeshTrianglesDebug } from './logic/composables/useNavmeshTrianglesDebug';
-import { WasmFacade } from './logic/WasmFacade.ts';
 
 const agentCount = inject<Ref<number>>('agentCount');
 const gameState = inject<GameState>('gameState');

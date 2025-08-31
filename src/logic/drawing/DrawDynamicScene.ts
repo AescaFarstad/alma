@@ -3,6 +3,7 @@ import { DynamicScene } from './DynamicScene';
 import { GameState } from '../GameState';
 import { Map as OlMap } from 'ol';
 import { AgentState } from '../agents/Agent';
+import { findCorners } from '../navmesh/pathCorners';
 
 const laserBlastLineStyle: LineStyle = {
   width: 2,
@@ -12,6 +13,26 @@ const laserBlastLineStyle: LineStyle = {
 
 const laserCorridorPolyStyle: PolyStyle = {
   fillStyle: { color: 0x50C878, alpha: 0.3 }, // Emerald
+};
+
+// Corridor polygons for selected agent
+const lightBlueCorridorPolyStyle: PolyStyle = {
+  fillStyle: { color: 0x6666FF, alpha: 0.25 }, // Light blue transparent
+};
+
+// Path line/dots for selected agent
+const emeraldPathLineStyle: LineStyle = {
+  width: 0.5,
+  color: 0x50C878, // Emerald
+  alpha: 0.5,
+};
+
+const emeraldDotStyle: PolyStyle = {
+  fillStyle: { color: 0x50C878, alpha: 1.0 },
+};
+
+const redDotStyle: PolyStyle = {
+  fillStyle: { color: 0xCC0000, alpha: 1.0 },
 };
 
 const avatarPolyStyle: PolyStyle = {
@@ -29,6 +50,58 @@ const avatarOutsideNavmeshPolyStyle: PolyStyle = {
 export class DrawDynamicScene {
   public static buildDynamicPrimitives(primitives: PrimitiveState, dynamicScene: DynamicScene, gameState: GameState, _olMap: OlMap) {
     primitives.clear();
+
+    const selIdx = dynamicScene.selectedWAgentIdx;
+    if (typeof selIdx === 'number' && selIdx !== null && gameState.wasm_agents.positions) {
+      const agents = gameState.wasm_agents;
+      const navmesh = gameState.navmesh;
+
+      const startPoint = { x: agents.positions[selIdx * 2], y: agents.positions[selIdx * 2 + 1] };
+      const endPoint = { x: agents.end_targets[selIdx * 2], y: agents.end_targets[selIdx * 2 + 1] };
+
+      const corridor = dynamicScene.selectedWAgentCorridor || [];
+
+      for (const polyIdx of corridor) {
+        const pvStart = navmesh.polygons[polyIdx];
+        const pvEnd = navmesh.polygons[polyIdx + 1];
+        if (pvStart < 0 || pvEnd <= pvStart) continue;
+
+        const verts: number[] = [];
+        for (let i = pvStart; i < pvEnd; i++) {
+          const vIdx = navmesh.poly_verts[i];
+          const vx = navmesh.vertices[vIdx * 2];
+          const vy = navmesh.vertices[vIdx * 2 + 1];
+          verts.push(vx, -vy);
+        }
+        primitives.addPolygon(verts, lightBlueCorridorPolyStyle);
+      }
+
+      if (corridor.length > 0) {
+        const corners = findCorners(navmesh, corridor, startPoint, endPoint);
+        if (corners.length > 0) {
+          for (const c of corners) {
+            primitives.addCircle(c.point.x, -c.point.y, 0.75, { fillStyle: emeraldDotStyle.fillStyle });
+          }
+          for (let i = 0; i < corners.length - 1; i++) {
+            const a = corners[i].point;
+            const b = corners[i + 1].point;
+            primitives.addLine([a.x, -a.y, b.x, -b.y], emeraldPathLineStyle);
+          }
+        }
+      }
+
+      const nValid = agents.num_valid_corners[selIdx] | 0;
+      if (nValid >= 1) {
+        const nx = agents.next_corners[selIdx * 2];
+        const ny = agents.next_corners[selIdx * 2 + 1];
+        primitives.addCircle(nx, -ny, 1.2, { fillStyle: redDotStyle.fillStyle });
+      }
+      if (nValid >= 2) {
+        const nx2 = agents.next_corners2[selIdx * 2];
+        const ny2 = agents.next_corners2[selIdx * 2 + 1];
+        primitives.addCircle(nx2, -ny2, 1.2, { fillStyle: redDotStyle.fillStyle });
+      }
+    }
 
     // Render laser blasts
     for (const blast of dynamicScene.laserBlasts) {
@@ -69,15 +142,5 @@ export class DrawDynamicScene {
       primitives.addPolygon(flattenedTriangle, avatar.isOutsideNavmesh ? avatarOutsideNavmeshPolyStyle : (avatar.wallContact ? avatarWallContactPolyStyle : avatarPolyStyle));
       primitives.addCircle(pos.x, -pos.y, 0.1, { fillStyle: { color: 0xffffff, alpha: 1.0 } });
     }
-
-    // Render agents using pooling system
-    // Sync pool with agents from GameState (operates directly on GameState.agents as requested)
-    // Note: We no longer use the primitives system for agents - they are managed as PIXI objects directly
-
-    // --- Camera Follow ---
-    // if (dynamicScene.avatar && olMap && (dynamicScene.avatar.movement.x !== 0 || dynamicScene.avatar.movement.y !== 0)) {
-    //   const view = olMap.getView();
-    //   view.setCenter([dynamicScene.avatar.coordinate.x, dynamicScene.avatar.coordinate.y]);
-    // }
   }
 } 

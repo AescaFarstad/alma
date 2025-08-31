@@ -4,6 +4,7 @@
 #include "path_corridor.h"
 #include "math_utils.h"
 #include <algorithm>
+ 
 
 extern Navmesh g_navmesh;
 
@@ -100,43 +101,54 @@ static inline bool compute_corner_miter_offset(int polyIdx, int cornerVIdx, cons
 bool attempt_path_patch(
   Navmesh& navmesh,
   int idx,
-  const Point2& hitP1,
-  const Point2& hitP2,
+  int hitV1_idx,
+  int hitV2_idx,
+  int hitTri_idx,
   const std::vector<int>& raycastTriCorridor
 ) {
   if (raycastTriCorridor.empty()) return false;
 
-  const int lastTri = raycastTriCorridor.back();
-  const int blockingPoly = g_navmesh.triangle_to_polygon[lastTri];
+  // Build hit edge points from vertex indices for geometric checks
+  const Point2 hitP1 = g_navmesh.vertices[hitV1_idx];
+  const Point2 hitP2 = g_navmesh.vertices[hitV2_idx];
+
+  // Unwalkable triangle that blocked the ray
+  const int blockingTri = hitTri_idx;
+  const int blockingPoly = (blockingTri != -1) ? g_navmesh.triangle_to_polygon[blockingTri] : -1;
 
   // Approach 2: miter-offset around solid/obstacle polygon hit
   if (blockingPoly >= g_navmesh.walkable_polygon_count) {
+    
     const float d1 = math::distancePointToSegment(hitP1, agent_data.last_visible_points_for_next_corner[idx], agent_data.next_corners[idx]);
     const float d2 = math::distancePointToSegment(hitP2, agent_data.last_visible_points_for_next_corner[idx], agent_data.next_corners[idx]);
-    const Point2 chosenCornerPoint = (d1 <= d2) ? hitP1 : hitP2;
-    const int chosenVIdx = vertex_index_from_point_on_triangle(lastTri, chosenCornerPoint);
+    const bool useFirst = (d1 <= d2);
+    const Point2 chosenCornerPoint = useFirst ? hitP1 : hitP2;
+    const int chosenVIdx = useFirst ? hitV1_idx : hitV2_idx;
 
     if (chosenVIdx != -1) {
       Point2 offsetPoint;
       if (compute_corner_miter_offset(blockingPoly, chosenVIdx, chosenCornerPoint, CORNER_OFFSET, offsetPoint)) {
         const int offsetTri = getTriangleFromPoint(offsetPoint);
         if (offsetTri != -1) {
-          auto rc1 = raycastCorridor(agent_data.positions[idx], offsetPoint, agent_data.current_tris[idx], offsetTri);
-          if (!std::get<3>(rc1) && !std::get<2>(rc1).empty()) {
+          RaycastCorridorResult rc1 = raycastCorridor(agent_data.positions[idx], offsetPoint, agent_data.current_tris[idx], offsetTri);
+          if (rc1.hitV1_idx == -1 && !rc1.corridor.empty()) {
             // If we already have two corners, ensure we can reach nextCorner2
             if (agent_data.num_valid_corners[idx] == 2) {
-              auto rc3 = raycastCorridor(offsetPoint, agent_data.next_corners2[idx], offsetTri, agent_data.next_corner_tris2[idx]);
-              if (std::get<3>(rc3) || std::get<2>(rc3).empty()) {
+              RaycastCorridorResult rc3 = raycastCorridor(offsetPoint, agent_data.next_corners2[idx], offsetTri, agent_data.next_corner_tris2[idx]);
+              if (rc3.hitV1_idx != -1 || rc3.corridor.empty()) {
                 // fallback to trying nextCorner first
-                auto rc2 = raycastCorridor(offsetPoint, agent_data.next_corners[idx], offsetTri, agent_data.next_corner_tris[idx]);
-                if (std::get<3>(rc2) || std::get<2>(rc2).empty()) {
+                RaycastCorridorResult rc2 = raycastCorridor(offsetPoint, agent_data.next_corners[idx], offsetTri, agent_data.next_corner_tris[idx]);
+                if (rc2.hitV1_idx != -1 || rc2.corridor.empty()) {
                   // give up miter approach
                 } else {
                   // Update corners: insert offset as nextCorner, keep nextCorner2 as is
+                  // Preserve the old nextCorner triangle for correct rejoin point
+                  const int oldNextCornerTri = agent_data.next_corner_tris[idx];
                   agent_data.next_corners[idx] = offsetPoint;
                   agent_data.next_corner_tris[idx] = offsetTri;
                   std::vector<int> merged;
-                  if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
+                  // IMPORTANT: rejoin at old nextCorner, not nextCorner2
+                  if (merge_corridors(rc2.corridor, rc1.corridor, agent_data.corridors[idx], oldNextCornerTri, merged)) {
                     agent_data.corridors[idx] = std::move(merged);
                     return true;
                   }
@@ -146,15 +158,15 @@ bool attempt_path_patch(
                 agent_data.next_corners[idx] = offsetPoint;
                 agent_data.next_corner_tris[idx] = offsetTri;
                 std::vector<int> merged;
-                if (merge_corridors(std::get<2>(rc3), std::get<2>(rc1), agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
+                if (merge_corridors(rc3.corridor, rc1.corridor, agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
                   agent_data.corridors[idx] = std::move(merged);
                   return true;
                 }
               }
             } else {
               // Only one corner known: must be able to go offset -> nextCorner
-              auto rc2 = raycastCorridor(offsetPoint, agent_data.next_corners[idx], offsetTri, agent_data.next_corner_tris[idx]);
-              if (!std::get<3>(rc2) && !std::get<2>(rc2).empty()) {
+              RaycastCorridorResult rc2 = raycastCorridor(offsetPoint, agent_data.next_corners[idx], offsetTri, agent_data.next_corner_tris[idx]);
+              if (rc2.hitV1_idx == -1 && !rc2.corridor.empty()) {
                 agent_data.next_corners2[idx] = agent_data.next_corners[idx];
                 agent_data.next_corner_tris2[idx] = agent_data.next_corner_tris[idx];
                 agent_data.next_corners[idx] = offsetPoint;
@@ -162,7 +174,7 @@ bool attempt_path_patch(
                 agent_data.num_valid_corners[idx] = 2;
 
                 std::vector<int> merged;
-                if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
+                if (merge_corridors(rc2.corridor, rc1.corridor, agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
                   agent_data.corridors[idx] = std::move(merged);
                   return true;
                 }
@@ -176,6 +188,7 @@ bool attempt_path_patch(
 
   // Approach 1: Intersection-based patch
   {
+    
     const Point2& L = agent_data.last_visible_points_for_next_corner[idx];
     const Point2& C = agent_data.next_corners[idx];
     const Point2& A = agent_data.positions[idx];
@@ -194,9 +207,9 @@ bool attempt_path_patch(
         if (dR2 <= dC2 * 2.25f) {
           const int rTri = getTriangleFromPoint(R);
           if (rTri != -1) {
-            auto rc1 = raycastCorridor(A, R, agent_data.current_tris[idx], rTri);
-            auto rc2 = raycastCorridor(R, agent_data.next_corners[idx], rTri, agent_data.next_corner_tris[idx]);
-            if (!std::get<3>(rc1) && !std::get<3>(rc2) && !std::get<2>(rc1).empty() && !std::get<2>(rc2).empty()) {
+            RaycastCorridorResult rc1 = raycastCorridor(A, R, agent_data.current_tris[idx], rTri);
+            RaycastCorridorResult rc2 = raycastCorridor(R, agent_data.next_corners[idx], rTri, agent_data.next_corner_tris[idx]);
+            if (rc1.hitV1_idx == -1 && rc2.hitV1_idx == -1 && !rc1.corridor.empty() && !rc2.corridor.empty()) {
               agent_data.next_corners2[idx] = agent_data.next_corners[idx];
               agent_data.next_corner_tris2[idx] = agent_data.next_corner_tris[idx];
               agent_data.next_corners[idx] = R;
@@ -204,7 +217,7 @@ bool attempt_path_patch(
               agent_data.num_valid_corners[idx] = 2;
 
               std::vector<int> merged;
-              if (merge_corridors(std::get<2>(rc2), std::get<2>(rc1), agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
+              if (merge_corridors(rc2.corridor, rc1.corridor, agent_data.corridors[idx], agent_data.next_corner_tris2[idx], merged)) {
                 agent_data.corridors[idx] = std::move(merged);
                 return true;
               }

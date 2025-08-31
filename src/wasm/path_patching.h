@@ -10,8 +10,9 @@
 bool attempt_path_patch(
   Navmesh& navmesh,
   int idx,
-  const Point2& hitP1,
-  const Point2& hitP2,
+  int hitV1_idx,
+  int hitV2_idx,
+  int hitTri_idx,
   const std::vector<int>& raycastTriCorridor
 );
 

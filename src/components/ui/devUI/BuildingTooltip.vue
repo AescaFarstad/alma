@@ -1,21 +1,20 @@
 <template>
   <div class="tooltip-container">
   <div v-if="building" class="tooltip-content">
-    <h4>Building Properties</h4>
     <ul>
     <li v-for="(value, key) in building" :key="key">
-      <strong>{{ key }}:</strong>
+      {{ key }}:   
       <span v-if="key as any === 'color'" class="color-box-container">
       <span class="color-box" :style="{ backgroundColor: value as any }"></span>
-      {{ value }}
+      <strong>    {{ value }}</strong>
       </span>
       <span v-else>
-      {{ value }}
+        <strong>    {{ value }}</strong>
       </span>
     </li>
     <li>
-      <strong>area:</strong>
-      <span>{{ area.toFixed(2) }}</span>
+      area: 
+      <span><strong>{{ area.toFixed(0) }}</strong></span>
     </li>
     </ul>
   </div>
@@ -23,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import { BuildingProperties } from '../../types';
+import { BuildingProperties } from '../../../types';
 
 const props = defineProps<{
   building: BuildingProperties | null,
@@ -34,14 +33,16 @@ const props = defineProps<{
 
 <style scoped>
 .tooltip-container {
-  position: absolute;
+  position: fixed;
   background: rgba(40, 40, 40, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   padding: 8px;
   color: #f0f0f0;
   font-size: 12px;
-  z-index: 10;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.3;
+  z-index: 10000;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   min-width: 200px;

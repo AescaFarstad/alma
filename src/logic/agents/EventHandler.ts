@@ -1,10 +1,12 @@
 import { EventBuffer } from "../EventBuffer";
 import { GameState } from "../GameState";
+import { dynamicScene } from "../drawing/DynamicScene";
 
 
 export enum AgentEventType {
   NONE = 0,
   CMD_SET_CORRIDOR = 1,
+  EVT_SELECTED_CORRIDOR = 2,
 }
 
 export enum CorridorAction {
@@ -20,6 +22,19 @@ export function handleEvents(gs: GameState) {
     const type = header & 0xffff;
     const size = (header >> 16) & 0xffff;
     switch (type) {
+      case AgentEventType.EVT_SELECTED_CORRIDOR: {
+        const agentIdx = events.u32[events.cursor + 1] | 0;
+        const count = size - 2;
+        const corridor: number[] = new Array(count);
+        for (let i = 0; i < count; i++) {
+          corridor[i] = events.u32[events.cursor + 2 + i] | 0;
+        }
+        // Publish to DynamicScene
+        if (dynamicScene.selectedWAgentIdx === agentIdx) {
+          dynamicScene.selectedWAgentCorridor = corridor;
+        }
+        break;
+      }
       // case AgentEventType.NONE:
       //   break;
       default:

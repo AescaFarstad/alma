@@ -190,6 +190,7 @@ export function attemptPathPatchInternal(
               } else {
                 // fallback to trying nextCorner first
                 // sceneState.addDebugLine(copy(offsetPoint), copy(agent.nextCorner), ACEMERALD);
+                const oldNextCornerTri = agent.nextCornerTri;
                 const raycastToNextCorner = raycastCorridor(navmesh, offsetPoint, agent.nextCorner, offsetTri, agent.nextCornerTri);
                 if (raycastToNextCorner.hitV1_idx === -1 && raycastToNextCorner.corridor) {
                   // Update corners: insert offset as nextCorner, keep nextCorner2 as is
@@ -202,7 +203,7 @@ export function attemptPathPatchInternal(
                     raycastToNextCorner.corridor,
                     raycastToOffset.corridor,
                     agent.corridor,
-                    agent.nextCorner2Tri 
+                    oldNextCornerTri 
                   );
                   return true;
                 }

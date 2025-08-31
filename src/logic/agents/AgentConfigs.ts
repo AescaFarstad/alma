@@ -61,4 +61,18 @@ export class AgentConfigs {
     maxSpeed: 217,
     brainCells: [BrainCellType.RANDOM_JOURNEY],
   } as const;
+
+  static readonly crazy = {
+    coordinate: { x: 0, y: 0 },
+    accel: 200,
+    resistance: 0.6,
+    maxFrustration: 4,
+    intelligence: 0,
+    arrivalDesiredSpeed: 0.02,
+    arrivalThresholdSq: 125,
+    display: "character_brown_white",
+    lookSpeed: 50,
+    maxSpeed: 217,
+    brainCells: [BrainCellType.RANDOM_JOURNEY],
+  } as const;
 }

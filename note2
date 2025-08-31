@@ -1,0 +1,53 @@
+
+new polygonalization
+
+operates on NavmeshData
+
+it splits triangles into groups:
+for each unclassified triangle it starts a flood fill that will join them all into a group:
+for each neighbour, if it has an admissible edge with this triangle -> it's added to the group
+an admissible edge means that it doesn't create obtuse angle if removed.
+specifically for atriangles ABC, BDC:
+BC is shared. check AB * AD < AB * AC && AC * AD < AC * AB, where * is a cross product and all edges are of normalizaed length
+
+it passes the edges to the group too.
+
+Next the algorithm runs on each of the groups separately.
+
+
+for the initial implementation I just want to run some statistics and calculate the size of the largest group and median group.
+
+
+=== NAVMESH GENERATION SUMMARY ===
+Total vertices: 25144
+Total triangles: 50282
+  - Walkable triangles: 33226
+  - Impassable triangles: 17056
+Total polygons: 18248
+  - Walkable polygons: 14202 (0.0% reduction)
+    • Largest polygon: 11 triangles
+    • Average triangles per polygon: 2.3
+    • Single triangle polygons: 3004
+  - Impassable polygons: 4046 (0.0% reduction)
+Polygon vertices count: 102222
+Polygon triangles count: 50282
+Average triangle area: 1578.70
+Average polygon area: 4889.68
+
+
+
+=== NAVMESH GENERATION SUMMARY ===
+Total vertices: 25144
+Total triangles: 50282
+  - Walkable triangles: 33226
+  - Impassable triangles: 17056
+Total polygons: 18248
+  - Walkable polygons: 14202 (0.0% reduction)
+    • Largest polygon: 11 triangles
+    • Average triangles per polygon: 2.3
+    • Single triangle polygons: 3004
+  - Impassable polygons: 4046 (0.0% reduction)
+Polygon vertices count: 102222
+Polygon triangles count: 50282
+Average triangle area: 1578.70
+Average polygon area: 4889.68

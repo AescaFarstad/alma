@@ -1,9 +1,6 @@
 #include "agent_navigation.h"
 #include "math_utils.h"
-#include "nav_utils.h"
-#include "path_corridor.h"
 #include "path_corners.h"
-#include "raycasting.h"
 #include "data_structures.h"
 #include "agent_nav_utils.h"
 #include <iostream>

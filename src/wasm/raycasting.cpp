@@ -6,21 +6,31 @@
 #include <tuple>
 
 // Forward declaration of internal functions
-static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex);
+// Returns the walkable corridor and outputs both the hit edge index and the
+// unwalkable triangle index that stopped the ray (hitTriIdx). If no hit
+// occurred, hitTriIdx remains -1.
+static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex, int& hitTriIdx);
 static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex);
 static void getTrianglePoints(int triIdx, std::array<Point2, 3>& outPoints);
 
 
-std::tuple<Point2, Point2, std::vector<int>, bool> raycastCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
+RaycastCorridorResult raycastCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
   int hitEdgeIndex = -1;
-  std::vector<int> corridor = traceStraightCorridor(startPoint, endPoint, startTriIdx, endTriIdx, hitEdgeIndex);
+  int hitTriIdx = -1;
+  std::vector<int> corridor = traceStraightCorridor(startPoint, endPoint, startTriIdx, endTriIdx, hitEdgeIndex, hitTriIdx);
 
-  if (corridor.empty()) {
-    return std::make_tuple(startPoint, startPoint, std::vector<int>{}, true);
+  RaycastCorridorResult result;
+  result.hitV1_idx = -1;
+  result.hitV2_idx = -1;
+  result.hitTri_idx = -1;
+  result.corridor = std::move(corridor);
+
+  if (result.corridor.empty()) {
+    return result;
   }
 
-  int lastTriIdx = corridor.back();
-  
+  int lastTriIdx = result.corridor.back();
+
   bool hasClearPath = false;
   if (endTriIdx != -1) {
     if (lastTriIdx == endTriIdx) {
@@ -33,18 +43,19 @@ std::tuple<Point2, Point2, std::vector<int>, bool> raycastCorridor(const Point2&
   }
 
   if (hasClearPath) {
-    return std::make_tuple(Point2{}, Point2{}, corridor, false);
+    return result; // remains with -1 hit indices
   }
 
-  if (hitEdgeIndex != -1) {
-    std::array<Point2, 3> triPoints;
-    getTrianglePoints(lastTriIdx, triPoints);
-    Point2 p1 = triPoints[hitEdgeIndex];
-    Point2 p2 = triPoints[(hitEdgeIndex + 1) % 3];
-    return std::make_tuple(p1, p2, corridor, true);
+  if (hitEdgeIndex != -1 && hitTriIdx != -1) {
+    // Compute indices of blocking edge on the last walkable triangle
+    const int triVertexStartIndex = lastTriIdx * 3;
+    result.hitV1_idx = g_navmesh.triangles[triVertexStartIndex + hitEdgeIndex];
+    result.hitV2_idx = g_navmesh.triangles[triVertexStartIndex + ((hitEdgeIndex + 1) % 3)];
+    result.hitTri_idx = hitTriIdx;
+    return result;
   }
 
-  return std::make_tuple(Point2{}, Point2{}, corridor, false); // Fallback
+  return result; // Fallback: no clear path yet couldn't determine hit; leave -1s
 }
 
 std::tuple<Point2, Point2, bool> raycastPoint(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx) {
@@ -81,7 +92,7 @@ std::tuple<Point2, Point2, bool> raycastPoint(const Point2& startPoint, const Po
   return std::make_tuple(Point2{}, Point2{}, false); // Fallback
 }
 
-static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex) {
+static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Point2& endPoint, int startTriIdx, int endTriIdx, int& hitEdgeIndex, int& hitTriIdx) {
   int currentTriIdx = (startTriIdx != -1) ? startTriIdx : getTriangleFromPoint(startPoint);
   if (currentTriIdx == -1 || currentTriIdx >= g_navmesh.walkable_triangle_count) return {};
 
@@ -89,6 +100,7 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
   corridor.push_back(currentTriIdx);
   const int MAX_ITERATIONS = 5000;
   int previousTriIdx = -1;
+  hitTriIdx = -1;
 
   for (int iter = 0; iter < MAX_ITERATIONS; ++iter) {
     if (endTriIdx != -1 && currentTriIdx == endTriIdx) return corridor;
@@ -133,8 +145,9 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
     
     if (exitEdgeIdx != -1) {
       nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-      if (nextTriIdx == -1 || nextTriIdx >= g_navmesh.walkable_triangle_count) {
+      if (nextTriIdx >= g_navmesh.walkable_triangle_count) {
         hitEdgeIndex = exitEdgeIdx;
+        hitTriIdx = nextTriIdx;
         return corridor;
       }
     }
@@ -199,7 +212,8 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
     
     if (exitEdgeIdx != -1) {
       nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-      if (nextTriIdx == -1 || nextTriIdx >= g_navmesh.walkable_triangle_count) {
+      // Only treat neighbors >= walkable_triangle_count as walls; -1 is not expected.
+      if (nextTriIdx >= g_navmesh.walkable_triangle_count) {
         hitEdgeIndex = exitEdgeIdx;
         return currentTriIdx;
       }

@@ -1,0 +1,6 @@
+CompileFlags:
+  Add: [
+    "--target=wasm32-unknown-emscripten",
+    "--sysroot=/mnt/WoB/WOB/web_rep/emsdk/upstream/emscripten/cache/sysroot",
+    "-std=c++17"
+  ]

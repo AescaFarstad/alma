@@ -42,7 +42,7 @@ august 24
 august 25-26
     debugging navigation, corners, offsets
 august 29-30
-    separate ai, Event buffer, reversed corridor
+    separate ai, Event buffer, reversed corridor, QOL extension, tabs, whitespace
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -61,112 +61,11 @@ Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite i
 8 fps -> 60 fps simply by removing memory allocations and reusing text nodes
 
 
-properly convert filter_geojson.cjs to filter_geojson.ts to be called in tsnode.
-convert the rest
-
 don't include sentinels in indexes
 
 why does main.cpp allocate. does it ever clear?
 
-bboxes and spatial indexes....
 
-remove obsolete isGridCorner
-
-if can't see next corner, check distance to the line between the corner and the last point from which you saw the corner
-
-which triangle am I
-current one? it's neighbour 1, 2, 3?
-check neighbour, check neighbour's poly
-
-helper triangle corridor
-empty?
-    check neighbours
-    check "I'm inside the next poly"
-    no? -> cast ray to corner
-
-
-
-I'm going to use corridor property for polygons instead of triangles.
-I'm going to update the corridor when entering a triangle which belongs to a new polygon.
-
-What code will that affect? What should I be mindfull of?
-
-
-I want to update the path patching logic. If an agent no longer sees the next corner,
-then it calculate the LINE1 between the corner and the last point where that corner was certainly visible.
-then it takes the edge which the raycasting has returned
-find the LINE2 which goes through the agent and is parallel to that edge
-finds R = intersection of LINE1, LINE2
-finds the triangle of R
-checks that R is visible from agent's position
-uses R as the next corner, while the actual next corner becomes the next-next corner.
-
-if R is not visible -> recalculate path fully.
-
-distance to the line
-If this distance is 
-
-
-
-new polygonalization
-
-operates on NavmeshData
-
-it splits triangles into groups:
-for each unclassified triangle it starts a flood fill that will join them all into a group:
-for each neighbour, if it has an admissible edge with this triangle -> it's added to the group
-an admissible edge means that it doesn't create obtuse angle if removed.
-specifically for atriangles ABC, BDC:
-BC is shared. check AB * AD < AB * AC && AC * AD < AC * AB, where * is a cross product and all edges are of normalizaed length
-
-it passes the edges to the group too.
-
-Next the algorithm runs on each of the groups separately.
-
-
-for the initial implementation I just want to run some statistics and calculate the size of the largest group and median group.
-
-
-
-
-
-
-=== NAVMESH GENERATION SUMMARY ===
-Total vertices: 25144
-Total triangles: 50282
-  - Walkable triangles: 33226
-  - Impassable triangles: 17056
-Total polygons: 18248
-  - Walkable polygons: 14202 (0.0% reduction)
-    • Largest polygon: 11 triangles
-    • Average triangles per polygon: 2.3
-    • Single triangle polygons: 3004
-  - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 102222
-Polygon triangles count: 50282
-Average triangle area: 1578.70
-Average polygon area: 4889.68
-
-
-
-=== NAVMESH GENERATION SUMMARY ===
-Total vertices: 25144
-Total triangles: 50282
-  - Walkable triangles: 33226
-  - Impassable triangles: 17056
-Total polygons: 18248
-  - Walkable polygons: 14202 (0.0% reduction)
-    • Largest polygon: 11 triangles
-    • Average triangles per polygon: 2.3
-    • Single triangle polygons: 3004
-  - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 102222
-Polygon triangles count: 50282
-Average triangle area: 1578.70
-Average polygon area: 4889.68
-
-
-do not reverse teh corridor
 
 optimise corner finding
 
@@ -177,8 +76,4 @@ try corner offsetting during data generation
 ts random generates garbage
 
 
-c++ extension
-delete white space
-decrease indentation
-
-getLineSegmentIntersectionPoint float variant
+brain should not reset if we are in the unwalkable territory

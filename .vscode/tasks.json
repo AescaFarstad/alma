@@ -83,6 +83,25 @@
         "clear": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "bear",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "source /mnt/WoB/WOB/web_rep/emsdk/emsdk_env.sh && bear -- make clean all -C '${workspaceFolder}/src/wasm'"
+      ],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "showReuseMessage": false,
+        "clear": true
+      },
+      "problemMatcher": []
     }
   ]
 }

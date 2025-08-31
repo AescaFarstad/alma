@@ -32,8 +32,8 @@
 
 <script setup lang="ts">
 import { computed, defineProps, type PropType } from 'vue';
-import type { Avatar } from '../../logic/GameState';
-import { length } from '../../logic/core/math';
+import type { Avatar } from '../../../logic/GameState';
+import { length } from '../../../logic/core/math';
 
 const props = defineProps({
   avatar: {

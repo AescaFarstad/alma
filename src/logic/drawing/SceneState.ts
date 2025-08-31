@@ -62,6 +62,7 @@ export class SceneState {
   public paths: Map<string, Path> = new Map();
   public isDirty = true;
 
+
   public debugPolygons: Point2[][] = [];
   public debugPoints: Record<string, Point2[]> = makeDebugColorRecord(() => []);
   public debugLines: Record<string, DebugLine[]> = makeDebugColorRecord(() => []);
@@ -288,6 +289,7 @@ export class SceneState {
       this.isDirty = true;
     }
   }
+
 }
 
 /**

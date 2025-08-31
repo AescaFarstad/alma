@@ -7,6 +7,7 @@
 #include "constants_layout.h"
 #include <vector>
 #include <algorithm>
+ 
 
 extern Navmesh g_navmesh;
 
@@ -17,6 +18,7 @@ bool findPathToDestination(
   int endTri,
   const char* errorContext
 ) {
+  
   int startPoly = navmesh.triangle_to_polygon[startTri];
   int endPoly = navmesh.triangle_to_polygon[endTri];
   
@@ -26,6 +28,7 @@ bool findPathToDestination(
     DualCorner reusableDualCorner = find_next_corner(agent_data.positions[idx], agent_data.corridors[idx], agent_data.end_targets[idx], CORNER_OFFSET);
     
     if (reusableDualCorner.numValid > 0) {
+      
       agent_data.next_corners[idx] = reusableDualCorner.corner1;
       agent_data.next_corners2[idx] = reusableDualCorner.corner2;
       agent_data.next_corner_tris[idx] = reusableDualCorner.tri1;
@@ -35,9 +38,11 @@ bool findPathToDestination(
       agent_data.last_visible_points_for_next_corner[idx] = agent_data.positions[idx];
       return true;
     } else {
+      
       return false;
     }
   } else {
+    
     return false;
   }
 }
@@ -48,14 +53,13 @@ bool raycastAndPatchCorridor(
   const Point2& targetPoint,
   int targetTri
 ) {
-  auto raycastResult = raycastCorridor(agent_data.positions[idx], targetPoint, agent_data.current_tris[idx], targetTri);
+  RaycastCorridorResult raycastResult = raycastCorridor(agent_data.positions[idx], targetPoint, agent_data.current_tris[idx], targetTri);
 
-  const Point2 hitP1 = std::get<0>(raycastResult);
-  const Point2 hitP2 = std::get<1>(raycastResult);
-  const std::vector<int>& triCorridor = std::get<2>(raycastResult);
-  const bool hit = std::get<3>(raycastResult);
+  const std::vector<int>& triCorridor = raycastResult.corridor;
+  const bool hit = (raycastResult.hitV1_idx != -1);
 
   if (!hit && !triCorridor.empty()) {
+    
     auto& agentCorridor = agent_data.corridors[idx];
     std::vector<int> raycastPolyCorridor;
     raycastPolyCorridor.reserve(agentCorridor.capacity());
@@ -76,6 +80,7 @@ bool raycastAndPatchCorridor(
     }
 
     if (targetPolyIndex != -1) {
+      
       std::vector<int> newCorridor;
       newCorridor.reserve(targetPolyIndex + 1 + raycastPolyCorridor.size());
       newCorridor.insert(newCorridor.end(), agentCorridor.begin(), agentCorridor.begin() + targetPolyIndex);
@@ -85,12 +90,14 @@ bool raycastAndPatchCorridor(
 
       return true;
     } else if (!raycastPolyCorridor.empty()) {
+      
       agent_data.corridors[idx] = raycastPolyCorridor;
       return true;
     }
   }
   else {
-    return attempt_path_patch(navmesh, idx, hitP1, hitP2, triCorridor);
+    
+    return attempt_path_patch(navmesh, idx, raycastResult.hitV1_idx, raycastResult.hitV2_idx, raycastResult.hitTri_idx, triCorridor);
   }
 
   return false;

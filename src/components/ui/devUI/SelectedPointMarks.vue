@@ -20,15 +20,18 @@
 
 <script setup lang="ts">
 import { computed, inject } from 'vue';
-import { usePointMarks } from '../../logic/composables/usePointMarks';
-import type { GameState } from '../../logic/GameState';
-import type { SceneState } from '../../logic/drawing/SceneState';
+import { usePointMarks } from '../../../logic/composables/usePointMarks';
+import type { GameState } from '../../../logic/GameState';
+import type { SceneState } from '../../../logic/drawing/SceneState';
 
 interface PointMark {
   id: number;
   x: number;
   y: number;
 }
+
+// Type guard helper to filter out undefined values
+const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
 
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
@@ -46,7 +49,7 @@ const getSelectedPointMarkCoords = computed(() => {
   if (!gameState) return [];
   return selectedPointMarks.value
   .map((id: number) => gameState.pointMarks.find((mark: PointMark) => mark.id === id))
-  .filter((mark?: PointMark): mark is PointMark => mark !== undefined)
+  .filter(isDefined)
   .map((mark: PointMark) => ({ x: mark.x, y: mark.y }));
 });
 
