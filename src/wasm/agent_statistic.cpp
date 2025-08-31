@@ -1,5 +1,6 @@
 #include "agent_statistic.h"
 #include "data_structures.h"
+#include "constants_layout.h"
 #include "math_utils.h"
 #include <cmath>
 #include <algorithm>

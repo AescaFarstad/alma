@@ -4,10 +4,8 @@
 #include "nav_utils.h"
 #include "data_structures.h" // brings in constants_layout.h macros
 #include <cmath>
-#include <iostream>
-#include <iomanip>
+#include "constants_layout.h"
 #include <cstdio>
-#include <tuple>
 
 extern Navmesh g_navmesh;
 extern float g_sim_time;

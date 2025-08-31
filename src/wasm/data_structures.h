@@ -3,10 +3,7 @@
 
 #include <cstdint>
 #include <vector>
-#include <cmath>
 
-#include "constants_layout.h"
-#include "spatial_index.h"
 #include "point2.h"
 
 // Enum for agent state, mirroring AgentState in Agent.ts

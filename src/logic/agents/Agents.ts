@@ -2,7 +2,7 @@ import { EventBuffer } from "../EventBuffer";
 import { WAgent } from "../WAgent";
 
 // Maximum number of agents supported by the system
-export const MAX_AGENTS = 32100;
+export const MAX_AGENTS = 36100;
 
 export class Agents {
   // Core physics

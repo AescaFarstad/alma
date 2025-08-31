@@ -2,6 +2,7 @@
 #include "math_utils.h"
 #include "path_corners.h"
 #include "data_structures.h"
+#include "constants_layout.h"
 #include "agent_nav_utils.h"
 #include <iostream>
 #include <iomanip>
@@ -49,7 +50,8 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
       return;
     }
 
-    if (agent_data.stuck_ratings[idx] > STUCK_DANGER_1) {
+    float dangeMult = 2 - agent_data.intelligences[idx];
+    if (agent_data.stuck_ratings[idx] > STUCK_DANGER_1 * dangeMult) {
       bool needFullRepath = false;
       if (agent_data.sight_ratings[idx] < 1) {
         agent_data.sight_ratings[idx]++;
@@ -59,10 +61,10 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
           needFullRepath = true;
         }
       }
-      else if (agent_data.stuck_ratings[idx] > STUCK_DANGER_2) {
+      else if (agent_data.stuck_ratings[idx] > STUCK_DANGER_2 * dangeMult) {
         float velocityMagSq = math::length_sq(agent_data.velocities[idx]);
         float maxSpeedSq = agent_data.max_speeds[idx] * agent_data.max_speeds[idx];
-        needFullRepath = agent_data.stuck_ratings[idx] > STUCK_DANGER_3 || velocityMagSq < maxSpeedSq * 0.0025f;
+        needFullRepath = agent_data.stuck_ratings[idx] > STUCK_DANGER_3 * dangeMult || velocityMagSq < maxSpeedSq * 0.0025f;
       }
 
       if (needFullRepath) {

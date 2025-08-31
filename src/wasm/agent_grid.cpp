@@ -3,7 +3,7 @@
 #include <cmath>
 #include <vector>
 
-const float CELL_SIZE = 256.0f;
+const float CELL_SIZE = 128.0f;
 const float WORLD_MIN_X = -10000.0f;
 const float WORLD_MIN_Y = -10000.0f;
 const float WORLD_MAX_X = 10000.0f;

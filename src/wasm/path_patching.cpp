@@ -2,6 +2,7 @@
 #include "raycasting.h"
 #include "nav_utils.h"
 #include "path_corridor.h"
+#include "constants_layout.h"
 #include "math_utils.h"
 #include <algorithm>
  

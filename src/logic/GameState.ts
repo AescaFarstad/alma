@@ -9,6 +9,7 @@ import { Agent, createAgent } from "./agents/Agent";
 import agentData from "./agent-data.json";
 import { Spawner } from "./agents/AgentSpawner";
 import { WAgentSpawner } from "./WAgentSpawner";
+import { createWAgentGridSpawner, type WAgentGridSpawner } from "./WAgentGridSpawner";
 import { seededRandom } from "./core/mathUtils";
 import { AgentGrid } from "./agents/AgentGrid";
 import { Agents } from "./agents/Agents";
@@ -42,8 +43,8 @@ export type LaserBlast = {
   corridor: number[] | null;
 };
 const spawnersCooldown = 0.01;
-// export const wagentsLimit = 24000;
-export const wagentsLimit = 0;
+export const wagentsLimit = 36000;
+// export const wagentsLimit = 200;
 export const agentsLimit = 2;
 export class GameState { // This is a POD class. No functions allowed.
   public lib : Lib;
@@ -69,6 +70,7 @@ export class GameState { // This is a POD class. No functions allowed.
   public wagents: WAgent[];
   public spawners: Spawner[];
   public wAgentSpawners: WAgentSpawner[];
+  public wAgentGridSpawners: WAgentGridSpawner[];
   public agentGrid: AgentGrid;
 
   public timeScale: { current: number; previous: number };
@@ -93,7 +95,7 @@ export class GameState { // This is a POD class. No functions allowed.
     
     // Initialize WAgent spawners
     this.wAgentSpawners = [
-      { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
+      // { config: config2, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
       // { config: config2, coordinate: { x: -322, y: 338 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
       // { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.3, spawnCount: 0 },
       // { config: config, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.4, spawnCount: 0 },
@@ -153,6 +155,13 @@ export class GameState { // This is a POD class. No functions allowed.
     this.scheduledLaserBlasts = 0;
     this.agents = [];
     this.wagents = [];
+    this.wAgentGridSpawners = [
+      createWAgentGridSpawner({ x: 0, y: 0 }, { x: 400, y: 100 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: -961, y: 1128 }, { x: 400, y: 400 }, AgentConfigs.walker2, 500, 16000),
+      createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+    ];
     this.agentGrid = new AgentGrid();
     this.timeScale = { current: 1.0, previous: 1.0 };
     this.allowedUpdates = 0;

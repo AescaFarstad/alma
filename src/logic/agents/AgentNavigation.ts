@@ -60,7 +60,8 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       return;
     }
 
-    if (agent.stuckRating > STUCK_DANGER_1) {
+    const dangeMult = 2 - agent.intelligence;
+    if (agent.stuckRating > STUCK_DANGER_1 * dangeMult) {
       let needFullRepath = false;
       if (agent.sightRating < 1) {
         agent.sightRating++;
@@ -72,8 +73,8 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
           needFullRepath = true;
         }
       }
-      else if (agent.stuckRating > STUCK_DANGER_2)
-        needFullRepath = agent.stuckRating > STUCK_DANGER_3 || length_sq(agent.velocity) < agent.maxSpeed * agent.maxSpeed * 0.0025;
+      else if (agent.stuckRating > STUCK_DANGER_2 * dangeMult)
+        needFullRepath = agent.stuckRating > STUCK_DANGER_3 * dangeMult || length_sq(agent.velocity) < agent.maxSpeed * agent.maxSpeed * 0.0025;
 
       if (needFullRepath) {
 

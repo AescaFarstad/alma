@@ -2,11 +2,10 @@
 #include "path_corridor.h"
 #include "path_corners.h"
 #include "raycasting.h"
-#include "nav_utils.h"
 #include "path_patching.h"
 #include "constants_layout.h"
 #include <vector>
-#include <algorithm>
+#include <iostream>
  
 
 extern Navmesh g_navmesh;
@@ -21,6 +20,7 @@ bool findPathToDestination(
   
   int startPoly = navmesh.triangle_to_polygon[startTri];
   int endPoly = navmesh.triangle_to_polygon[endTri];
+  std::cout << "findPathToDestination" << std::endl;
   
   bool pathFound = findCorridor(navmesh, PATH_FREE_WIDTH, PATH_WIDTH_PENALTY_MULT, agent_data.positions[idx], agent_data.end_targets[idx], agent_data.corridors[idx], startPoly, endPoly);
   
