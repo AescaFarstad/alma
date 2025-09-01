@@ -593,17 +593,21 @@ class OptimizedGroupGatherer {
     const edgeV2Point = getPoint(edgeV2, this.navmeshData);
     
     // Simplified admissibility test for triangles (faster than full polygon test)
-    // Check if the new vertex would create an acceptable angle
-    const edge1 = subtract(edgeV1Point, currentThirdPoint);
-    const edge2 = subtract(edgeV2Point, currentThirdPoint);
-    const toNew = subtract(newPoint, currentThirdPoint);
+    // Ensure edge order is CCW around the third vertex so the wedge test is order-independent
+    let e1 = subtract(edgeV1Point, currentThirdPoint); // A->V1
+    let e2 = subtract(edgeV2Point, currentThirdPoint); // A->V2
+    const order = cross(e1, e2);
+    if (order < 0) {
+      // Swap so that rotating e1 CCW sweeps to e2 through the interior wedge
+      const tmp = e1; e1 = e2; e2 = tmp;
+    }
+    const toNew = subtract(newPoint, currentThirdPoint); // A->D
     
-    // Cross products to determine orientation
-    const cross1 = cross(edge1, toNew);
-    const cross2 = cross(toNew, edge2);
-    
-    // Both should have the same sign (both positive for CCW)
-    return cross1 >= 0 && cross2 >= 0;
+    // Wedge test: toNew must be between e1 and e2 in CCW sense
+    const cross1 = cross(e1, toNew);
+    const cross2 = cross(toNew, e2);
+    const EPS = 0; // strictness; keep >= 0 as before
+    return cross1 >= EPS && cross2 >= EPS;
   }
 }
 

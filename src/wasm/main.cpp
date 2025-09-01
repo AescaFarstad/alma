@@ -17,8 +17,6 @@
 // Global state for our agent simulation
 AgentSoA agent_data;
 Model g_model;
-// Transient per-agent flags (not shared with JS)
-std::vector<uint8_t> g_wall_contact; // 0 = no contact, 1 = in contact
 
 // Global pointer to TS-provided constants buffer
 uint8_t* g_constants_buffer = nullptr;
@@ -103,8 +101,6 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
   // Allocate dynamic data arrays
   agent_data.corridors = new std::vector<int>[maxAgents];
   agent_data.corridor_indices = new int[maxAgents];
-  // Initialize transient flags
-  g_wall_contact.assign(maxAgents, 0);
 
   initialize_agent_grid(maxAgents);
 }

@@ -3,7 +3,7 @@
 // - header u32: low 16 bits = type, high 16 bits = size in dwords (including header)
 // - payload: packed words; floats read via Float32 view.
 
-export const EVENT_BUFFER_WORDS = 65536;
+export const EVENT_BUFFER_WORDS = 262144;
 
 export class EventBuffer {
   u32!: Uint32Array;

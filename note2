@@ -19,35 +19,24 @@ for the initial implementation I just want to run some statistics and calculate 
 
 
 === NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 5116
+Building vertices added specifically for buildings: 4312
+Total building vertices: 26273
+Average buildings per blob: 1.3
+Single building blobs: 3378
+Total blobs: 4046
+
 Total vertices: 25144
 Total triangles: 50282
   - Walkable triangles: 33226
   - Impassable triangles: 17056
-Total polygons: 18248
-  - Walkable polygons: 14202 (0.0% reduction)
-    • Largest polygon: 11 triangles
-    • Average triangles per polygon: 2.3
-    • Single triangle polygons: 3004
+Total polygons: 21644
+  - Walkable polygons: 17598 (0.0% reduction)
+  • Largest polygon: 8 triangles
+  • Average triangles per polygon: 1.9
+  • Single triangle polygons: 7702
   - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 102222
+Polygon vertices count: 93570
 Polygon triangles count: 50282
 Average triangle area: 1578.70
-Average polygon area: 4889.68
-
-
-
-=== NAVMESH GENERATION SUMMARY ===
-Total vertices: 25144
-Total triangles: 50282
-  - Walkable triangles: 33226
-  - Impassable triangles: 17056
-Total polygons: 18248
-  - Walkable polygons: 14202 (0.0% reduction)
-    • Largest polygon: 11 triangles
-    • Average triangles per polygon: 2.3
-    • Single triangle polygons: 3004
-  - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 102222
-Polygon triangles count: 50282
-Average triangle area: 1578.70
-Average polygon area: 4889.68
+Average polygon area: 0.00

@@ -11,7 +11,7 @@ import { populateTriangulationData, populatePolygonData, populateBuildingData, p
 import { finalizeNavmesh, buildFinalTriangleToPolygonMap } from './finalize_navmesh';
 import { drawNavmesh } from './navmesh_visualization';
 import { generateBoundary, validateBoundaryTriangulation } from './navmesh_boundary';
-import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex } from './navmesh_validation';
+import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex, validateAllTrianglesCCW, validateWalkablePolygonsCCW } from './navmesh_validation';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { newPolygonization } from './polygonize_o';
@@ -122,12 +122,14 @@ function main() {
   console.log('\n=== TRIANGULATION PHASE ===');
   const triangulationResult = triangulate(boundaryData.outerBoundary, holePolygons, boundaryData);
   populateTriangulationData(navmeshData, triangulationResult, MEMORY_SETTINGS);
+  validateAllTrianglesCCW(navmeshData, 'Triangulation');
 
   // Step 4: Polygonization phase  
   console.log('\n=== WALKABLE POLYGONIZATION PHASE ===');
   newPolygonization(navmeshData);
 
   // Step 4.1: No longer need to extract polygons, they are in navmeshData.
+  validateWalkablePolygonsCCW(navmeshData, 'Polygonization');
   validateAllPolygonsConvex(navmeshData, "Polygonization");
   
   // Create a mapping from the global triangle index to the new global polygon index.

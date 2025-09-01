@@ -3,6 +3,8 @@
     <button @click="handleClick(() => drawNavmesh())">Navmesh</button>
     <button @click="handleClick(() => drawNavGrid(1))">Grid 1</button>
     <button @click="handleClick(() => drawNavGrid(2))">Grid 2</button>
+    <button @click="handleClick(() => drawAllPolygons())">Polygons</button>
+    <button @click="handleClick(() => drawAllBlobs())">Blobs</button>
   </div>
 </template>
 
@@ -12,12 +14,14 @@ import type { GameState } from '../../../logic/GameState';
 import type { SceneState } from '../../../logic/drawing/SceneState';
 import { useNavmeshDebug } from '../../../logic/composables/useNavmeshDebug';
 import { useNavmeshGridDebug } from '../../../logic/composables/useNavmeshGridDebug';
+import { useNavmeshPolygonsBlobsDebug } from '../../../logic/composables/useNavmeshPolygonsBlobsDebug';
 
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
 
 const { drawNavmesh } = useNavmeshDebug(gameState, sceneState);
 const { drawNavGrid } = useNavmeshGridDebug(gameState, sceneState);
+const { drawAllPolygons, drawAllBlobs } = useNavmeshPolygonsBlobsDebug(gameState, sceneState);
 
 const handleClick = (action: () => void) => {
   action();
@@ -49,4 +53,3 @@ button {
 
 button:hover { background-color: #616161; }
 </style>
-

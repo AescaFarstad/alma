@@ -79,7 +79,6 @@ export class Agent {
 
   // Logging/Debug identifiers and state
   id: number = -1;
-  wallContact: boolean = false;
 }
 
 let NEXT_AGENT_ID = 1;

@@ -2,7 +2,7 @@ import { Agent, AgentState, STUCK_DANGER_2 } from "./Agent";
 import { GameState } from "../GameState";
 import { add, dot, length, length_sq, add_, set, scale_, set_, distance_sq, subtract_, normalize_, lerp, cvt } from "../core/math";
 import { raycastPoint } from "../Raycasting";
-import { findTriangle, isPointInNavmesh } from "../navmesh/NavUtils";
+import { findTriangle, isPointInNavmesh, testPointInsideTriangle } from "../navmesh/NavUtils";
 import { NavConst } from "./NavConst";
 
 
@@ -132,43 +132,38 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
       // Use temporary variables to avoid allocations
       set_(endPoint, agent.coordinate);
       add_(endPoint, moveVector);
-      
-      set_(normVelocity, agent.velocity);
-      normalize_(normVelocity);
-      
-      set_(tempScaled, normVelocity);
-      scale_(tempScaled, 0.45);
-      set_(endPointForRecast, endPoint);
-      add_(endPointForRecast, tempScaled);
-      
-      const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentTri, undefined);
-
-      if (raycastResult.hitP1 && raycastResult.hitP2) {
-        if (!agent.wallContact) {
-          agent.wallContact = true;
-        }
-        agent.stuckRating += NavConst.STUCK_HIT_WALL;
-        set_(wallVector, raycastResult.hitP2);
-        subtract_(wallVector, raycastResult.hitP1);
+      if (!testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, agent.currentTri)) {
+        set_(normVelocity, agent.velocity);
+        normalize_(normVelocity);
         
-        set(wallNormal, -wallVector.y, wallVector.x);
-        normalize_(wallNormal);
+        set_(tempScaled, normVelocity);
+        scale_(tempScaled, 0.45);
+        set_(endPointForRecast, endPoint);
+        add_(endPointForRecast, tempScaled);
         
-        if (dot(wallNormal, normVelocity) > 0) {
-          scale_(wallNormal, -1);
-        }
+        const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentTri, undefined);
 
-        const normalVelocityComponent = dot(agent.velocity, wallNormal);
-        agent.velocity.x -= normalVelocityComponent * wallNormal.x * 1.45;
-        agent.velocity.y -= normalVelocityComponent * wallNormal.y * 1.45;
-        set_(moveVector, agent.velocity);
-        scale_(moveVector, deltaTime);        
-        add_(agent.coordinate, moveVector);
-      } else {
-        if (agent.wallContact) {
-          agent.wallContact = false;
+        if (raycastResult.hitP1 && raycastResult.hitP2) {
+          agent.stuckRating += NavConst.STUCK_HIT_WALL;
+          set_(wallVector, raycastResult.hitP2);
+          subtract_(wallVector, raycastResult.hitP1);
+          
+          set(wallNormal, -wallVector.y, wallVector.x);
+          normalize_(wallNormal);
+          
+          if (dot(wallNormal, normVelocity) > 0) {
+            scale_(wallNormal, -1);
+          }
+
+          const normalVelocityComponent = dot(agent.velocity, wallNormal);
+          agent.velocity.x -= normalVelocityComponent * wallNormal.x * 1.45;
+          agent.velocity.y -= normalVelocityComponent * wallNormal.y * 1.45;
+          set_(moveVector, agent.velocity);
+          scale_(moveVector, deltaTime);        
+          add_(agent.coordinate, moveVector);
+        } else {
+          set_(agent.coordinate, endPoint);
         }
-        set_(agent.coordinate, endPoint);
       }
     }
   }

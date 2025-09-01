@@ -2,7 +2,6 @@ import { HypotheticalState } from "./core/Hypothetical";
 import { Connections } from "./core/Stat";
 import { Invoker } from "./core/behTree/Invoker";
 import { Lib } from "./lib/Lib";
-import RBush from "rbush";
 import { Navmesh } from "./navmesh/Navmesh";
 import { Point2 } from "./core/math";
 import { Agent, createAgent } from "./agents/Agent";
@@ -44,7 +43,7 @@ export type LaserBlast = {
 };
 const spawnersCooldown = 0.01;
 export const wagentsLimit = 36000;
-// export const wagentsLimit = 200;
+// export const wagentsLimit = 0;
 export const agentsLimit = 2;
 export class GameState { // This is a POD class. No functions allowed.
   public lib : Lib;
@@ -94,6 +93,51 @@ export class GameState { // This is a POD class. No functions allowed.
     // ]
     
     // Initialize WAgent spawners
+    this.lib = new Lib();
+    this.invoker = new Invoker();
+    this.gameTime = 0;
+    this.nextEventId = 0;
+    this.uiState = {
+      lastProcessedEventId: -1,
+    };
+    this.connections = new Connections();
+    this.navmesh = new Navmesh();
+    this.wasm_agents = new Agents();
+    this.nextPointMarkId = 2;
+    this.laserBlasts = [];
+    this.nextLaserBlastId = 0;
+    this.scheduledLaserBlasts = 0;
+    this.agents = [];
+    this.wagents = [];
+    this.wAgentGridSpawners = [
+      createWAgentGridSpawner({ x: 0, y: 0 }, { x: 400, y: 100 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: -961, y: 1128 }, { x: 400, y: 400 }, AgentConfigs.walker2, 500, 16000),
+      createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+    ];
+    this.agentGrid = new AgentGrid();
+    this.timeScale = { current: 1.0, previous: 1.0 };
+    this.allowedUpdates = 0;
+    this.avatar = {
+      coordinate: { x: -83, y: 6 },
+      velocity: { x: 0, y: 0 },
+      look: { x: 1, y: 0 }, // Pointing right by default
+      lookSpeed: 15,
+      lookTarget: { x: 1, y: 0 },
+      maxSpeed: 80,
+      accel: 700,
+      resistance: 0.95,
+      wallResistance: 0.98,
+      movement: { x: 0, y: 0 },
+      lastTriangle: -1,
+      wallContact: false,
+      isOutsideNavmesh: false,
+    };
+
+    this.rngSeed = INITIAL_SPAWN_SEED;
+    this.rngSeedW = INITIAL_SPAWN_SEED;
+
     this.wAgentSpawners = [
       // { config: config2, coordinate: { x: -100, y: 50 }, spawnCooldown: spawnersCooldown, spawnTimer: 1.1, spawnCount: 0 },
       // { config: config2, coordinate: { x: -322, y: 338 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.2, spawnCount: 0 },
@@ -139,50 +183,6 @@ export class GameState { // This is a POD class. No functions allowed.
       // { config: config, coordinate: { x: 346, y: 116 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
       // { config: config, coordinate: { x: 469, y: 551 }, spawnCooldown: spawnersCooldown, spawnTimer: 0.0, spawnCount: 0 },
     ]
-    this.lib = new Lib();
-    this.invoker = new Invoker();
-    this.gameTime = 0;
-    this.nextEventId = 0;
-    this.uiState = {
-      lastProcessedEventId: -1,
-    };
-    this.connections = new Connections();
-    this.navmesh = new Navmesh();
-    this.wasm_agents = new Agents();
-    this.nextPointMarkId = 2;
-    this.laserBlasts = [];
-    this.nextLaserBlastId = 0;
-    this.scheduledLaserBlasts = 0;
-    this.agents = [];
-    this.wagents = [];
-    this.wAgentGridSpawners = [
-      createWAgentGridSpawner({ x: 0, y: 0 }, { x: 400, y: 100 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: -961, y: 1128 }, { x: 400, y: 400 }, AgentConfigs.walker2, 500, 16000),
-      createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
-    ];
-    this.agentGrid = new AgentGrid();
-    this.timeScale = { current: 1.0, previous: 1.0 };
-    this.allowedUpdates = 0;
-    this.avatar = {
-      coordinate: { x: -83, y: 6 },
-      velocity: { x: 0, y: 0 },
-      look: { x: 1, y: 0 }, // Pointing right by default
-      lookSpeed: 15,
-      lookTarget: { x: 1, y: 0 },
-      maxSpeed: 80,
-      accel: 700,
-      resistance: 0.95,
-      wallResistance: 0.98,
-      movement: { x: 0, y: 0 },
-      lastTriangle: -1,
-      wallContact: false,
-      isOutsideNavmesh: false,
-    };
-
-    this.rngSeed = INITIAL_SPAWN_SEED;
-    this.rngSeedW = INITIAL_SPAWN_SEED;
   }
 
   public swapTimeScale(): void {

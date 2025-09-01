@@ -44,6 +44,5 @@
   "pathLogMaxLen": 200,
   "pathLogIdx": 0,
   "display": "character_blonde_green",
-  "id": -1,
-  "wallContact": false
+  "id": -1
 }

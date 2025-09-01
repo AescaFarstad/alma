@@ -203,6 +203,97 @@ export function validateIntermediateTrianglePolygonMapping(
   return !foundIssues;
 }
 
+// ================================
+// ORIENTATION (CCW) VALIDATION
+// ================================
+
+function triangleSignedArea(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): number {
+  // 2x area (positive for CCW)
+  return (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+}
+
+function polygonSignedAreaByIndices(polyIndices: number[], vertices: Float32Array): number {
+  let area2 = 0; // 2x area
+  const n = polyIndices.length;
+  for (let i = 0; i < n; i++) {
+    const i1 = polyIndices[i];
+    const i2 = polyIndices[(i + 1) % n];
+    const x1 = vertices[i1 * 2];
+    const y1 = vertices[i1 * 2 + 1];
+    const x2 = vertices[i2 * 2];
+    const y2 = vertices[i2 * 2 + 1];
+    area2 += x1 * y2 - y1 * x2;
+  }
+  return area2; // positive => CCW
+}
+
+export function validateAllTrianglesCCW(navmeshData: NavmeshData, phase: string = 'Triangulation'): void {
+  const t = navmeshData.triangles;
+  const v = navmeshData.vertices;
+  const triangleCount = t.length / 3;
+
+  let invalidCount = 0;
+  let firstInvalidIndex = -1;
+  for (let i = 0; i < triangleCount; i++) {
+    const i0 = t[i * 3];
+    const i1 = t[i * 3 + 1];
+    const i2 = t[i * 3 + 2];
+    const x1 = v[i0 * 2];
+    const y1 = v[i0 * 2 + 1];
+    const x2 = v[i1 * 2];
+    const y2 = v[i1 * 2 + 1];
+    const x3 = v[i2 * 2];
+    const y3 = v[i2 * 2 + 1];
+
+    const a2 = triangleSignedArea(x1, y1, x2, y2, x3, y3);
+    if (!(a2 > 0)) { // reject CW or degenerate
+      invalidCount++;
+      if (firstInvalidIndex === -1) firstInvalidIndex = i;
+    }
+  }
+
+  if (invalidCount > 0) {
+    const i = firstInvalidIndex;
+    const i0 = t[i * 3];
+    const i1 = t[i * 3 + 1];
+    const i2 = t[i * 3 + 2];
+    const msg = `Found ${invalidCount} non-CCW triangle(s) after ${phase}. Example tri #${i} -> [${i0}, ${i1}, ${i2}]`;
+    logValidationError(msg);
+    throw new Error(msg);
+  }
+  console.log(`All ${triangleCount} triangles are CCW (after ${phase}).`);
+}
+
+export function validateWalkablePolygonsCCW(navmeshData: NavmeshData, phase: string = 'Polygonization'): void {
+  const v = navmeshData.vertices;
+  const polyStarts = navmeshData.polygons;
+  const polyVerts = navmeshData.poly_verts;
+  const walkableCount = navmeshData.walkable_polygon_count;
+
+  let invalid = 0;
+  let firstInvalid = -1;
+
+  for (let p = 0; p < walkableCount; p++) {
+    const start = polyStarts[p];
+    const end = polyStarts[p + 1];
+    const indices: number[] = [];
+    for (let i = start; i < end; i++) indices.push(polyVerts[i]);
+    if (indices.length < 3) continue; // ignore degenerate
+    const area2 = polygonSignedAreaByIndices(indices, v);
+    if (!(area2 > 0)) {
+      invalid++;
+      if (firstInvalid === -1) firstInvalid = p;
+    }
+  }
+
+  if (invalid > 0) {
+    const msg = `Found ${invalid} non-CCW walkable polygon(s) after ${phase}. Example polygon index: ${firstInvalid}`;
+    logValidationError(msg);
+    throw new Error(msg);
+  }
+  console.log(`All ${walkableCount} walkable polygons are CCW (after ${phase}).`);
+}
+
 function isPolygonConvex(polygon: number[], navmeshData: NavmeshData): boolean {
   // Polygons with 3 or fewer vertices are considered convex.
   if (polygon.length < 4) {

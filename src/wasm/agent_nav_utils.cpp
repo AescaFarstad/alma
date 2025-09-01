@@ -20,7 +20,6 @@ bool findPathToDestination(
   
   int startPoly = navmesh.triangle_to_polygon[startTri];
   int endPoly = navmesh.triangle_to_polygon[endTri];
-  std::cout << "findPathToDestination" << std::endl;
   
   bool pathFound = findCorridor(navmesh, PATH_FREE_WIDTH, PATH_WIDTH_PENALTY_MULT, agent_data.positions[idx], agent_data.end_targets[idx], agent_data.corridors[idx], startPoly, endPoly);
   

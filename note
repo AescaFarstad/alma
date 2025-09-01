@@ -76,4 +76,8 @@ try corner offsetting during data generation
 ts random generates garbage
 
 
-brain should not reset if we are in the unwalkable territory
+floater brain should not reset if we are in the unwalkable territory
+there are convex pairs of triangles that did not form polygons
+
+
+1348, 1125

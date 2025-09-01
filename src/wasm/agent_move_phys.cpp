@@ -9,7 +9,6 @@
 
 extern Navmesh g_navmesh;
 extern float g_sim_time;
-extern std::vector<uint8_t> g_wall_contact;
 
 void update_agent_phys(int idx, float deltaTime) {
   agent_data.last_coordinates[idx] = agent_data.positions[idx];
@@ -110,34 +109,32 @@ void update_agent_phys(int idx, float deltaTime) {
   } else {
     if (deltaTime > 0.0f && moveLnSq > 0.0001f) {
       Point2 endPoint = agent_data.positions[idx] + moveVector;
-      Point2 normVelocity = math::normalize(agent_data.velocities[idx]);
-      Point2 endPointForRecast = endPoint + (normVelocity * 0.45f);
-      
-      auto raycastResult = raycastPoint(agent_data.positions[idx], endPointForRecast, agent_data.current_tris[idx]);
-
-      if (std::get<2>(raycastResult)) {
-        if (!g_wall_contact.empty() && g_wall_contact[idx] == 0) {
-          g_wall_contact[idx] = 1;
-        }
-        agent_data.stuck_ratings[idx] += STUCK_HIT_WALL;
-        Point2 wallVector = std::get<1>(raycastResult) - std::get<0>(raycastResult);
-        Point2 wallNormal = {-wallVector.y, wallVector.x};
-        math::normalize_inplace(wallNormal);
-
-        if (math::dot(wallNormal, normVelocity) > 0) {
-          wallNormal *= -1.0f;
-        }
-
-        const float normalVelocityComponent = math::dot(agent_data.velocities[idx], wallNormal);
-        agent_data.velocities[idx].x -= normalVelocityComponent * wallNormal.x * 1.45;
-        agent_data.velocities[idx].y -= normalVelocityComponent * wallNormal.y * 1.45;
-        moveVector = agent_data.velocities[idx] * deltaTime;
-        agent_data.positions[idx] += moveVector;
-      } else {
-        if (!g_wall_contact.empty() && g_wall_contact[idx] == 1) {
-          g_wall_contact[idx] = 0;
-        }
+      if (test_point_inside_triangle(endPoint, agent_data.current_tris[idx])) {
         agent_data.positions[idx] = endPoint;
+      } else {
+        Point2 normVelocity = math::normalize(agent_data.velocities[idx]);
+        Point2 endPointForRecast = endPoint + (normVelocity * 0.45f);
+        
+        auto raycastResult = raycastPoint(agent_data.positions[idx], endPointForRecast, agent_data.current_tris[idx]);
+
+        if (std::get<2>(raycastResult)) {
+          agent_data.stuck_ratings[idx] += STUCK_HIT_WALL;
+          Point2 wallVector = std::get<1>(raycastResult) - std::get<0>(raycastResult);
+          Point2 wallNormal = {-wallVector.y, wallVector.x};
+          math::normalize_inplace(wallNormal);
+
+          if (math::dot(wallNormal, normVelocity) > 0) {
+            wallNormal *= -1.0f;
+          }
+
+          const float normalVelocityComponent = math::dot(agent_data.velocities[idx], wallNormal);
+          agent_data.velocities[idx].x -= normalVelocityComponent * wallNormal.x * 1.45;
+          agent_data.velocities[idx].y -= normalVelocityComponent * wallNormal.y * 1.45;
+          moveVector = agent_data.velocities[idx] * deltaTime;
+          agent_data.positions[idx] += moveVector;
+        } else {
+          agent_data.positions[idx] = endPoint;
+        }
       }
     }
   }
