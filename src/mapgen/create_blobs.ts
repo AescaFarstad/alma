@@ -10,6 +10,8 @@ import { BuildingFeature } from './simplification/geometryUtils';
 import fs from 'fs';
 import path from 'path';
 import { visualizeBlobs } from './visualize_blobs';
+import { simplifyWithDilationErosion } from './simplification/dilationErosion';
+import { slideToNeighbor } from './simplification/slideToNeighbor';
 
 type SplitLine = Point2[];
 
@@ -154,21 +156,46 @@ export async function createBlobs(
       path.join(outputDir, 'blob_partitions.png')
     );
 
+    // Two-pass grouping per partition
     for (let i = 0; i < partitions.length; i++) {
       const partition = partitions[i];
-      if (partition.length > 0) {
-        console.log(`Running unite on partition ${i} with ${partition.length} buildings...`);
-        const partitionStartedAt = Date.now();
-        const partitionBlobs = await uniteGeometries(partition, mergeInflation);
-        console.log(`Unite on partition ${i} finished in ${Date.now() - partitionStartedAt}ms, found ${partitionBlobs.length} blobs`);
-        unitedBlobs.push(...partitionBlobs);
+      if (partition.length === 0) continue;
+
+      const partitionStartedAt = Date.now();
+
+      const pass1StartedAt = Date.now();
+      const discoveredGroups: UnitedGroup[] = await uniteGeometries(partition, mergeInflation);
+
+      for (let gi = 0; gi < discoveredGroups.length; gi++) {
+        const group = discoveredGroups[gi];
+        if (!group.buildings || group.buildings.length === 0) continue;
+        const groupSet = new Set(group.buildings);
+        const subset = partition.filter(b => groupSet.has(b.id));
+        if (subset.length === 0) continue;
+
+        const pass2StartedAt = Date.now();
+        const refinedGroups = await uniteGeometries(subset, mergeInflation * 1);
+        unitedBlobs.push(...refinedGroups);
       }
+
+      const partitionDuration = Date.now() - partitionStartedAt;
+      console.log(`Partition ${i} (${partition.length} buildings) processed in ${partitionDuration}ms`);
     }
 
   } else {
-    const uniteStartedAt = Date.now();
-    unitedBlobs = await uniteGeometries(buildingsForUnite, mergeInflation);
-    console.log(`Unite finished in ${Date.now() - uniteStartedAt}ms, found ${unitedBlobs.length} blobs`);
+    const discoveredGroups: UnitedGroup[] = await uniteGeometries(buildingsForUnite, mergeInflation);
+
+    for (let gi = 0; gi < discoveredGroups.length; gi++) {
+      const group = discoveredGroups[gi];
+      if (!group.buildings || group.buildings.length === 0) continue;
+      const groupSet = new Set(group.buildings);
+      const subset = buildingsForUnite.filter(b => groupSet.has(b.id));
+      if (subset.length === 0) continue;
+
+      const pass2StartedAt = Date.now();
+      const refinedGroups = await uniteGeometries(subset, mergeInflation * 1);
+      unitedBlobs.push(...refinedGroups);
+    }
   }
 
   console.log(`uniteGeometries finished. Found ${unitedBlobs.length} blobs in ${Date.now() - startedAt}ms`);
@@ -176,8 +203,27 @@ export async function createBlobs(
   let blobOutput = '';
   let totalBlobVertices = 0;
   let blobsSkippedCount = 0;
-  unitedBlobs.forEach((group, index) => {
-    let simplified = pullAway(group.geom, 1, 5);
+  for (let index = 0; index < unitedBlobs.length; index++) {
+    const group = unitedBlobs[index];
+    let simplified = flatten(group.geom, 3);
+
+    const beforeDilation = simplified;
+    simplified = await simplifyWithDilationErosion(simplified, mergeInflation * 2.5);
+    simplified = flatten(simplified, 3);
+
+    // 5) Union pre/post dilation results to fuse small gaps
+    const unionInput: BuildingWithPolygon[] = [
+      { id: 'before', polygon: beforeDilation },
+      { id: 'after',  polygon: simplified }
+    ];
+    const unioned = await uniteGeometries(unionInput, mergeInflation);
+    if (unioned && unioned.length > 0) {
+      const merged = unioned.find(g => g.buildings.length > 1) ?? unioned[0];
+      simplified = merged.geom;
+    }
+
+    // Adopt simplifyBlobTest pipeline
+    simplified = pullAway(simplified, 1, 5);
     simplified = cornerize(simplified, allPoints, mergeInflation + 0.1, 0.5);
     simplified = unround(simplified, 10, 0.45);
     simplified = flatten(simplified, 3);
@@ -186,21 +232,20 @@ export async function createBlobs(
     simplified = unround(simplified, 5, 0.55);
     simplified = flatten(simplified, 7);
     simplified = unround(simplified, 5, 0.55);
-    
+
     if (simplified.length < 3 && calculatePolygonArea(simplified) < safeToSkipArea) {
       blobsSkippedCount++;
-      return;
+      continue;
     }
     totalBlobVertices += simplified.length;
-    
+
     const blobBuildings = group.buildings.join(',');
     const coordsStr = formatCoordsRounded(simplified, 2);
     blobOutput += `${index};[${blobBuildings}];[${coordsStr}]\n`;
-  });
+  }
   
   console.log(`Blobs: Skipped ${blobsSkippedCount} blobs with < 3 vertices and area < ${safeToSkipArea}.`);
-  console.log(`Blob vertices: ${totalBlobVertices}`);
   
   fs.writeFileSync(path.join(outputDir, 'blobs.txt'), blobOutput);
-  console.log('Blobs saved to blobs.txt');
-} 
+  console.log(`Blob vertices: ${totalBlobVertices}, saved to blobs.txt`);
+}

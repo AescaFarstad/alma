@@ -1,4 +1,4 @@
-import { NavmeshData, MyPolygon } from './navmesh_struct';
+import { NavmeshData, MyPolygon, MyPoint } from './navmesh_struct';
 
 // Helper function to make validation errors more noticeable
 function logValidationError(message: string): void {
@@ -369,4 +369,118 @@ export function validateAllPolygonsConvex(navmeshData: NavmeshData, phase: strin
   }
 
   return !foundIssues;
-} 
+}
+
+// ================================
+// PRE-TRIANGULATION DUPLICATE-POINT LOGGING
+// ================================
+
+function pointKey(p: MyPoint): string {
+  // Use exact value string; upstream snapping already controls precision for snapped polys
+  return `${p[0]};${p[1]}`;
+}
+
+function buildIndexMap(poly: MyPolygon): Map<string, number[]> {
+  const map = new Map<string, number[]>();
+  for (let i = 0; i < poly.length; i++) {
+    const k = pointKey(poly[i]);
+    const arr = map.get(k);
+    if (arr) arr.push(i); else map.set(k, [i]);
+  }
+  return map;
+}
+
+function findAllDuplicateBuckets(poly: MyPolygon): Array<{ key: string; coord: MyPoint; indices: number[] }>{
+  const buckets = buildIndexMap(poly);
+  const result: Array<{ key: string; coord: MyPoint; indices: number[] }> = [];
+  for (const [k, idxs] of buckets.entries()) {
+    if (idxs.length > 1) {
+      const [x, y] = k.split(';').map(Number) as [number, number];
+      result.push({ key: k, coord: [x, y], indices: idxs.slice() });
+    }
+  }
+  return result;
+}
+
+function pointsEqual(a: MyPoint, b: MyPoint): boolean {
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+function findConsecutiveDuplicateEdges(poly: MyPolygon): Array<{ idxA: number; idxB: number; point: MyPoint; type: 'adjacent' | 'closing' }>{
+  const issues: Array<{ idxA: number; idxB: number; point: MyPoint; type: 'adjacent' | 'closing' }> = [];
+  if (poly.length === 0) return issues;
+  for (let i = 0; i < poly.length - 1; i++) {
+    if (pointsEqual(poly[i], poly[i + 1])) {
+      issues.push({ idxA: i, idxB: i + 1, point: poly[i], type: 'adjacent' });
+    }
+  }
+  if (poly.length >= 2 && pointsEqual(poly[poly.length - 1], poly[0])) {
+    issues.push({ idxA: poly.length - 1, idxB: 0, point: poly[0], type: 'closing' });
+  }
+  return issues;
+}
+
+/**
+ * Logs duplicate vertices for each blob (snapped polygons), with raw vs snapped origin info.
+ * - Checks all points, not just consecutive.
+ * - Uses hash maps to aggregate duplicates in O(n) per polygon.
+ * - Emits logs only when duplicates are present.
+ */
+export function logDuplicatePointsInBlobs(
+  rawHolePolygons: MyPolygon[],
+  snappedHolePolygons: MyPolygon[],
+  blobToBuildings: string[][]
+): void {
+  for (let i = 0; i < snappedHolePolygons.length; i++) {
+    const snapped = snappedHolePolygons[i] ?? [];
+    const raw = rawHolePolygons[i] ?? [];
+
+    // Detect duplicates in snapped (authoritative for triangulation input)
+    const allDupBuckets = findAllDuplicateBuckets(snapped);
+    if (allDupBuckets.length === 0) continue; // no logs on positive outcomes
+
+    // Also detect if duplicates existed in raw input
+    const rawDupBuckets = findAllDuplicateBuckets(raw);
+    const introducedBySnapping = rawDupBuckets.length === 0 && allDupBuckets.length > 0;
+
+    const consecutiveDupEdges = findConsecutiveDuplicateEdges(snapped);
+    const buildingIds = blobToBuildings[i] ?? [];
+
+    console.error('--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---');
+    console.error(`Blob index: ${i}`);
+    console.error(`Building IDs: [${buildingIds.join(', ')}]`);
+
+    // Report all duplicate coordinates with index lists
+    for (const bucket of allDupBuckets) {
+      const [x, y] = bucket.coord;
+      console.error(`Repeated coordinate (${x};${y}) at indices [${bucket.indices.join(', ')}]`);
+    }
+
+    // If any of the above duplicates are also consecutive edges, highlight them explicitly
+    for (const issue of consecutiveDupEdges) {
+      const [x, y] = issue.point;
+      if (issue.type === 'adjacent') {
+        console.error(`Duplicate adjacent edge at indices ${issue.idxA} -> ${issue.idxB}: (${x};${y})`);
+      } else {
+        console.error(`Duplicate closing edge at indices ${issue.idxA} -> ${issue.idxB}: (${x};${y})`);
+      }
+    }
+
+    // Origin message
+    if (introducedBySnapping) {
+      console.error('Origin: Introduced by snapping to 2-decimal precision');
+    } else if (rawDupBuckets.length > 0) {
+      console.error('Origin: Present in raw input geometry (pre-snapping)');
+    } else {
+      console.error('Origin: Unknown');
+    }
+
+    // Full geometry dump for diagnostics
+    console.error(`Snapped geometry (${snapped.length} points): ${JSON.stringify(snapped)}`);
+    if (raw.length !== snapped.length || introducedBySnapping) {
+      console.error(`Raw geometry (${raw.length} points): ${JSON.stringify(raw)}`);
+    }
+
+    console.error('--- END OF BLOB ERROR ---');
+  }
+}

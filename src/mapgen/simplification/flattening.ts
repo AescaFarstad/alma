@@ -32,7 +32,7 @@ export function flatten(points: Point2[], area_threshold: number): Point2[] {
       const AC_length = distance(A, C);
       
       // Modify area_threshold based on how far the edge would move
-      const threshold_multiplier = cvt(M, 0.1, 0.05 * AC_length, 3, 1);
+      const threshold_multiplier = cvt(M, 0.1, 0.05 * AC_length, 3, 1, true);
       const adjusted_threshold = area_threshold * threshold_multiplier;
 
       const area = triangleArea(A, B, C);

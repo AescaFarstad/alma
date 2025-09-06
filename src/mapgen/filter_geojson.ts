@@ -10,6 +10,8 @@ const __dirname = path.dirname(__filename);
 
 const ORIGIN_LAT = 43.242502;
 const ORIGIN_LON = 76.948339;
+// const ORIGIN_LAT = 43.241048;
+// const ORIGIN_LON = 76.927389;
 const EARTH_RADIUS_METERS = 6371000;
 const COS_ORIGIN_LAT = Math.cos(ORIGIN_LAT * Math.PI / 180);
 

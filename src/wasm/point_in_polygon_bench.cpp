@@ -18,7 +18,7 @@ struct BenchmarkResult {
 };
 
 template<typename Func>
-BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<std::vector<int>>& candidateArrays) {
+BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<RangeView>& candidateArrays) {
   int zeroMatches = 0;
   int multiMatches = 0;
   auto t0 = std::chrono::high_resolution_clock::now();
@@ -27,7 +27,8 @@ BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_p
     const Point2 p = points[i]; // Make a copy to avoid aliasing issues
     int matches = 0;
     const auto& candidates = candidateArrays[i];
-    for (int polyIdx : candidates) {
+    for (uint32_t k = 0; k < candidates.count; ++k) {
+      int polyIdx = candidates.ptr[k];
       if (method(p, polyIdx)) {
         matches++;
       }
@@ -73,17 +74,18 @@ void point_in_polygon_bench() {
     };
   }
 
-  std::vector<std::vector<int>> candidateArrays(NUM_POINTS);
+  std::vector<RangeView> candidateArrays;
+  candidateArrays.reserve(NUM_POINTS);
   for (int i = 0; i < NUM_POINTS; i++) {
-    candidateArrays[i] = g_navmesh.polygon_index.query(points[i]);
+    candidateArrays.push_back(g_navmesh.polygon_index.query(points[i]));
   }
 
   const int warmN = std::min(NUM_POINTS, 256);
   for (int i = 0; i < warmN; i++) {
     const auto& p = points[i];
     const auto& candidates = candidateArrays[i];
-    
-    for (int polyIdx : candidates) {
+    for (uint32_t k = 0; k < candidates.count; ++k) {
+      int polyIdx = candidates.ptr[k];
       test_point_inside_poly(p, polyIdx);
     }
   }

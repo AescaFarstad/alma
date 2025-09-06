@@ -30,7 +30,7 @@ function update_random_journey(gs: GameState, a: WAgent, dt: number): void {
   if (gs.wasm_agents.states[a.idx] == AgentState.Standing) {
     const data = gs.wasm_agents;
     const navmesh = gs.navmesh;
-    const endNode = getRandomTriangleInArea(navmesh, 0, 0, 30, gs.rngSeedW);
+    const endNode = getRandomTriangleInArea(navmesh, 0, 0, 100, gs.rngSeedW);
     gs.rngSeedW = advanceSeed(gs.rngSeedW);
 
     data.end_targets[a.idx * 2] = navmesh.triangle_centroids[endNode * 2];

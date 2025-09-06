@@ -118,7 +118,12 @@ function findOptimalSimplificationPoint(A: Point2, B: Point2, C: Point2, D: Poin
   };
 }
 
-export function unround(points: Point2[], distance_threshold: number, error_threshold: number): Point2[] {
+export function unround(
+  points: Point2[],
+  distance_threshold: number,
+  error_threshold: number,
+  border_threshold: number = 1
+): Point2[] {
   let currentPoints = [...points];
   if (currentPoints.length > 0 && distance(currentPoints[0], currentPoints[currentPoints.length-1]) < 1e-9) {
     currentPoints.pop();
@@ -151,6 +156,42 @@ export function unround(points: Point2[], distance_threshold: number, error_thre
       if (result.M && result.h < error_threshold) {
         // CONVERGENCE CHECK: Ensure the new point is a meaningful change to prevent infinite loops.
         if (distance(result.M, B) < 1e-5 && distance(result.M, C) < 1e-5) {
+          i++;
+          continue;
+        }
+
+        // PROXIMITY CHECK: Ensure the new point isn't too close to any other segment
+        // (similar to pullAway.ts). Skip edges that involve A, B, C, or D.
+        let tooClose = false;
+        for (let j = 0; j < len; j++) {
+          const P1_idx = j;
+          const P2_idx = (j + 1) % len;
+
+          const A_idx = (i - 1 + len) % len;
+          const B_idx = i % len;
+          const C_idx = (i + 1) % len;
+          const D_idx = (i + 2) % len;
+
+          // Skip edges that contain A, B, C, or D (adjacent to the modified area)
+          if (
+            P1_idx === A_idx || P2_idx === A_idx ||
+            P1_idx === B_idx || P2_idx === B_idx ||
+            P1_idx === C_idx || P2_idx === C_idx ||
+            P1_idx === D_idx || P2_idx === D_idx
+          ) {
+            continue;
+          }
+
+          const P1 = currentPoints[P1_idx];
+          const P2 = currentPoints[P2_idx];
+          const segDist = distancePointToSegment(result.M, P1, P2);
+          if (segDist < border_threshold) {
+            tooClose = true;
+            break;
+          }
+        }
+
+        if (tooClose) {
           i++;
           continue;
         }

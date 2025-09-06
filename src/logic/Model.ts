@@ -12,6 +12,7 @@ import { updateAgentNavigation } from "./agents/AgentNavigation";
 import { updateSpawners } from "./agents/AgentSpawner";
 import { updateWAgentSpawners } from "./WAgentSpawner";
 import { updateWAgentGridSpawners } from "./WAgentGridSpawner";
+import { updateWAgentAllSpawners } from "./WAgentAllSpawner";
 import { updateAgentStatistic } from "./agents/AgentStatistic";
 import { updateAgentCollisions } from "./agents/AgentCollision";
 import { WasmFacade } from "./WasmFacade";
@@ -86,6 +87,7 @@ export function update(gs: GameState, deltaTime: number): void {
     updateSpawners(gs, effectiveDeltaTime);
     updateWAgentSpawners(gs.wAgentSpawners, effectiveDeltaTime, gs);
     updateWAgentGridSpawners(gs.wAgentGridSpawners, effectiveDeltaTime, gs);
+    updateWAgentAllSpawners(gs.wAgentAllSpawners, effectiveDeltaTime, gs);
 
     // ts agents
     for (const agent of gs.agents) {

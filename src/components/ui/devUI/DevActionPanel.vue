@@ -5,6 +5,7 @@
     <!-- <button @click="click(() => toggleAgentRenderMode())">{{ agentRenderMode === 'visual' ? 'Visual' : 'Sprite' }} Mode</button> -->
     <button @click="click(() => toggleWasmRender())">{{ wasmRenderEnabled ? '🚫' : '👁' }} WASM</button>
     <button @click="click(() => findCorridors())">pathfind</button>
+    <button @click="click(() => buildSelectedLine())">Line</button>
     <button @click="click(() => spawnAgentFromJSON())">Spawn</button>
   </div>
 </template>
@@ -70,6 +71,20 @@ const spawnAgentFromJSON = () => {
   } catch (error) {
     console.error('Failed to spawn agent from JSON:', error);
   }
+};
+
+const buildSelectedLine = () => {
+  if (!gameState || !sceneState) return;
+  const selected = gameState.pointMarks.filter(pm => pm.selected);
+  if (selected.length < 2) {
+    console.log('Need at least 2 selected point marks to build a line.');
+    return;
+  }
+  // Use ID order for a deterministic sequence
+  const ordered = [...selected].sort((a, b) => a.id - b.id);
+  const corners = ordered.map(m => ({ x: m.x, y: m.y }));
+  const pathId = `line-${Date.now()}`;
+  sceneState.addPath(pathId, corners, corners[0], corners[corners.length - 1]);
 };
 </script>
 

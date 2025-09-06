@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include "point2.h"
+#include "range_view.h"
 
 class SpatialIndex {
 public:
@@ -28,7 +29,7 @@ public:
   ~SpatialIndex();
   
   // Query methods
-  std::vector<int> query(Point2 p) const;
+  RangeView query(Point2 p) const;
   std::vector<int> queryArea(float minX, float minY, float maxX, float maxY) const;
   
   // Initialize from WASM memory pointers (called by TypeScript)
@@ -40,6 +41,8 @@ public:
 
 private:
   void cleanup();
+  static void addCellItemsNoDedup(const SpatialIndex* self, int cx, int cy, std::vector<int>& out);
+  static void addCellItemsUnique(const SpatialIndex* self, int cx, int cy, std::vector<int>& out);
 };
 
 #endif // SPATIAL_INDEX_H

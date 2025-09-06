@@ -179,7 +179,6 @@ const applyOffsetToCorner = (result: DualCorner, cornerNum: 1 | 2, endPoint: Poi
     }
   }
   
-  // Add warning if blob not found (like C++ version)
   if (!foundBlob) {
     console.warn(`applyOffsetToCorner: FAILURE corner${cornerNum} - Could not find matching blob for corner, not applying offset. Point: (${point.x.toFixed(3)}, ${point.y.toFixed(3)}) vIdx=${vIdx}`);
     console.warn("applyOffsetToCorner: Nearby blobs were:", nearbyBlobIds);

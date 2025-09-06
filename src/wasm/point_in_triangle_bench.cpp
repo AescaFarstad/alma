@@ -18,7 +18,7 @@ struct BenchmarkResult {
 };
 
 template<typename Func>
-BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<std::vector<int>>& candidateArrays) {
+BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<RangeView>& candidateArrays) {
   int zeroMatches = 0;
   int multiMatches = 0;
   auto t0 = std::chrono::high_resolution_clock::now();
@@ -27,7 +27,8 @@ BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_p
     const Point2 p = points[i]; // Make a copy to avoid aliasing issues
     int matches = 0;
     const auto& candidates = candidateArrays[i];
-    for (int triIdx : candidates) {
+    for (uint32_t k = 0; k < candidates.count; ++k) {
+      int triIdx = candidates.ptr[k];
       if (method(p, triIdx)) {
         matches++;
       }
@@ -42,7 +43,7 @@ BenchmarkResult runNavmeshMethod(const std::string& name, Func method, int num_p
 }
 
 template<typename Func>
-BenchmarkResult runCoordinateMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<std::vector<int>>& candidateArrays) {
+BenchmarkResult runCoordinateMethod(const std::string& name, Func method, int num_points, const std::vector<Point2>& points, const std::vector<RangeView>& candidateArrays) {
   int zeroMatches = 0;
   int multiMatches = 0;
   auto t0 = std::chrono::high_resolution_clock::now();
@@ -51,7 +52,8 @@ BenchmarkResult runCoordinateMethod(const std::string& name, Func method, int nu
     const Point2 p = points[i]; // Make a copy to avoid aliasing issues
     int matches = 0;
     const auto& candidates = candidateArrays[i];
-    for (int triIdx : candidates) {
+    for (uint32_t k = 0; k < candidates.count; ++k) {
+      int triIdx = candidates.ptr[k];
       int base = triIdx * 3;
       int i1 = g_navmesh.triangles[base];
       int i2 = g_navmesh.triangles[base + 1];
@@ -108,9 +110,10 @@ void point_in_triangle_bench() {
     };
   }
 
-  std::vector<std::vector<int>> candidateArrays(NUM_POINTS);
+  std::vector<RangeView> candidateArrays;
+  candidateArrays.reserve(NUM_POINTS);
   for (int i = 0; i < NUM_POINTS; i++) {
-    candidateArrays[i] = g_navmesh.triangle_index.query(points[i]);
+    candidateArrays.push_back(g_navmesh.triangle_index.query(points[i]));
   }
 
   std::vector<BenchmarkResult> results;

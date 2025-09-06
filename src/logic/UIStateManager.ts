@@ -23,4 +23,13 @@ function syncEvents(_gameState: GameState): void {
  */
 export function sync(gameState: GameState): void {
   syncEvents(gameState);
-} 
+  // Sync point marks from non-reactive game state to reactive UI state
+  // Use a shallow copy to trigger Vue reactivity reliably
+  const src = gameState.pointMarks;
+  const mirrored = new Array(src.length);
+  for (let i = 0; i < src.length; i++) {
+    const m = src[i];
+    mirrored[i] = { id: m.id, x: m.x, y: m.y, selected: m.selected };
+  }
+  gameState.uiState.pointMarks = mirrored;
+}

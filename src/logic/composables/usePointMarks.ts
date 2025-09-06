@@ -7,6 +7,19 @@ export function usePointMarks(
   sceneState: SceneState | undefined,
   contextMenu?: { coordinate: { lng: number; lat: number }; visible: boolean }
 ) {
+  const addPointMarkAt = (x: number, y: number, selected: boolean = true) => {
+  if (gameState && sceneState) {
+    const newPointMark = {
+    id: gameState.nextPointMarkId++,
+    x,
+    y,
+    selected,
+    };
+    gameState.pointMarks.push(newPointMark);
+    sceneState.isDirty = true;
+  }
+  };
+
   const addPointMark = () => {
   if (gameState && sceneState && contextMenu) {
     const newPointMark = {
@@ -74,11 +87,10 @@ export function usePointMarks(
   };
 
   const selectedPointMarks = computed(() => {
-  if (gameState) {
-    return gameState.pointMarks.filter(mark => mark.selected).map(mark => mark.id);
-  }
-  return [];
+  if (!gameState) return [];
+  const src = gameState.uiState?.pointMarks ?? gameState.pointMarks;
+  return src.filter(mark => mark.selected).map(mark => mark.id);
   });
 
-  return { addPointMark, moveNearestPointMark, selectAllPointMarks, deleteSelectedPointMarks, deleteAllPointMarks, selectedPointMarks };
-} 
+  return { addPointMarkAt, addPointMark, moveNearestPointMark, selectAllPointMarks, deleteSelectedPointMarks, deleteAllPointMarks, selectedPointMarks };
+}

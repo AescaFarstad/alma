@@ -22,19 +22,11 @@
     <div class="building-controls">
       <button @click="handleButtonClick($event, () => flyTo(building.id))">@</button>
       <button @click="handleButtonClick($event, () => copyBuildingProperties(building.id))">C</button>
-      <!-- <button @click="simplifyBuilding(building)">S</button> -->
-      <button @click="handleButtonClick($event, () => simplifyWithConvexHull(building.id))">Hull</button>
-      <!-- <button @click="simplifyWithConvexHullAndSimplify(building)">S3</button> -->
-      <button @click="handleButtonClick($event, () => simplifyWithUR(building.id))">UR</button>
-      <button @click="handleButtonClick($event, () => simplifyWithFT(building.id))">FT</button>
-      <button @click="handleButtonClick($event, () => simplifyWithS6(building.id))">S6</button>
-      <button @click="handleButtonClick($event, () => simplifyWithS7(building.id))">S7</button>
-      <button @click="handleButtonClick($event, () => inflate(building.id))">i</button>
-      <button @click="handleButtonClick($event, () => inflateAndCornerize(building.id))">iC</button>
-      <button @click="handleButtonClick($event, () => uniteBuilding(building.id))">U</button>
-      <button @click="handleButtonClick($event, () => uniteAndSimplifyBuilding(building.id))">US</button>
-      <button @click="handleButtonClick($event, () => findNearby(building.id))">?</button>
       <button @click="handleButtonClick($event, () => drawBlobs(building.id))">b</button>
+      <button @click="handleButtonClick($event, () => simplifyVisual(building.id))">SVis</button>
+      <button @click="handleButtonClick($event, () => simplifyNav(building.id))">SNav</button>
+      <button @click="handleButtonClick($event, () => simplifyBlob(building.id))">SBlb</button>
+      <button @click="handleButtonClick($event, () => simplifyBlobTest(building.id))">STst</button>
       <button @click="handleButtonClick($event, () => removeBuilding(building.id))">X</button>
     </div>
     </li>
@@ -65,11 +57,41 @@ import { getBuildingGeometry, getPolygonVertices, getBuildingArea } from '../../
 import { cornerize } from '../../../mapgen/simplification/cornerize';
 import { pullAway } from '../../../mapgen/simplification/pullAway';
 import { BuildingProperties } from '../../../types';
+import { devFeatures, ensureDevFeaturesLoaded } from '../../../logic/DevFeatures';
+import { cutImposter } from '../../../mapgen/simplification/cutImposter';
+import { slideToNeighbor } from '../../../mapgen/simplification/slideToNeighbor';
+import { simplifyBlobTest as simplifyBlobTestAction } from '../../../mapgen/simplifyBlobTest';
 
 type BuildingDisplayData = { 
   id: number;
   stats: BuildingProperties;
   area: number;
+};
+
+// Centroid for labeling: area-weighted polygon centroid with fallback
+const centroidOfPolygon = (pts: Point2[]): Point2 => {
+  if (!pts || pts.length === 0) return { x: 0, y: 0 };
+  let area2 = 0; // twice the area
+  let cx = 0;
+  let cy = 0;
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const p = pts[i];
+    const q = pts[j];
+    const cross = p.x * q.y - q.x * p.y;
+    area2 += cross;
+    cx += (p.x + q.x) * cross;
+    cy += (p.y + q.y) * cross;
+  }
+  if (Math.abs(area2) < 1e-6) {
+    // Degenerate polygon: average vertices
+    let ax = 0, ay = 0;
+    for (const p of pts) { ax += p.x; ay += p.y; }
+    return { x: ax / n, y: ay / n };
+  }
+  const inv = 1 / (3 * area2);
+  return { x: cx * inv, y: cy * inv };
 };
 
 const handleButtonClick = (event: MouseEvent, action: () => void) => {
@@ -81,7 +103,7 @@ const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
 const buildingIdToAdd = ref('');
 
-const SIMPLIFICATION_INFLATION = 3.6;
+const SIMPLIFICATION_INFLATION = 1.6;
 const MERGE_INFLATION = 2;
 
 const tooltip = reactive({
@@ -108,6 +130,20 @@ const buildings = computed((): BuildingDisplayData[] => {
   .filter((b): b is BuildingDisplayData => !!b);
 });
 
+
+const getOriginalOuterRingByBuildingId = async (id: number): Promise<Point2[] | null> => {
+  if (!gameState) return null;
+  const props = gameState.navmesh.building_properties[id];
+  const osmId = props?.osm_id;
+  if (!osmId) return null;
+  await ensureDevFeaturesLoaded();
+  const rings = devFeatures.buildings.get(osmId);
+  if (!rings || rings.length === 0) return null;
+  const ring = rings[0];
+  if (!ring || ring.length < 3) return null;
+  return ring;
+};
+
 const addBuilding = () => {
   if (!gameState || !sceneState) return;
   const id = parseInt(buildingIdToAdd.value, 10);
@@ -122,219 +158,91 @@ const addBuilding = () => {
 };
 
 const removeBuilding = (id: number) => {
+  sceneState!.deselectBuilding(id);
+};
+
+const simplifyVisual = async (id: number) => {
   if (!sceneState) return;
-  sceneState.deselectBuilding(id);
-};
+  const original = await getOriginalOuterRingByBuildingId(id);
+  if (!original) return;
 
-const simplifyWithConvexHull = (id: number) => {
-  if (!sceneState || !gameState) return;
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points) return;
-  
-  const convexHull = getConvexHull(points);
 
-  sceneState.addSimplifiedBuilding(id, convexHull);
-};
-
-const simplifyWithUR = (id: number) => {
-  if (!sceneState || !gameState) return;
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points) return;
-
-  const unrounded = unround(points, 5, 0.25);
-  sceneState.addSimplifiedBuilding(id, unrounded);
-};
-
-const simplifyWithFT = (id: number) => {
-  if (!sceneState || !gameState) return;
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points) return;
-  
-  const flattened = flatten(points, 1.75);
-  sceneState.addSimplifiedBuilding(id, flattened);
-};
-
-const simplifyWithS6 = (id: number) => {
-  if (!sceneState || !gameState) return;
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points) return;
-
-  let res = unround(points, 5, 0.25);
-  res = flatten(res, 1.75);
-  res = unround(res, 5, 0.3);
-  res = flatten(res, 2);
-  // res = flatten(res, 3);
-  // res = unround(res, 2.5, 1.5);
-  // res = flatten(res, 5);
-  // res = flatten(res, 6);
-
-  sceneState.addSimplifiedBuilding(id, res);
-  console.log(`Simplified: ${points.length} -> ${res.length}`);
-};
-
-const simplifyWithS7 = async (id: number) => {
-  if (!sceneState || !gameState) return;
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points) return;
-  
-  let simplified = await simplifyWithDilationErosion(points, SIMPLIFICATION_INFLATION);
+  let simplified = await simplifyWithDilationErosion(original, SIMPLIFICATION_INFLATION);
   simplified = unround(simplified, 10, 0.45);
   simplified = flatten(simplified, 3);
   simplified = unround(simplified, 10, 0.5);
-  simplified = cornerize(simplified, points, SIMPLIFICATION_INFLATION + 0.1, 1);
+  simplified = cornerize(simplified, original, SIMPLIFICATION_INFLATION + 0.1, 1);
   simplified = flatten(simplified, 5);
   simplified = unround(simplified, 5, 0.55);
 
   sceneState.addSimplifiedBuilding(id, simplified);
-  console.log(`Simplified: ${points.length} -> ${simplified.length}`);
 };
 
-const getBuildingsToUnite = (id: number, range: number, modifiedMainPolygon?: Point2[]): BuildingWithPolygon[] => {
-  if (!gameState) return [];
-  const originalMainPolygon = getBuildingGeometry(gameState.navmesh, id);
-  if (!originalMainPolygon) return [];
+const simplifyNav = async (id: number) => {
+  if (!sceneState) return;
+  const original = await getOriginalOuterRingByBuildingId(id);
+  if (!original) return;
 
-  const mainPolygonForUnite = modifiedMainPolygon || originalMainPolygon;
+  // Pre-blob-combining simplification (from create_blobs.ts)
+  let simplified = unround(original, 10, 0.45);
+  simplified = flatten(simplified, 3);
 
-  const { minX, minY, maxX, maxY } = originalMainPolygon.reduce(
-  (acc, p) => ({
-    minX: Math.min(acc.minX, p.x),
-    minY: Math.min(acc.minY, p.y),
-    maxX: Math.max(acc.maxX, p.x),
-    maxY: Math.max(acc.maxY, p.y),
-  }),
-  { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
-  );
+  sceneState.addSimplifiedBuilding(id, simplified);
+};
 
-  const searchArea = {
-  minX: minX - range,
-  minY: minY - range,
-  maxX: maxX + range,
-  maxY: maxY + range,
-  };
 
-  const buildingIndex = gameState.navmesh.buildingIndex;
-  const minCellX = Math.floor((searchArea.minX - buildingIndex.minX) / buildingIndex.cellSize);
-  const maxCellX = Math.floor((searchArea.maxX - buildingIndex.minX) / buildingIndex.cellSize);
-  const minCellY = Math.floor((searchArea.minY - buildingIndex.minY) / buildingIndex.cellSize);
-  const maxCellY = Math.floor((searchArea.maxY - buildingIndex.minY) / buildingIndex.cellSize);
+const simplifyBlob = async (id: number) => {
+  if (!gameState || !sceneState) return;
+  const blobIndex = gameState.navmesh.building_to_blob[id];
+  if (blobIndex === undefined || blobIndex < 0) return;
 
-  const nearbyBuildingIds = new Set<number>();
-  for (let cy = minCellY; cy <= maxCellY; cy++) {
-  for (let cx = minCellX; cx <= maxCellX; cx++) {
-    const items = buildingIndex.getItemsInCell(cx, cy);
-    for (let i = 0; i < items.length; i++) {
-    nearbyBuildingIds.add(items[i]);
+  const start = gameState.navmesh.blob_buildings[blobIndex];
+  const end = gameState.navmesh.blob_buildings[blobIndex + 1];
+  if (start === undefined || end === undefined || end <= start) return;
+
+  // Gather original rings for all buildings in this blob
+  const buildingsForUnite: BuildingWithPolygon[] = [];
+  for (let b = start; b < end; b++) {
+    const ring = await getOriginalOuterRingByBuildingId(b);
+    if (ring && ring.length >= 3) {
+      buildingsForUnite.push({ id: String(b), polygon: ring });
     }
   }
-  }
-  
-  const buildingsMap = new Map(gameState.navmesh.building_properties.map((p, index) => [index, p]));
-  const nearbyBuildings = Array.from(nearbyBuildingIds)
-  .map(buildingId => {
-    const props = buildingsMap.get(buildingId);
-    if (!props) return null;
-    return { id: buildingId, stats: props };
-  })
-  .filter((b): b is { id: number; stats: BuildingProperties } => !!b && b.id !== id);
-  
-  const buildingsWithPolygons: BuildingWithPolygon[] = [{ id: id.toString(), polygon: mainPolygonForUnite }];
-  
-  for(const b of nearbyBuildings) {
-  const polygon = getBuildingGeometry(gameState.navmesh, b.id);
-  if(polygon) {
-    buildingsWithPolygons.push({ id: b.id.toString(), polygon });
-  }
+  if (buildingsForUnite.length === 0) return;
+
+  // Simplify each building for blob combining
+  for (const b of buildingsForUnite) {
+    let simplified = unround(b.polygon, 10, 0.45);
+    simplified = flatten(simplified, 3);
+    b.polygon = simplified;
   }
 
-  return buildingsWithPolygons;
-};
+  const allPoints = buildingsForUnite.flatMap(g => g.polygon);
+  const unitedGroups = await uniteGeometries(buildingsForUnite, MERGE_INFLATION);
+  if (!unitedGroups || unitedGroups.length === 0) return;
 
-const inflate = async (id: number) => {
-  if (!gameState || !sceneState) return;
-  
-  const buildingsToUnite = getBuildingsToUnite(id, 0.1);
-  if (buildingsToUnite.length === 0) return;
-
-  for(let b of buildingsToUnite) {
-    b.polygon = unround(b.polygon, 10, 0.45);
-    b.polygon = flatten(b.polygon, 3);
-  }
-
-  const unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
-  unitedGroups.forEach((group, index) => {
-    sceneState.addSimplifiedBuilding(id, group.geom);
-  });
-};
-
-const inflateAndCornerize = async (id: number) => {
-  if (!gameState || !sceneState) return;
-
-  const buildingsToUnite = getBuildingsToUnite(id, 0.1);
-  if (buildingsToUnite.length === 0) return;
-
-  for(let b of buildingsToUnite) {
-    b.polygon = unround(b.polygon, 10, 0.45);
-    b.polygon = flatten(b.polygon, 3);
-  }
-
-  let allPoints = buildingsToUnite.flatMap(g => g.polygon);
-  const unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
-
-
-  unitedGroups.forEach((group, index) => {
-    let simplified = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
-    sceneState.addSimplifiedBuilding(id, simplified);
-  });
-};
-
-const uniteBuilding = async (id: number) => {
-  if (!gameState || !sceneState) return;
-  const buildingsToUnite = getBuildingsToUnite(id, 0.1);
-  if (buildingsToUnite.length === 0) return;
-
-  const unitedGroups = await uniteGeometries(buildingsToUnite, 3.6);
-  
-  unitedGroups.forEach((group, index) => {
-  console.log(`United group ${index}: ${group.buildings.join(', ')}`);
-  sceneState.addSimplifiedBuilding(id, group.geom);
-  });
-};
-
-const uniteAndSimplifyBuilding = async (id: number) => {
-  if (!gameState || !sceneState) return;
-
-  let mainPolygon = getBuildingGeometry(gameState.navmesh, id);
-  if (!mainPolygon) return;
-
-  const buildingsToUnite = getBuildingsToUnite(id, 50.1, mainPolygon);
-  if (buildingsToUnite.length === 0) return;
-  let allPoints = buildingsToUnite.flatMap(g => g.polygon);
-
-  buildingsToUnite.forEach((b) => {
-  b.polygon = unround(b.polygon, 10, 0.45);
-  b.polygon = flatten(b.polygon, 3);
-  });
-
-  let unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
-  unitedGroups.forEach((group) => {
-  group.geom = cornerize(group.geom, allPoints, MERGE_INFLATION + 0.1, 0.5);
-  });
-  
   for (let i = 0; i < unitedGroups.length; i++) {
-  const group = unitedGroups[i];
-  let simplified = group.geom;
-  simplified = pullAway(simplified, 1, 5);
-  simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
-  simplified = unround(simplified, 10, 0.45);
-  simplified = flatten(simplified, 3);
-  simplified = unround(simplified, 10, 0.5);
-  simplified = flatten(simplified, 5);
-  simplified = unround(simplified, 5, 0.55);
-  simplified = flatten(simplified, 7);
-  simplified = unround(simplified, 5, 0.55);
-  sceneState.addSimplifiedBuilding(id, simplified);
+    const group = unitedGroups[i];
+    let simplified = group.geom;
+    simplified = pullAway(simplified, 1, 5);
+    simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
+    simplified = unround(simplified, 10, 0.45);
+    simplified = flatten(simplified, 3);
+    simplified = unround(simplified, 10, 0.5);
+    simplified = flatten(simplified, 5);
+    simplified = unround(simplified, 5, 0.55);
+    simplified = flatten(simplified, 7);
+    simplified = unround(simplified, 5, 0.55);
+
+    const targetId = i === 0 ? id : Math.round(Math.random() * -1000000);
+    sceneState.addSimplifiedBuilding(targetId, simplified);
   }
+};
+
+// Test variant moved to module: two-pass grouping for accuracy
+const simplifyBlobTest = async (id: number) => {
+  if (!gameState || !sceneState) return;
+  await simplifyBlobTestAction(gameState, sceneState, id, { mergeInflation: MERGE_INFLATION, radiusMeters: 30 });
 };
 
 const uniteAndSimplifySelectedBuildings = async () => {
@@ -342,7 +250,7 @@ const uniteAndSimplifySelectedBuildings = async () => {
 
   const selectedBuildings = buildings.value;
   if (selectedBuildings.length === 0) {
-  return;
+    return;
   }
 
   const buildingsToUnite: BuildingWithPolygon[] = [];
@@ -358,32 +266,68 @@ const uniteAndSimplifySelectedBuildings = async () => {
 
   if (buildingsToUnite.length === 0) return;
 
-  let unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION);
+  let unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION * 2.5);
   
   if (unitedGroups.length === 0) return;
 
   
   for (let i = 0; i < unitedGroups.length; i++) {
-  const group = unitedGroups[i];
-  let simplified = group.geom;
-  simplified = pullAway(simplified, 1, 5);
-  simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
-  simplified = unround(simplified, 10, 0.45);
-  simplified = flatten(simplified, 3);
-  simplified = unround(simplified, 10, 0.5);
-  simplified = flatten(simplified, 5);
-  simplified = unround(simplified, 5, 0.55);
-  simplified = flatten(simplified, 7);
-  simplified = unround(simplified, 5, 0.55);
+    const group = unitedGroups[i];
+    // let simplified = [...group.geom];
+    let simplified = flatten(group.geom, 3);
 
-  sceneState.addSimplifiedBuilding(Math.round(Math.random() * -1000000), simplified);
+    const beforeDilation = simplified;
+    simplified = await simplifyWithDilationErosion(simplified, MERGE_INFLATION * 2.5);
+    // simplified = unround(simplified, 10, 0.45);
+    simplified = flatten(simplified, 3);
+
+    // 5) Union pre/post dilation results to fuse small gaps
+    const unionInput: BuildingWithPolygon[] = [
+      { id: 'before', polygon: beforeDilation },
+      { id: 'after',  polygon: simplified }
+    ];
+    const unioned = await uniteGeometries(unionInput, MERGE_INFLATION);
+    if (unioned && unioned.length > 0) {
+      const merged = unioned.find(g => g.buildings.length > 1) ?? unioned[0];
+      simplified = merged.geom;
+    }
+
+    simplified = pullAway(simplified, 1, 6);
+    simplified = cornerize(simplified, allPoints, MERGE_INFLATION + 0.1, 0.5);
+    // simplified = pullAway(simplified, 1, 4);
+    // simplified = await slideToNeighbor(allPoints, simplified, 0.75)
+    // simplified = pullAway(simplified, 1, 5);
+    simplified = unround(simplified, 10, 0.45);
+    simplified = flatten(simplified, 3);
+    simplified = unround(simplified, 10, 0.5);
+    simplified = flatten(simplified, 5);
+    simplified = unround(simplified, 5, 0.55);
+    simplified = flatten(simplified, 7);
+    simplified = unround(simplified, 5, 0.55);
+    simplified = flatten(simplified, 9);
+    // simplified = await slideToNeighbor(allPoints, simplified, 0.75)
+
+    // // simplified = await cutImposter(buildingsToUnite.map(g => g.polygon), simplified)
+    // simplified = await slideToNeighbor(group.geom, simplified, 1.25)
+    // simplified = pullAway(simplified, 1, 5);
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.75)
+    // simplified = pullAway(simplified, 1, 5);
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.5)
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.5)
+    // simplified = pullAway(simplified, 1, 5);
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.25)
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.25)
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.15)
+    // simplified = await slideToNeighbor(group.geom, simplified, 0.15)
+
+    sceneState.addSimplifiedBuilding(Math.round(Math.random() * -1000000), simplified);
   }
 };
 
 const drawBlobs = (id: number) => {
   if (!gameState || !sceneState) {
-  console.log('gameState or sceneState is missing');
-  return;
+    console.log('gameState or sceneState is missing');
+    return;
   }
 
   console.log(`Drawing blob for building ${id}`);
@@ -404,43 +348,24 @@ const drawBlobs = (id: number) => {
   console.log(`Total polygons: ${gameState.navmesh.polygons.length - 1}`);
   
   if (blobPolygonId >= gameState.navmesh.polygons.length - 1) {
-  console.warn(`Blob polygon ID ${blobPolygonId} is out of range for polygons array (length: ${gameState.navmesh.polygons.length - 1})`);
-  return;
+    console.warn(`Blob polygon ID ${blobPolygonId} is out of range for polygons array (length: ${gameState.navmesh.polygons.length - 1})`);
+    return;
   }
   
   const blobPolygon = getPolygonVertices(gameState.navmesh, blobPolygonId);
   console.log(`Retrieved ${blobPolygon.length} vertices for blob polygon ${blobPolygonId}`);
 
   if (blobPolygon.length > 0) {
-  sceneState.addDebugPolygon(blobPolygon);
-  for (const point of blobPolygon) {
-    sceneState.addDebugPoint(point, "blue");
-  }
-  blobPolygon.forEach((point, index) => {
-    sceneState.addDebugText(point, index.toString(), "white");
-  });
-  console.log(`Successfully drew blob ${blobIndex} (polygon ${blobPolygonId}) with ${blobPolygon.length} vertices`);
+    sceneState.addDebugPolygon(blobPolygon);
+    for (const point of blobPolygon) {
+      sceneState.addDebugPoint(point, "blue");
+    }
+    blobPolygon.forEach((point, index) => {
+      sceneState.addDebugText(point, index.toString(), "white");
+    });
+    console.log(`Successfully drew blob ${blobIndex} (polygon ${blobPolygonId}) with ${blobPolygon.length} vertices`);
   } else {
-  console.warn(`No vertices found for blob polygon ${blobPolygonId}.`);
-  }
-};
-
-const findNearby = (id: number) => {
-  if (!gameState || !sceneState) return;
-  const nearbyBuildings = getBuildingsToUnite(id, 1);
-  nearbyBuildings.forEach(b => sceneState!.selectBuilding(parseInt(b.id, 10)));
-};
-
-const flyTo = (id: number) => {
-  if (mapInstance.map && gameState) {
-  const points = getBuildingGeometry(gameState.navmesh, id);
-  if (!points || points.length === 0) return;
-  
-  mapInstance.map.getView().animate({
-    center: [points[0].x, points[0].y],
-    zoom: 19,
-    duration: 500,
-  });
+    console.warn(`No vertices found for blob polygon ${blobPolygonId}.`);
   }
 };
 

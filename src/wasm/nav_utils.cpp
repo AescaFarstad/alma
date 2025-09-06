@@ -25,11 +25,10 @@ int32_t is_point_in_navmesh(Point2 p, int32_t lastTriangle) {
     }
   }
 
-  std::vector<int> candidateTriangles = g_navmesh.triangle_index.query(p);
-  for (int32_t triIdx : candidateTriangles) {
-    if (check_triangle(triIdx, p)) {
-      return triIdx;
-    }
+  RangeView view = g_navmesh.triangle_index.query(p);
+  for (uint32_t i = 0; i < view.count; ++i) {
+    int32_t triIdx = view.ptr[i];
+    if (check_triangle(triIdx, p)) return triIdx;
   }
   return -1;
 }
@@ -124,33 +123,29 @@ int32_t get_triangles_in_cell(int32_t cellX, int32_t cellY, int32_t* triangleIds
 }
 
 int getTriangleFromPoint(const Point2& point) {
-  std::vector<int> possibleTris = g_navmesh.triangle_index.query(point);
-
-  for (int triIdx : possibleTris) {
-    if (test_point_inside_triangle(point, triIdx)) {
-      return triIdx;
-    }
+  RangeView view = g_navmesh.triangle_index.query(point);
+  for (uint32_t i = 0; i < view.count; ++i) {
+    int triIdx = view.ptr[i];
+    if (test_point_inside_triangle(point, triIdx)) return triIdx;
   }
 
   return -1;
 }
 
 int getPolygonFromPoint(const Point2& point) {
-  std::vector<int> possiblePolys = g_navmesh.polygon_index.query(point);
-  for (int polyIdx : possiblePolys) {
-    if (test_point_inside_poly_t(point, polyIdx)) {
-      return polyIdx;
-    }
+  RangeView view = g_navmesh.polygon_index.query(point);
+  for (uint32_t i = 0; i < view.count; ++i) {
+    int polyIdx = view.ptr[i];
+    if (test_point_inside_poly_t(point, polyIdx)) return polyIdx;
   }
   return -1;
 }
 
 int getBlobFromPoint(const Point2& point) {
-  std::vector<int> possibleBlobs = g_navmesh.blob_index.query(point);
-  for (int blobIdx : possibleBlobs) {
-    if (testPointInsideBlob(point, blobIdx)) {
-      return blobIdx;
-    }
+  RangeView view = g_navmesh.blob_index.query(point);
+  for (uint32_t i = 0; i < view.count; ++i) {
+    int blobIdx = view.ptr[i];
+    if (testPointInsideBlob(point, blobIdx)) return blobIdx;
   }
   return -1;
 }

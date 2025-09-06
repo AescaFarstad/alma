@@ -10,10 +10,10 @@ const __dirname = path.dirname(__filename);
 // true false
 const STEPS_TO_RUN = {
   ensureFilteredPbf: false,
-  processOsm: false,
-  filterGeojson: false,
-  deduplication: false,
-  simplify: false,
+  processOsm: true,
+  filterGeojson: true,
+  deduplication: true,
+  simplify: true,
   buildNavmesh: true,
   generateTiles: false,
   copyData: true,
@@ -169,7 +169,10 @@ function stepCopyData(): void {
     // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_simplified.geojson' },
     // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'buildings_s7.txt' },
     // { from: GEOJSON_COPY_SOURCE_DIR_SIMPLIFIED, file: 'blobs.txt' },
-    // { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'buildings.geojson' },
+    // Deduplicated full datasets
+    { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'buildings.geojson', rename: 'buildings_all.geojson' },
+    { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'roads.geojson', rename: 'roads_all.geojson' },
+    // Render-focused datasets
     { from: GEOJSON_COPY_SOURCE_DIR_DEDUPLICATED, file: 'roads.geojson', rename: 'map_render_roads.geojson' },
     { from: STEP_5_NAVMESH_DIR, file: 'navmesh.txt' },
     { from: STEP_5_NAVMESH_DIR, file: 'navmesh.bin' },

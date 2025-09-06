@@ -14,10 +14,12 @@ export async function simplifyWithDilationErosion(polygon: Point2[], offset: num
 
   const dilated = clipper.offsetToPaths({
     delta: offset * scale,
+    mitterLimit:1,
     offsetInputs: [{
       data: scaledPolygon,
       joinType: clipperLib.JoinType.Miter,
-      endType: clipperLib.EndType.ClosedPolygon
+      endType: clipperLib.EndType.ClosedPolygon,
+      mitterLimit:1
     }]
   });
 
@@ -27,10 +29,12 @@ export async function simplifyWithDilationErosion(polygon: Point2[], offset: num
 
   const eroded = clipper.offsetToPaths({
     delta: -offset * scale,
+    mitterLimit:1,
     offsetInputs: [{
       data: dilated[0],
       joinType: clipperLib.JoinType.Miter,
-      endType: clipperLib.EndType.ClosedPolygon
+      endType: clipperLib.EndType.ClosedPolygon,
+      mitterLimit:1
     }]
   });
 

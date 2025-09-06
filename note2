@@ -40,3 +40,430 @@ Polygon vertices count: 93570
 Polygon triangles count: 50282
 Average triangle area: 1578.70
 Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 5115
+Building vertices added specifically for buildings: 6676
+Total building vertices: 26754
+Average buildings per blob: 1.3
+Single building blobs: 3378
+Total blobs: 4046
+
+Total vertices: 25079
+Total triangles: 50152
+  - Walkable triangles: 33161
+  - Impassable triangles: 16991
+Total polygons: 15994
+  - Walkable polygons: 11948 (0.0% reduction)
+  • Largest polygon: 13 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 1449
+  - Impassable polygons: 4046 (0.0% reduction)
+Polygon vertices count: 82140
+Polygon triangles count: 50152
+Average triangle area: 1582.79
+Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 5059
+Building vertices added specifically for buildings: 6001
+Total building vertices: 26528
+Average buildings per blob: 1.3
+Single building blobs: 3352
+Total blobs: 4012
+
+Total vertices: 23483
+Total triangles: 46960
+  - Walkable triangles: 31497
+  - Impassable triangles: 15463
+Total polygons: 15327
+  - Walkable polygons: 11315 (0.0% reduction)
+  • Largest polygon: 10 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 1365
+  - Impassable polygons: 4012 (0.0% reduction)
+Polygon vertices count: 77614
+Polygon triangles count: 46960
+Average triangle area: 1690.37
+Average polygon area: 0.00
+
+773;[Ma1025358640,Ma1025358660];[-482.22,334.74,-484.17,368.04,-496.89,367.3,-498.18,380.22,-547.31,376.77,-546.4,363.77,-496.89,367.3,-494.94,334]
+
+5047;[Ma630236540,Ma630236560];[-241.61,-104.16,-245.02,-67.58,-209.44,-64.29,-210.67,-50.94,-246.25,-54.23,-245.02,-67.58,-259.56,-68.91,-256.51,-101.53,-252.53,-101.16,-252.16,-105.14]
+
+614.64, 423.05
+
+
+
+
+--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
+Blob index: 4458
+Building IDs: [Ma8284566580]
+Repeated coordinate (2608.18;1057.85) at indices [6, 7]
+Duplicate adjacent edge at indices 6 -> 7: (2608.18;1057.85)
+Origin: Present in raw input geometry (pre-snapping)
+Snapped geometry (10 points): [[2621.87,1075.96],[2610.13,1077.01],[2609.22,1075.43],[2607.34,1074.94],[2605.97,1060.26],[2608.15,1058.86],[2608.18,1057.85],[2608.18,1057.85],[2608.23,1056.84],[2619.73,1055.63]]
+--- END OF BLOB ERROR ---
+--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
+Blob index: 5643
+Building IDs: [Ma5789903120, Ma5789903140]
+Repeated coordinate (1316.17;-84.19) at indices [2, 3]
+Duplicate adjacent edge at indices 2 -> 3: (1316.17;-84.19)
+Origin: Present in raw input geometry (pre-snapping)
+Snapped geometry (10 points): [[1313.21,-96.88],[1314.84,-84.77],[1316.17,-84.19],[1316.17,-84.19],[1317.18,-84.05],[1318.09,-74.49],[1297.04,-72.5],[1296.13,-82.11],[1301.69,-83.32],[1301.1,-96.03]]
+--- END OF BLOB ERROR ---
+--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
+Blob index: 12163
+Building IDs: [Ma8631416820]
+Repeated coordinate (-1874.18;126.06) at indices [2, 3]
+Duplicate adjacent edge at indices 2 -> 3: (-1874.18;126.06)
+Origin: Present in raw input geometry (pre-snapping)
+Snapped geometry (18 points): [[-1874.52,118.89],[-1874.78,125.09],[-1874.18,126.06],[-1874.18,126.06],[-1873.22,126.52],[-1873.88,133.37],[-1875.64,134.48],[-1875.61,155.37],[-1877.36,156.47],[-1878,163.3],[-1897.63,161.87],[-1899.01,163.27],[-1906.14,162.46],[-1907.56,160.99],[-1913.06,160.55],[-1912.07,147.94],[-1889.97,149.32],[-1887.16,117.9]]
+--- END OF BLOB ERROR ---
+--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
+Blob index: 12781
+Building IDs: [Ma5051687840]
+Repeated coordinate (332.51;-717.06) at indices [13, 14]
+Duplicate adjacent edge at indices 13 -> 14: (332.51;-717.06)
+Origin: Present in raw input geometry (pre-snapping)
+Snapped geometry (33 points): [[305.23,-736.08],[306.88,-736.84],[314.35,-732.27],[316.16,-734.09],[325.04,-733.31],[326.5,-730.96],[332.93,-732.8],[334.8,-731.63],[339.61,-733.45],[342.71,-726.09],[338.16,-723.08],[338.13,-721.44],[332.52,-718.85],[332.51,-717.06],[332.51,-717.06],[333.02,-716.03],[327.9,-708.46],[326.53,-709.51],[324.32,-708.42],[323.95,-701.66],[321.92,-700.68],[321.36,-696.57],[312.32,-697.03],[312.25,-702.38],[310.61,-703.23],[309.72,-710.92],[307.64,-711.35],[305.19,-718.29],[305.95,-721],[300.56,-725.74],[300.43,-728.21],[297.38,-730.61],[302.49,-737.83]]
+--- END OF BLOB ERROR ---
+--- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
+Blob index: 14032
+Building IDs: [Ma8762574220, Ma8762574240]
+Repeated coordinate (-914.91;-1960.56) at indices [7, 8]
+Duplicate adjacent edge at indices 7 -> 8: (-914.91;-1960.56)
+Origin: Present in raw input geometry (pre-snapping)
+Snapped geometry (20 points): [[-934.18,-1979.92],[-930.22,-1978.66],[-928.77,-1974.64],[-919.12,-1965.82],[-917.03,-1965.81],[-914.46,-1962.91],[-915.64,-1961.44],[-914.91,-1960.56],[-914.91,-1960.56],[-915.39,-1959.33],[-919.51,-1957.71],[-928.65,-1947.65],[-929.56,-1944.47],[-932.91,-1943.36],[-935.83,-1945.49],[-936.43,-1947.87],[-948.78,-1958.26],[-952.86,-1958.13],[-965.52,-1970.41],[-945.59,-1990.95]]
+--- END OF BLOB ERROR ---
+
+
+
+
+ name: 'PointError',
+  points: [
+    <ref *1> Point {
+      x: -3745.05,
+      y: -3144.47,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: -3816.17, y: -3150.04, _p2t_edge_list: null },
+          q: [Circular *1]
+        },
+        Edge {
+          p: Point { x: -3743.55, y: -3159.64, _p2t_edge_list: null },
+          q: [Circular *1]
+        }
+      ]
+    },
+    Point { x: -3743.55, y: -3159.64, _p2t_edge_list: null },
+    Point { x: -3745.05, y: -3145.03, _p2t_edge_list: null },
+    <ref *2> Point {
+      x: -3738.6,
+      y: -3144.5,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: -3745.05, y: -3145.03, _p2t_edge_list: null },
+          q: [Circular *2]
+        }
+      ]
+    }
+  ],
+  message: 'poly2tri Intersecting Constraints (-3745.05;-3144.47) (-3743.55;-3159.64) (-3745.05;-3145.03) (-3738.6;-3144.5)'
+}
+
+
+ points: [
+    <ref *1> Point {
+      x: 798.44,
+      y: -759.04,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: 799.82, y: -774.22, _p2t_edge_list: [Array] },
+          q: [Circular *1]
+        }
+      ]
+    },
+    Point { x: 799.82, y: -774.22, _p2t_edge_list: null },
+    <ref *2> Point {
+      x: 799.82,
+      y: -774.22,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: 782.57, y: -775.62, _p2t_edge_list: null },
+          q: [Circular *2]
+        }
+      ]
+    }
+  ],
+
+
+   name: 'PointError',
+  points: [
+    <ref *1> Point {
+      x: -7965.58,
+      y: -3069.63,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: -7977.06, y: -3073.75, _p2t_edge_list: [Array] },
+          q: [Circular *1]
+        }
+      ]
+    },
+    <ref *2> Point {
+      x: -7960.46,
+      y: -3089.42,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: -7971.12, y: -3092.44, _p2t_edge_list: null },
+          q: [Circular *2]
+        },
+        Edge {
+          p: Point { x: -7947.79, y: -3127.13, _p2t_edge_list: null },
+          q: [Circular *2]
+        }
+      ]
+    },
+    <ref *3> Point {
+      x: -7966.1,
+      y: -3069.71,
+      _p2t_edge_list: [
+        Edge {
+          p: Point { x: -7959.61, y: -3088.7, _p2t_edge_list: null },
+          q: [Circular *3]
+        }
+      ]
+    },
+    Point { x: -7959.61, y: -3088.7, _p2t_edge_list: null }
+  ],
+  message: 'poly2tri Intersecting Constraints (-7965.58;-3069.63) (-7960.46;-3089.42) (-7966.1;-3069.71) (-7959.61;-3088.7)'
+
+
+Validation failed: Vertices 106291 (-3141.72, 2939.38) and 106297 (-3140.91, 2938.80) in the same cell are too close: 1.00
+Validation failed: Vertices 7553 (2603.67, 1707.04) and 7554 (2603.23, 1706.76) in the same cell are too close: 0.52
+Validation failed: Vertices 10474 (-5169.71, -3358.03) and 10486 (-5169.38, -3357.46) in the same cell are too close: 0.66
+Validation failed: Vertices 3227 (-5887.03, -3044.96) and 3248 (-5887.08, -3045.40) in the same cell are too close: 0.44
+Validation failed: Vertices 10961 (-5763.56, -1945.10) and 10962 (-5763.26, -1944.43) in the same cell are too close: 0.73
+Validation failed: Vertices 2237 (-5930.79, -1895.00) and 2271 (-5930.92, -1895.68) in the same cell are too close: 0.69
+Validation failed: Vertices 2257 (-6003.53, -1832.63) and 12418 (-6004.51, -1832.58) in the same cell are too close: 0.98
+Validation failed: Vertices 3314 (-5868.11, -3119.31) and 105985 (-5868.43, -3118.77) in the same cell are too close: 0.63
+Validation failed: Vertices 3440 (-5933.07, -3319.68) and 3451 (-5933.11, -3320.19) in the same cell are too close: 0.51
+Validation failed: Vertices 3581 (-5477.10, -3578.78) and 3593 (-5476.31, -3579.09) in the same cell are too close: 0.85
+Validation failed: Vertices 3626 (-6189.44, -3611.26) and 4236 (-6189.56, -3611.97) in the same cell are too close: 0.72
+Validation failed: Vertices 4172 (-6976.83, -3339.30) and 4184 (-6977.11, -3338.64) in the same cell are too close: 0.72
+Validation failed: Vertices 4436 (-6273.24, 2966.64) and 4437 (-6273.87, 2966.91) in the same cell are too close: 0.69
+Validation failed: Vertices 4496 (-6109.12, 3015.09) and 4524 (-6108.59, 3014.63) in the same cell are too close: 0.70
+Validation failed: Vertices 103587 (-2052.29, 2748.08) and 103588 (-2051.63, 2748.60) in the same cell are too close: 0.84
+Validation failed: Vertices 16088 (1177.11, 2992.53) and 16097 (1176.96, 2992.19) in the same cell are too close: 0.37
+Validation failed: Vertices 23855 (-2640.82, -3533.94) and 105237 (-2641.33, -3533.88) in the same cell are too close: 0.51
+Validation failed: Vertices 25490 (-5336.51, -2499.10) and 25491 (-5335.76, -2499.32) in the same cell are too close: 0.78
+Validation failed: Vertices 26083 (-5918.19, -1675.79) and 26120 (-5918.79, -1676.47) in the same cell are too close: 0.91
+Validation failed: Vertices 11395 (-6908.22, -1039.43) and 11543 (-6909.19, -1039.62) in the same cell are too close: 0.99
+Validation failed: Vertices 11396 (-6876.95, -1060.23) and 11544 (-6876.73, -1061.19) in the same cell are too close: 0.98
+Validation failed: Vertices 11490 (-7070.22, -1587.47) and 12438 (-7070.55, -1587.84) in the same cell are too close: 0.50
+Validation failed: Vertices 12439 (-7055.61, -1601.46) and 12440 (-7056.38, -1601.12) in the same cell are too close: 0.84
+Validation failed: Vertices 44472 (-5720.44, 2444.05) and 96673 (-5719.80, 2444.19) in the same cell are too close: 0.66
+Validation failed: Vertices 99460 (-745.37, 3009.72) and 99499 (-744.80, 3009.50) in the same cell are too close: 0.61
+Validation failed: Vertices 103536 (127.53, 2823.54) and 100049 (128.29, 2822.91) in neighboring cells are too close: 0.99
+Validation failed: Vertices 100804 (1341.36, 2379.82) and 100835 (1340.55, 2379.31) in the same cell are too close: 0.96
+Validation failed: Vertices 31615 (2134.55, 720.44) and 31632 (2134.85, 720.30) in the same cell are too close: 0.33
+Validation failed: Vertices 95019 (2101.53, 642.56) and 95029 (2100.76, 642.48) in the same cell are too close: 0.77
+Validation failed: Vertices 31762 (2731.25, 719.46) and 31775 (2731.44, 719.67) in the same cell are too close: 0.28
+Validation failed: Vertices 20487 (1281.53, -2858.80) and 98932 (1281.22, -2858.44) in the same cell are too close: 0.48
+Validation failed: Vertices 21683 (-1782.87, -1641.33) and 98836 (-1782.86, -1640.35) in the same cell are too close: 0.98
+Validation failed: Vertices 22681 (-736.69, -2671.51) and 98657 (-736.97, -2672.16) in the same cell are too close: 0.71
+Validation failed: Vertices 22683 (-737.17, -2620.89) and 22737 (-736.84, -2620.55) in the same cell are too close: 0.47
+Validation failed: Vertices 22685 (-749.20, -2602.48) and 22738 (-749.01, -2601.97) in the same cell are too close: 0.54
+Validation failed: Vertices 98462 (-237.52, -2921.57) and 98464 (-237.59, -2921.42) in the same cell are too close: 0.17
+Validation failed: Vertices 98351 (-97.76, -3260.10) and 98357 (-98.39, -3260.44) in the same cell are too close: 0.72
+Validation failed: Vertices 97417 (-2146.32, -3364.97) and 97426 (-2145.64, -3364.55) in the same cell are too close: 0.80
+Validation failed: Vertices 24102 (-4077.28, -2516.73) and 24133 (-4077.85, -2516.89) in the same cell are too close: 0.59
+Validation failed: Vertices 24934 (-4758.61, -3040.36) and 24955 (-4758.49, -3039.42) in the same cell are too close: 0.95
+Validation failed: Vertices 25866 (-5608.23, -1856.08) and 25963 (-5609.09, -1856.37) in the same cell are too close: 0.91
+Validation failed: Vertices 26372 (-6358.04, -1040.89) and 96907 (-6358.60, -1040.59) in the same cell are too close: 0.64
+Validation failed: Vertices 45415 (-4847.77, 2335.37) and 91628 (-4848.30, 2334.96) in the same cell are too close: 0.67
+Validation failed: Vertices 45713 (-3629.05, 2275.33) and 96633 (-3629.12, 2275.66) in the same cell are too close: 0.34
+Validation failed: Vertices 29254 (-951.67, 2291.13) and 96520 (-950.98, 2291.10) in the same cell are too close: 0.69
+Validation failed: Vertices 90082 (1763.49, -2740.28) and 90589 (1763.82, -2739.93) in the same cell are too close: 0.48
+Validation failed: Vertices 33908 (1571.36, -2356.65) and 90140 (1570.79, -2355.95) in the same cell are too close: 0.90
+Validation failed: Vertices 35420 (1259.10, -2372.63) and 35438 (1259.92, -2373.18) in the same cell are too close: 0.99
+Validation failed: Vertices 56411 (550.65, -1481.77) and 56428 (550.92, -1481.73) in the same cell are too close: 0.27
+Validation failed: Vertices 34356 (577.22, -1164.91) and 94515 (577.51, -1165.20) in the same cell are too close: 0.41
+Validation failed: Vertices 86178 (404.23, -753.29) and 86192 (405.12, -753.41) in the same cell are too close: 0.90
+Validation failed: Vertices 35616 (206.03, -2453.73) and 94404 (206.95, -2453.39) in the same cell are too close: 0.98
+Validation failed: Vertices 37114 (-3033.25, -1421.88) and 37794 (-3033.93, -1421.53) in the same cell are too close: 0.76
+Validation failed: Vertices 38427 (-3583.86, -1775.36) and 39381 (-3583.10, -1776.00) in the same cell are too close: 0.99
+Validation failed: Vertices 38700 (-4773.65, -1197.38) and 85252 (-4773.16, -1196.97) in the same cell are too close: 0.64
+Validation failed: Vertices 38767 (-5117.88, -1230.49) and 38789 (-5117.48, -1231.22) in the same cell are too close: 0.83
+Validation failed: Vertices 38785 (-5195.97, -1239.79) and 93298 (-5195.89, -1239.53) in the same cell are too close: 0.27
+Validation failed: Vertices 93191 (-2303.04, -2363.96) and 93199 (-2303.63, -2363.37) in the same cell are too close: 0.83
+Validation failed: Vertices 65378 (-4873.10, -2118.96) and 65891 (-4873.24, -2118.83) in the same cell are too close: 0.19
+Validation failed: Vertices 41249 (-5323.88, -2044.17) and 92236 (-5324.62, -2043.66) in the same cell are too close: 0.90
+Validation failed: Vertices 48325 (-2767.69, 1427.69) and 48326 (-2767.41, 1428.12) in the same cell are too close: 0.51
+Validation failed: Vertices 52324 (-3489.39, 1413.66) and 91134 (-3489.69, 1413.83) in the same cell are too close: 0.34
+Validation failed: Vertices 51703 (-5421.64, 1922.39) and 91171 (-5421.58, 1922.19) in the same cell are too close: 0.21
+Validation failed: Vertices 68020 (-6010.02, 1854.31) and 68022 (-6009.28, 1854.04) in the same cell are too close: 0.79
+Validation failed: Vertices 52318 (-3524.42, 1384.63) and 91133 (-3524.65, 1385.52) in the same cell are too close: 0.92
+Validation failed: Vertices 52321 (-3506.79, 1399.36) and 91130 (-3507.54, 1399.33) in the same cell are too close: 0.75
+Validation failed: Vertices 91125 (-3541.79, 1370.51) and 91127 (-3542.30, 1370.38) in the same cell are too close: 0.53
+Validation failed: Vertices 54099 (873.95, 639.49) and 54128 (873.34, 638.73) in the same cell are too close: 0.97
+Validation failed: Vertices 56375 (727.82, -1492.75) and 56396 (727.31, -1493.33) in the same cell are too close: 0.77
+Validation failed: Vertices 58924 (-74.43, 406.84) and 89109 (-73.79, 407.55) in the same cell are too close: 0.96
+Validation failed: Vertices 57260 (-1773.19, 872.76) and 71589 (-1773.89, 872.76) in the same cell are too close: 0.70
+Validation failed: Vertices 57774 (-784.53, 528.68) and 86688 (-784.82, 529.44) in the same cell are too close: 0.81
+Validation failed: Vertices 72036 (-2640.06, 787.22) and 72037 (-2640.30, 787.32) in the same cell are too close: 0.26
+Validation failed: Vertices 58243 (-2432.57, 550.06) and 58157 (-2431.95, 550.72) in neighboring cells are too close: 0.91
+Validation failed: Vertices 72690 (-2666.87, 355.73) and 72694 (-2667.50, 354.97) in the same cell are too close: 0.99
+Validation failed: Vertices 58804 (-497.22, 366.92) and 86544 (-496.59, 367.65) in the same cell are too close: 0.96
+Validation failed: Vertices 60141 (-572.30, -519.77) and 86268 (-572.01, -519.76) in the same cell are too close: 0.29
+Validation failed: Vertices 61980 (-1726.32, -1251.96) and 61989 (-1726.57, -1251.76) in the same cell are too close: 0.32
+Validation failed: Vertices 74277 (-1864.47, -730.79) and 85909 (-1864.48, -731.18) in the same cell are too close: 0.39
+Validation failed: Vertices 74815 (-3035.80, -476.73) and 83556 (-3036.07, -476.58) in the same cell are too close: 0.31
+Validation failed: Vertices 63762 (-3614.56, -601.18) and 85711 (-3613.93, -600.43) in the same cell are too close: 0.98
+Validation failed: Vertices 85193 (-4887.29, -1114.75) and 85242 (-4888.04, -1114.11) in the same cell are too close: 0.99
+Validation failed: Vertices 66658 (-5969.64, -337.66) and 84825 (-5969.48, -337.20) in the same cell are too close: 0.49
+Validation failed: Vertices 81123 (-6010.81, 111.99) and 81657 (-6010.23, 112.68) in the same cell are too close: 0.90
+Validation failed: Vertices 77720 (-6269.95, 765.57) and 79095 (-6269.40, 766.18) in the same cell are too close: 0.82
+Validation failed: Vertices 69798 (-5016.79, 1547.69) and 84206 (-5016.23, 1547.23) in the same cell are too close: 0.72
+Validation failed: Vertices 84114 (-5809.09, 1532.43) and 84218 (-5808.80, 1533.22) in the same cell are too close: 0.84
+Validation failed: Vertices 71933 (-2785.21, 1184.50) and 83980 (-2785.54, 1184.69) in the same cell are too close: 0.38
+Validation failed: Vertices 71716 (-2625.70, 1275.13) and 71727 (-2626.23, 1275.14) in the same cell are too close: 0.53
+Validation failed: Vertices 70791 (-957.72, 1460.58) and 83883 (-958.56, 1461.02) in the same cell are too close: 0.95
+Validation failed: Vertices 71896 (-1921.09, 990.40) and 71897 (-1920.76, 990.52) in the same cell are too close: 0.35
+Validation failed: Vertices 71793 (-2139.18, 1134.98) and 71801 (-2138.86, 1134.59) in the same cell are too close: 0.50
+Validation failed: Vertices 72303 (-4420.62, 876.61) and 83638 (-4421.38, 876.09) in the same cell are too close: 0.92
+Validation failed: Vertices 72644 (-2847.75, 460.86) and 72674 (-2847.49, 459.90) in the same cell are too close: 0.99
+Validation failed: Vertices 75477 (-2785.84, 275.92) and 75478 (-2785.29, 276.41) in the same cell are too close: 0.74
+Validation failed: Vertices 76678 (-5100.15, 962.97) and 83393 (-5099.44, 963.67) in the same cell are too close: 1.00
+Validation failed: Vertices 77572 (-5965.66, 336.68) and 82938 (-5966.13, 337.02) in the same cell are too close: 0.58
+Validation failed: Vertices 77699 (-6206.46, 822.90) and 78635 (-6205.74, 822.43) in the same cell are too close: 0.86
+Validation failed: Vertices 82719 (-5076.78, -94.32) and 82732 (-5076.60, -95.23) in the same cell are too close: 0.93
+Validation failed: Vertices 82736 (-5058.37, -61.96) and 82741 (-5058.46, -61.45) in the same cell are too close: 0.52
+Validation failed: Vertices 94317 (519.35, -2525.42) and 94325 (519.81, -2524.55) in the same cell are too close: 0.98
+Validation failed: Vertices 98161 (-377.92, -2766.42) and 98162 (-378.22, -2767.32) in the same cell are too close: 0.95
+
+
+
+DevFeatures: Feature w234872170 has unsupported geometry type: LineString. Expected Polygon.
+
+
+=== NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 5059
+Building vertices added specifically for buildings: 5934
+Total building vertices: 25752
+Average buildings per blob: 1.3
+Single building blobs: 3352
+Total blobs: 4012
+
+Total vertices: 22731
+Total triangles: 45456
+  - Walkable triangles: 30745
+  - Impassable triangles: 14711
+Total polygons: 14996
+  - Walkable polygons: 10984 (0.0% reduction)
+  • Largest polygon: 11 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 1239
+  - Impassable polygons: 4012 (0.0% reduction)
+Polygon vertices count: 75448
+Polygon triangles count: 45456
+Average triangle area: 1746.30
+Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY === 2000
+BUILDINGS count: 5059
+Building vertices added specifically for buildings: 5934
+Total building vertices: 25752
+Average buildings per blob: 1.3
+Single building blobs: 3352
+Total blobs: 4012
+
+Total vertices: 22731
+Total triangles: 45456
+  - Walkable triangles: 30745
+  - Impassable triangles: 14711
+Total polygons: 14962
+  - Walkable polygons: 10950 (0.0% reduction)
+  • Largest polygon: 13 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 1242
+  - Impassable polygons: 4012 (0.0% reduction)
+Polygon vertices count: 75380
+Polygon triangles count: 45456
+Average triangle area: 1746.30
+Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY === 3000
+BUILDINGS count: 10995
+Building vertices added specifically for buildings: 11483
+Total building vertices: 53212
+Average buildings per blob: 1.3
+Single building blobs: 7265
+Total blobs: 8673
+
+Total vertices: 47245
+Total triangles: 94476
+  - Walkable triangles: 64573
+  - Impassable triangles: 29903
+Total polygons: 31554
+  - Walkable polygons: 22881 (0.0% reduction)
+  • Largest polygon: 13 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 2545
+  - Impassable polygons: 8673 (0.0% reduction)
+Polygon vertices count: 157584
+Polygon triangles count: 94476
+Average triangle area: 1830.94
+Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 10995
+Building vertices added specifically for buildings: 11483
+Total building vertices: 53212
+Average buildings per blob: 1.3
+Single building blobs: 7265
+Total blobs: 8673
+
+Total vertices: 47245
+Total triangles: 94476
+  - Walkable triangles: 64573
+  - Impassable triangles: 29903
+Total polygons: 31957
+  - Walkable polygons: 23284 (0.0% reduction)
+  • Largest polygon: 13 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 3303
+  - Impassable polygons: 8673 (0.0% reduction)
+Polygon vertices count: 158390
+Polygon triangles count: 94476
+Average triangle area: 1830.94
+Average polygon area: 0.00
+
+
+=== NAVMESH GENERATION SUMMARY ===
+BUILDINGS count: 46109
+Building vertices added specifically for buildings: 43540
+Total building vertices: 212728
+Average buildings per blob: 1.3
+Single building blobs: 31003
+Total blobs: 36333
+
+Total vertices: 190292
+Total triangles: 380570
+  - Walkable triangles: 262940
+  - Impassable triangles: 117630
+Total polygons: 130012
+  - Walkable polygons: 93679 (0.0% reduction)
+  • Largest polygon: 13 triangles
+  • Average triangles per polygon: 2.8
+  • Single triangle polygons: 12541
+  - Impassable polygons: 36333 (0.0% reduction)
+Polygon vertices count: 640594
+Polygon triangles count: 380570
+Average triangle area: 1480.71
+Average polygon area: 0.00

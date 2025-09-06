@@ -41,30 +41,83 @@ void SpatialIndex::initializeFromWasm(uint32_t cellOffsetsPtr, uint32_t cellItem
   this->maxY = maxY;
 }
 
-std::vector<int> SpatialIndex::query(Point2 p) const {
-  std::vector<int> results;
-  if (cellOffsets == nullptr || cellItems == nullptr) {
-    return results;
-  }
-
-  int cellX = static_cast<int>((p.x - minX) / cellSize);
-  int cellY = static_cast<int>((p.y - minY) / cellSize);
-  
-  if (cellX < 0 || cellX >= gridWidth || cellY < 0 || cellY >= gridHeight) {
-    return results;
-  }
-
-  int cellIndex = cellY * gridWidth + cellX;
-  if (cellIndex < 0 || cellIndex >= static_cast<int>(cellOffsetsCount) - 1) {
-    return results;
-  }
-
-  uint32_t start = cellOffsets[cellIndex];
-  uint32_t end = cellOffsets[cellIndex + 1];
+// Static helper: append items from cell without dedup
+void SpatialIndex::addCellItemsNoDedup(const SpatialIndex* self, int cx, int cy, std::vector<int>& out) {
+  if (!self) return;
+  if (cx < 0 || cy < 0 || cx >= self->gridWidth || cy >= self->gridHeight) return;
+  const int idx = cy * self->gridWidth + cx;
+  if (idx < 0 || idx >= static_cast<int>(self->cellOffsetsCount) - 1) return;
+  const uint32_t start = self->cellOffsets[idx];
+  const uint32_t end = self->cellOffsets[idx + 1];
   for (uint32_t i = start; i < end; ++i) {
-    results.push_back(cellItems[i]);
+    out.push_back(self->cellItems[i]);
   }
-  return results;
+}
+
+// Static helper: append unique items from cell (linear check)
+void SpatialIndex::addCellItemsUnique(const SpatialIndex* self, int cx, int cy, std::vector<int>& out) {
+  if (!self) return;
+  if (cx < 0 || cy < 0 || cx >= self->gridWidth || cy >= self->gridHeight) return;
+  const int idx = cy * self->gridWidth + cx;
+  if (idx < 0 || idx >= static_cast<int>(self->cellOffsetsCount) - 1) return;
+  const uint32_t start = self->cellOffsets[idx];
+  const uint32_t end = self->cellOffsets[idx + 1];
+  for (uint32_t i = start; i < end; ++i) {
+    const int item = self->cellItems[i];
+    if (std::find(out.begin(), out.end(), item) == out.end()) {
+      out.push_back(item);
+    }
+  }
+}
+
+RangeView SpatialIndex::query(Point2 p) const {
+  if (cellOffsets == nullptr || cellItems == nullptr) {
+    return RangeView();
+  }
+
+  const int cellX = static_cast<int>((p.x - minX) / cellSize);
+  const int cellY = static_cast<int>((p.y - minY) / cellSize);
+
+  if (cellX < 0 || cellX >= gridWidth || cellY < 0 || cellY >= gridHeight) {
+    return RangeView();
+  }
+
+  // Compute boundary distances
+  const float cellMinX = minX + cellX * cellSize;
+  const float cellMaxX = cellMinX + cellSize;
+  const float cellMinY = minY + cellY * cellSize;
+  const float cellMaxY = cellMinY + cellSize;
+  const float threshold = 0.1f;
+  const bool nearLeft = (p.x - cellMinX) <= threshold;
+  const bool nearRight = (cellMaxX - p.x) <= threshold;
+  const bool nearBottom = (p.y - cellMinY) <= threshold;
+  const bool nearTop = (cellMaxY - p.y) <= threshold;
+
+  // Fast path: not near any boundary, return a zero-copy view onto the single cell
+  if (!nearLeft && !nearRight && !nearBottom && !nearTop) {
+    const int idx = cellY * gridWidth + cellX;
+    if (idx >= 0 && idx < static_cast<int>(cellOffsetsCount) - 1) {
+      const uint32_t start = cellOffsets[idx];
+      const uint32_t end = cellOffsets[idx + 1];
+      const uint32_t count = end - start;
+      return RangeView(const_cast<int32_t*>(&cellItems[start]), count, false);
+    }
+    return RangeView();
+  }
+
+  // Slow path: union with adjacent cells, deduping and owning allocation
+  std::vector<int> tmp;
+  tmp.reserve(64); // likely small
+  addCellItemsNoDedup(this, cellX, cellY, tmp);
+  if (nearLeft)  addCellItemsUnique(this, cellX - 1, cellY, tmp);
+  if (nearRight) addCellItemsUnique(this, cellX + 1, cellY, tmp);
+  if (nearBottom) addCellItemsUnique(this, cellX, cellY - 1, tmp);
+  if (nearTop)   addCellItemsUnique(this, cellX, cellY + 1, tmp);
+
+  if (tmp.empty()) return RangeView();
+  int32_t* buf = new int32_t[tmp.size()];
+  std::memcpy(buf, tmp.data(), tmp.size() * sizeof(int32_t));
+  return RangeView(buf, static_cast<uint32_t>(tmp.size()), true);
 }
 
 std::vector<int> SpatialIndex::queryArea(float areaMinX, float areaMinY, float areaMaxX, float areaMaxY) const {
@@ -104,4 +157,4 @@ std::vector<int> SpatialIndex::queryArea(float areaMinX, float areaMinY, float a
   }
 
   return results;
-} 
+}

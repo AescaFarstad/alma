@@ -53,7 +53,7 @@ export function findCorridor(
   let iterations = 0;
   while (!pQueue.isEmpty()) {
     iterations++;
-    if (iterations > 100000) {
+    if (iterations > 500000) {
       console.error(`findCorridor: FAILED - iteration limit reached`);
       return null;
     }
@@ -78,6 +78,7 @@ export function findCorridor(
         temp = cameFrom.get(temp)!;
         path.push(temp);
       }
+      console.log(`Iterations: ${iterations}`);
       
 
       // const corridorLength = calculateCorridorLength(navmesh, path, startPoint, endPoint);

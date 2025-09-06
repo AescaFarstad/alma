@@ -11,7 +11,7 @@ import { populateTriangulationData, populatePolygonData, populateBuildingData, p
 import { finalizeNavmesh, buildFinalTriangleToPolygonMap } from './finalize_navmesh';
 import { drawNavmesh } from './navmesh_visualization';
 import { generateBoundary, validateBoundaryTriangulation } from './navmesh_boundary';
-import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex, validateAllTrianglesCCW, validateWalkablePolygonsCCW } from './navmesh_validation';
+import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex, validateAllTrianglesCCW, validateWalkablePolygonsCCW, logDuplicatePointsInBlobs } from './navmesh_validation';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { newPolygonization } from './polygonize_o';
@@ -23,7 +23,9 @@ const __dirname = path.dirname(__filename);
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, 0, 120, 120];
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-120, -120, 120, 120];
 // const DEBUG_BBOX: readonly [number, number, number, number] | null = [-200, -200, 200, 200];
-const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-2000, -2000, 2000, 2000];
+// const DEBUG_BBOX: readonly [number, number, number, number] | null = [-3000, -3000, 3000, 3000];
+const DEBUG_BBOX: readonly [number, number, number, number] | null = null;
 const BOUNDARY_INFLATION = 100;
 
 const OPTIMIZATION_SETTINGS = {
@@ -36,9 +38,9 @@ const OPTIMIZATION_SETTINGS = {
 } as const;
 
 const MEMORY_SETTINGS = {
-  initialVertexCapacity: 150000,
-  initialTriangleCapacity: 120000,
-  initialPolygonCapacity: 20000,
+  initialVertexCapacity: 300000,
+  initialTriangleCapacity: 400000,
+  initialPolygonCapacity: 150000,
   growthFactor: 1.5
 } as const;
 
@@ -80,7 +82,28 @@ function main() {
   // Step 1.1: Snap all coordinates to 2 decimal precision for consistency
   const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
   const snapPolygon = (poly: MyPolygon): MyPolygon => poly.map(([x, y]) => [snapTo2Decimals(x), snapTo2Decimals(y)]);
-  const holePolygons = rawHolePolygons.map(snapPolygon);
+  const holePolygonsRawSnapped = rawHolePolygons.map(snapPolygon);
+
+  // Minimal sanitize: drop consecutive duplicate points and a duplicate closing point (exact after snapping)
+  const sanitizePolygon = (poly: MyPolygon): MyPolygon => {
+    if (!poly || poly.length === 0) return poly;
+    const out: MyPolygon = [];
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i];
+      const prev = out.length > 0 ? out[out.length - 1] : undefined;
+      if (!prev || p[0] !== prev[0] || p[1] !== prev[1]) {
+        out.push(p);
+      }
+    }
+    if (out.length >= 2) {
+      const first = out[0];
+      const last = out[out.length - 1];
+      if (first[0] === last[0] && first[1] === last[1]) out.pop();
+    }
+    return out;
+  };
+
+  const holePolygons = holePolygonsRawSnapped.map(sanitizePolygon);
   
   const processingBbox = calculateProcessingBounds(holePolygons);
   
@@ -112,6 +135,10 @@ function main() {
     console.error('Boundary triangulation validation failed. Aborting navmesh generation.');
     process.exit(1);
   }
+
+  // Step 1.6: Validate hole polygons for duplicate points (pre-triangulation diagnostics)
+  // Logs only on errors; checks all duplicate coordinates and highlights consecutive ones.
+  logDuplicatePointsInBlobs(rawHolePolygons, holePolygons, blobToBuildings);
 
   // Step 2: Initialize the final navmesh data structure
   console.log('\n=== INITIALIZING NAVMESH DATA STRUCTURE ===');

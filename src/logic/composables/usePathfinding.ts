@@ -130,12 +130,13 @@ export function usePathfinding(
     console.log('\n--- WASM Implementation ---');
     const wasmResult = Wasm.testFindCorridor(startPoint, endPoint, 80, 3);
 
+    const tsCorridor3 = null;
     // Test findCorridor3
-    console.log('\n--- TypeScript Implementation 3 ---');
-    const time3 = performance.now();
-    const tsCorridor3 = findCorridor3(navmesh, 80, 3, startPoint, endPoint, startPoly, endPoly);
-    const time4 = performance.now();
-    console.log(`[TS] findCorridor3: ${time4 - time3}ms`);
+    // console.log('\n--- TypeScript Implementation 3 ---');
+    // const time3 = performance.now();
+    // const tsCorridor3 = findCorridor3(navmesh, 80, 3, startPoint, endPoint, startPoly, endPoly);
+    // const time4 = performance.now();
+    // console.log(`[TS] findCorridor3: ${time4 - time3}ms`);
 
     // Visualize TypeScript result
     if (tsCorridor) {

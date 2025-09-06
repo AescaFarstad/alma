@@ -32,6 +32,7 @@ SRCS = main.cpp \
      point_in_triangle_bench.cpp \
      point_in_polygon_bench.cpp \
      wasm_impulse.cpp \
+     range_view.cpp \
      event_buffer.cpp \
      event_handler.cpp
 

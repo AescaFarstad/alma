@@ -1,4 +1,5 @@
 import type { Point2 } from '../../logic/core/math';
+import { sceneState, ACINDIGO } from '../../logic/drawing/SceneState';
 import {
   pointLineSignedDistance,
   triangleArea,
@@ -82,30 +83,38 @@ export function pullAway(polygon: Point2[], minOffset: number, maxError: number)
       
       if (segmentDist < minOffset && segmentDist > 1e-6) {
         const candidateA = movePoint(B, A, P1, P2, minOffset);
+        let areaDiffA: number | null = null;
         if (candidateA) {
-          const areaDiff = Math.abs(triangleArea(A, C, candidateA) - triangleArea(A, C, B));
-          if (areaDiff < minAreaDiff) {
-            minAreaDiff = areaDiff;
+          areaDiffA = Math.abs(triangleArea(A, C, candidateA) - triangleArea(A, C, B));
+          if (areaDiffA < minAreaDiff) {
+            minAreaDiff = areaDiffA;
             bestFix = candidateA;
           }
         }
 
         const candidateC = movePoint(B, C, P1, P2, minOffset);
+        let areaDiffC: number | null = null;
         if (candidateC) {
-          const areaDiff = Math.abs(triangleArea(A, C, candidateC) - triangleArea(A, C, B));
-          if (areaDiff < minAreaDiff) {
-            minAreaDiff = areaDiff;
+          areaDiffC = Math.abs(triangleArea(A, C, candidateC) - triangleArea(A, C, B));
+          if (areaDiffC < minAreaDiff) {
+            minAreaDiff = areaDiffC;
             bestFix = candidateC;
           }
         }
+
+        // console.log(
+        //   `B=(${Math.round(B.x)},${Math.round(B.y)}) ` +
+        //   `segmentDist=${segmentDist.toFixed(2)} ` +
+        //   `diffA=${areaDiffA !== null ? areaDiffA.toFixed(2) : 'null'} ` +
+        //   `diffC=${areaDiffC !== null ? areaDiffC.toFixed(2) : 'null'}`
+        // );
       }
     }
 
     if (bestFix && minAreaDiff <= maxError) {
       newPolygon[B_idx] = bestFix;
-    } else if (bestFix) {
-      const B = newPolygon[B_idx];
-      console.error(`pullAway: Failed to move point ${B_idx} at (${B.x}, ${B.y}). Area difference ${minAreaDiff} is larger than maxError ${maxError}.`);
+      // Draw a small ACINDIGO debug point at the new location
+      sceneState.addDebugPoint(bestFix, ACINDIGO);
     }
   }
 

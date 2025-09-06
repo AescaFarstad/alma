@@ -37,10 +37,6 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
       return;
     }
 
-    if (agent_data.corridors[idx].empty()) {
-      findPathToDestination(g_navmesh, idx, agent_data.current_tris[idx], agent_data.end_target_tris[idx], "from start");
-    }
-
     if (agent_data.current_tris[idx] == -1) {
       agent_data.states[idx] = AgentState::Escaping;
       agent_data.pre_escape_corners[idx] = agent_data.next_corners[idx];
@@ -48,6 +44,10 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
       agent_data.next_corners[idx] = agent_data.last_valid_positions[idx];
       agent_data.next_corner_tris[idx] = agent_data.last_valid_tris[idx];
       return;
+    }
+
+    if (agent_data.corridors[idx].empty()) {
+      findPathToDestination(g_navmesh, idx, agent_data.current_tris[idx], agent_data.end_target_tris[idx], "from start");
     }
 
     float dangeMult = 2 - agent_data.intelligences[idx];

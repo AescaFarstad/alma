@@ -5,6 +5,7 @@
     <button @click="handleClick(() => drawNavGrid(2))">Grid 2</button>
     <button @click="handleClick(() => drawAllPolygons())">Polygons</button>
     <button @click="handleClick(() => drawAllBlobs())">Blobs</button>
+    <button @click="handleClick(() => clearSceneState())">💥</button>
   </div>
 </template>
 
@@ -25,6 +26,15 @@ const { drawAllPolygons, drawAllBlobs } = useNavmeshPolygonsBlobsDebug(gameState
 
 const handleClick = (action: () => void) => {
   action();
+};
+
+const clearSceneState = () => {
+  if (!sceneState) return;
+  sceneState.clearPaths();
+  sceneState.clearCorridors();
+  sceneState.clearDebugVisuals();
+  sceneState.clearMeasurementLine();
+  sceneState.clearSimplifiedGeometries();
 };
 </script>
 

@@ -43,9 +43,6 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       return
     }
 
-    if (agent.corridor.length == 0)
-      findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "from start");
-
     // Check 1: Have we fallen off the navmesh?
     if (agent.currentTri === -1) {
       agent.state = AgentState.Escaping;
@@ -59,6 +56,10 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       
       return;
     }
+
+    if (agent.corridor.length == 0)
+      findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "from start");
+
 
     const dangeMult = 2 - agent.intelligence;
     if (agent.stuckRating > STUCK_DANGER_1 * dangeMult) {

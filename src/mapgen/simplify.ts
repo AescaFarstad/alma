@@ -13,10 +13,10 @@ import type { Point2 } from '../logic/core/math';
 import { pullAway } from './simplification/pullAway';
 import { createBlobs } from './create_blobs';
 
-const SIMPLIFICATION_INFLATION = 3.6;
+const SIMPLIFICATION_INFLATION = 1.6;
 const MERGE_INFLATION = 2;
-const MIN_AREA = 10;
-const SAFE_TO_SKIP_AREA = 20;
+const MIN_AREA = 40;
+const SAFE_TO_SKIP_AREA = 40;
 
 const RUN_S6 = true;
 const RUN_BLOBS = true;
@@ -38,84 +38,6 @@ function calculatePolygonArea(points: Point2[]): number {
   }
   return Math.abs(area / 2);
 }
-
-
-function chooseRayDirection(line: SplitLine): Point2 {
-  const directions = [
-    { x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 },
-    { x: 0.707, y: 0.707 }, { x: -0.707, y: 0.707 }, { x: 0.707, y: -0.707 }, { x: -0.707, y: -0.707 }
-  ];
-
-  let bestDirection = directions[0];
-  let minMaxDotProduct = Infinity;
-
-  for (const dir of directions) {
-    let maxDotProduct = -Infinity;
-    for (let i = 0; i < line.length - 1; i++) {
-      const segStart = line[i];
-      const segEnd = line[i + 1];
-      let segVec = { x: segEnd.x - segStart.x, y: segEnd.y - segStart.y };
-      const len = Math.sqrt(segVec.x * segVec.x + segVec.y * segVec.y);
-      if (len > 0) {
-        segVec.x /= len;
-        segVec.y /= len;
-      }
-
-      let dotProduct = Math.abs(dir.x * segVec.x + dir.y * segVec.y);
-      if (i === 0 || i === line.length - 2) {
-        dotProduct /= 2;
-      }
-
-      if (dotProduct > maxDotProduct) {
-        maxDotProduct = dotProduct;
-      }
-    }
-    if (maxDotProduct < minMaxDotProduct) {
-      minMaxDotProduct = maxDotProduct;
-      bestDirection = dir;
-    }
-  }
-
-  return bestDirection;
-}
-
-function isIntersecting(p1: Point2, p2: Point2, p3: Point2, p4: Point2): boolean {
-  const d = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
-  if (d === 0) return false;
-  const t = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / d;
-  const u = -((p2.y - p1.y) * (p1.x - p3.x) - (p2.x - p1.x) * (p1.y - p3.y)) / d;
-  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
-}
-
-function getSideOfLine(point: Point2, line: SplitLine, rayDir: Point2): number {
-  let intersections = 0;
-  const rayEnd = { x: point.x + rayDir.x * 1e9, y: point.y + rayDir.y * 1e9 }; 
-
-  for (let i = 0; i < line.length - 1; i++) {
-    const segStart = line[i];
-    const segEnd = line[i + 1];
-    if (isIntersecting(point, rayEnd, segStart, segEnd)) {
-      intersections++;
-    }
-  }
-  
-  const firstSeg = line[0];
-  const firstSegDir = { x: line[1].x - firstSeg.x, y: line[1].y - firstSeg.y };
-  const rayStart = { x: firstSeg.x - firstSegDir.x * 1e9, y: firstSeg.y - firstSegDir.y * 1e9 };
-  if (isIntersecting(point, rayEnd, rayStart, firstSeg)) {
-    intersections++;
-  }
-
-  const lastSegEnd = line[line.length - 1];
-  const lastSegDir = { x: lastSegEnd.x - line[line.length - 2].x, y: lastSegEnd.y - line[line.length - 2].y };
-  const rayEndSeg = { x: lastSegEnd.x + lastSegDir.x * 1e9, y: lastSegEnd.y + lastSegDir.y * 1e9 };
-  if (isIntersecting(point, rayEnd, lastSegEnd, rayEndSeg)) {
-    intersections++;
-  }
-
-  return intersections % 2;
-}
-
 
 async function main() {
   const args = minimist(process.argv.slice(2));
@@ -192,7 +114,7 @@ async function main() {
   }
 
   // Remove problematic buildings except for the main one (Ma1036526660)
-  const problematicIds = ['Ma27375097540', 'Ma27375097480', 'Ma27375097520', 'Ma27375097500', 'Ma23832971900', 'Ma23832971920', 'Ma23307134820', 'Ma27369249000'];
+  const problematicIds = ['Ma27375097540', 'Ma27375097480', 'Ma27375097520', 'Ma27375097500', 'Ma23832971900', 'Ma23832971920', 'Ma23307134820', 'Ma27369249000', 'Ma201207930'];
   const remainingBuildings = correctedBuildings.filter(b => !problematicIds.includes(b.id ?? ''));
   
   const removedCount = correctedBuildings.length - remainingBuildings.length;

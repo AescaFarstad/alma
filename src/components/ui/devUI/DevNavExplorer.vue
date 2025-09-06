@@ -7,6 +7,7 @@
     <button @click="findTriangle">Tri</button>
     <button @click="drawPoint">Draw</button>
     <button @click="debugPoint">Dbg</button>
+    <button @click="addPointMarkFromCoordinates">p{}</button>
   </div>
   <div class="debug-section">
     <input type="text" v-model="triangleIndex" placeholder="Triangle Index" />
@@ -31,6 +32,7 @@ import { mapInstance } from '../../../map_instance';
 import type { GameState } from '../../../logic/GameState';
 import { SceneState, ACGREEN, ACINDIGO, ACBLUE, ACYELLOW, ACBROWN } from '../../../logic/drawing/SceneState';
 import { getTriangleFromPoint, getPolygonFromPoint } from '../../../logic/navmesh/NavUtils';
+import { usePointMarks } from '../../../logic/composables/usePointMarks';
 
 const gameState = inject<GameState>('gameState');
 const sceneState = inject<SceneState>('sceneState');
@@ -38,6 +40,8 @@ const sceneState = inject<SceneState>('sceneState');
 const coordinates = ref('');
 const triangleIndex = ref('');
 const polygonIndex = ref('');
+
+const { addPointMarkAt } = usePointMarks(gameState, sceneState);
 
 const pasteCoordinates = async () => {
   coordinates.value = await navigator.clipboard.readText();
@@ -53,25 +57,38 @@ const pastePolygonIndex = async () => {
 
 const parseCoordinatesFromString = (input: string): { x: number, y: number } | null => {
   const trimmedInput = input.trim();
+
+  // 1) Try strict JSON first: {"x":..., "y":...}
   try {
   const parsed = JSON.parse(trimmedInput);
   if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
     return { x: parsed.x, y: parsed.y };
   }
-  } catch (e) {
-  if (trimmedInput.startsWith('{') && trimmedInput.endsWith('}')) {
-    try {
-    const jsonString = trimmedInput.replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":');
-    const parsed = JSON.parse(jsonString);
-    if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
-      return { x: parsed.x, y: parsed.y };
+  } catch (_) { /* continue */ }
+
+  // 2) Handle object-like strings with unquoted keys or missing braces
+  // Examples supported:
+  //   {x:1,y:2}
+  //   x:1,y:2
+  //   "x":1,"y":2
+  if (trimmedInput.includes(':')) {
+  // Ensure it looks like an object by wrapping with braces when missing
+  let asObject = trimmedInput;
+  if (!asObject.startsWith('{')) asObject = '{' + asObject;
+  if (!asObject.endsWith('}')) asObject = asObject + '}';
+
+  // Quote unquoted keys: { x: 1, y: 2 } -> { "x": 1, "y": 2 }
+  // Match a leading '{' or ',' (or whitespace after them), then an unquoted key, then ':'
+  const withQuotedKeys = asObject.replace(/([,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g, '$1"$2":');
+  try {
+    const parsed2 = JSON.parse(withQuotedKeys);
+    if (parsed2 && typeof parsed2.x === 'number' && typeof parsed2.y === 'number') {
+    return { x: parsed2.x, y: parsed2.y };
     }
-    } catch (e2) {
-    // Fall through to CSV parsing
-    }
-  }
+  } catch (_) { /* continue */ }
   }
 
+  // 3) Fallback: CSV "x, y"
   const parts = trimmedInput.split(',').map(s => parseFloat(s.trim()));
   if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
   const [x, y] = parts;
@@ -95,6 +112,12 @@ const drawPoint = () => {
   if (coords) {
   sceneState.addDebugPoint(coords, ACINDIGO);
   }
+};
+
+const addPointMarkFromCoordinates = () => {
+  const coords = parseCoordinatesFromString(coordinates.value);
+  if (!coords) return;
+  addPointMarkAt(coords.x, coords.y, true);
 };
 
 const debugPoint = () => {

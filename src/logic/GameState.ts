@@ -9,12 +9,15 @@ import agentData from "./agent-data.json";
 import { Spawner } from "./agents/AgentSpawner";
 import { WAgentSpawner } from "./WAgentSpawner";
 import { createWAgentGridSpawner, type WAgentGridSpawner } from "./WAgentGridSpawner";
+import { createWAgentAllSpawner, type WAgentAllSpawner } from "./WAgentAllSpawner";
 import { seededRandom } from "./core/mathUtils";
 import { AgentGrid } from "./agents/AgentGrid";
 import { Agents } from "./agents/Agents";
 import { getRandomTriangle } from "./navmesh/NavUtils";
 import { WAgent } from "./WAgent";
 import { AgentConfigs } from "./agents/AgentConfigs";
+import { createWAgentAllSpawner } from "./WAgentAllSpawner";
+import { BrainCellType } from "./agents/ai/Brain";
 
 const INITIAL_SPAWN_SEED = 12345;
 
@@ -52,6 +55,8 @@ export class GameState { // This is a POD class. No functions allowed.
   public nextEventId: number;
   public uiState: {
     lastProcessedEventId: number;
+    // Reactive mirror of point marks for UI consumption
+    pointMarks: { id: number, x: number, y: number, selected: boolean }[];
   };
 
   public connections: Connections;
@@ -70,6 +75,7 @@ export class GameState { // This is a POD class. No functions allowed.
   public spawners: Spawner[];
   public wAgentSpawners: WAgentSpawner[];
   public wAgentGridSpawners: WAgentGridSpawner[];
+  public wAgentAllSpawners: WAgentAllSpawner[];
   public agentGrid: AgentGrid;
 
   public timeScale: { current: number; previous: number };
@@ -99,6 +105,7 @@ export class GameState { // This is a POD class. No functions allowed.
     this.nextEventId = 0;
     this.uiState = {
       lastProcessedEventId: -1,
+      pointMarks: [],
     };
     this.connections = new Connections();
     this.navmesh = new Navmesh();
@@ -110,11 +117,15 @@ export class GameState { // This is a POD class. No functions allowed.
     this.agents = [];
     this.wagents = [];
     this.wAgentGridSpawners = [
-      createWAgentGridSpawner({ x: 0, y: 0 }, { x: 400, y: 100 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: -961, y: 1128 }, { x: 400, y: 400 }, AgentConfigs.walker2, 500, 16000),
-      createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
-      createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      // createWAgentGridSpawner({ x: 0, y: 0 }, { x: 400, y: 100 }, AgentConfigs.walker2, 300, 16000),
+      // createWAgentGridSpawner({ x: -961, y: 1128 }, { x: 400, y: 400 }, AgentConfigs.walker2, 500, 16000),
+      // createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      // createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      // createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+    ];
+    this.wAgentAllSpawners = [
+      // createWAgentAllSpawner(AgentConfigs.benchmarkerSmart, 100, 12000),
+      createWAgentAllSpawner(AgentConfigs.walker1, 1000, 30000),
     ];
     this.agentGrid = new AgentGrid();
     this.timeScale = { current: 1.0, previous: 1.0 };

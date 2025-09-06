@@ -261,13 +261,7 @@ export function useMapInteractions(
     }
     }
 
-    if (!pointMarkClicked) {
-    // Clear selection for all point marks
-    for (const mark of gameState.pointMarks) {
-      mark.selected = false;
-    }
-    sceneState.isDirty = true;
-    }
+    // Do not clear selection when clicking empty space
   }
   };
 

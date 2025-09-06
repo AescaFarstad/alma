@@ -7,6 +7,7 @@
 #include <vector>
 #include <iostream>
  
+ 
 
 extern Navmesh g_navmesh;
 
@@ -17,7 +18,6 @@ bool findPathToDestination(
   int endTri,
   const char* errorContext
 ) {
-  
   int startPoly = navmesh.triangle_to_polygon[startTri];
   int endPoly = navmesh.triangle_to_polygon[endTri];
   

@@ -43,12 +43,12 @@ const {
   selectAllPointMarks,
 } = usePointMarks(gameState, sceneState);
 
-const allPointMarks = computed(() => gameState?.pointMarks || []);
+const allPointMarks = computed(() => gameState?.uiState?.pointMarks || []);
 
 const getSelectedPointMarkCoords = computed(() => {
   if (!gameState) return [];
   return selectedPointMarks.value
-  .map((id: number) => gameState.pointMarks.find((mark: PointMark) => mark.id === id))
+  .map((id: number) => (gameState?.uiState?.pointMarks || []).find((mark: PointMark) => mark.id === id))
   .filter(isDefined)
   .map((mark: PointMark) => ({ x: mark.x, y: mark.y }));
 });

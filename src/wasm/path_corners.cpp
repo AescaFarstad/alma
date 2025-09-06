@@ -332,41 +332,31 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     return;
   }
   
-  std::vector<int> nearbyBlobs = g_navmesh.blob_index.query(point);
   bool foundBlob = false;
-  
-  for (int blobPolygonId : nearbyBlobs) {
+
+  RangeView blobView = g_navmesh.blob_index.query(point);
+  for (uint32_t bi = 0; bi < blobView.count; ++bi) {
+    int blobPolygonId = blobView.ptr[bi];
     int32_t vertStart = g_navmesh.polygons[blobPolygonId];
     int32_t vertEnd = g_navmesh.polygons[blobPolygonId + 1];
-    
-    // Find matching vertex in blob geometry using vertex index comparison
     for (int32_t i = vertStart; i < vertEnd; ++i) {
       if (g_navmesh.poly_verts[i] == vIdx) {
         const Point2& B = point;
-        
-        // Find adjacent vertices (wrap around the polygon)
         int32_t prevIndex = (i == vertStart) ? vertEnd - 1 : i - 1;
         int32_t nextIndex = (i == vertEnd - 1) ? vertStart : i + 1;
-        
         Point2 A = g_navmesh.vertices[g_navmesh.poly_verts[prevIndex]];
         Point2 C = g_navmesh.vertices[g_navmesh.poly_verts[nextIndex]];
-
         Point2 tempV = B - A;
         math::normalize_inplace(tempV);
-        
         Point2 vec_CB = B - C;
         math::normalize_inplace(vec_CB);
-        
         tempV = tempV + vec_CB;
-
         float lenSq = math::length_sq(tempV);
-        
         if (lenSq > 1e-6f) {
           math::normalize_inplace(tempV);
           tempV = tempV * offset;
           point = point + tempV;
         }
-        
         foundBlob = true;
         break;
       }
@@ -379,9 +369,7 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     printf("apply_offset_to_point: FAILURE - Could not find matching blob for corner, not applying offset. Point: (%.3f, %.3f)\n", 
          point.x, point.y);
     printf("apply_offset_to_point: Nearby blobs were: ");
-    for (int blobId : nearbyBlobs) {
-      printf("%d ", blobId);
-    }
+    for (uint32_t bi = 0; bi < blobView.count; ++bi) { printf("%d ", blobView.ptr[bi]); }
     printf("\n");
     
     // Debug: Find the closest vertex across all blobs
@@ -389,7 +377,8 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     Point2 closestVertex = {0, 0};
     int closestBlob = -1;
     
-    for (int blobPolygonId : nearbyBlobs) {
+    for (uint32_t bi = 0; bi < blobView.count; ++bi) {
+      int blobPolygonId = blobView.ptr[bi];
       int32_t vertStart = g_navmesh.polygons[blobPolygonId];
       int32_t vertEnd = g_navmesh.polygons[blobPolygonId + 1];
       
@@ -408,4 +397,4 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     printf("apply_offset_to_point: DEBUG - Closest vertex found at (%.3f, %.3f) in blob %d, distance=%.6f (tolerance=0.015)\n", 
          closestVertex.x, closestVertex.y, closestBlob, minDist);
   }
-} 
+}

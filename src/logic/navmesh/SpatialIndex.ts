@@ -71,17 +71,43 @@ export class SpatialIndex {
     
     const cx = Math.floor((x - this.minX) / this.cellSize);
     const cy = Math.floor((y - this.minY) / this.cellSize);
-    const cellIndex = cx + cy * this.gridWidth;
 
-    if (cellIndex < 0 || cellIndex >= this.cellOffsets.length - 1) {
-      // console.log(`[TS SPATIAL DEBUG] Cell index out of range: ${cellIndex} (max: ${this.cellOffsets.length - 2})`);
+    const idx = cx + cy * this.gridWidth;
+    if (idx < 0 || idx >= this.cellOffsets.length - 1) {
       return new Int32Array(0);
     }
 
-    const start = this.cellOffsets[cellIndex];
-    const end = this.cellOffsets[cellIndex + 1];
-    const result = this.cellItems.slice(start, end);
-    return result;
+    const threshold = 0.1;
+    const cellMinX = this.minX + cx * this.cellSize;
+    const cellMaxX = cellMinX + this.cellSize;
+    const cellMinY = this.minY + cy * this.cellSize;
+    const cellMaxY = cellMinY + this.cellSize;
+
+    const nearLeft = (x - cellMinX) <= threshold;
+    const nearRight = (cellMaxX - x) <= threshold;
+    const nearBottom = (y - cellMinY) <= threshold;
+    const nearTop = (cellMaxY - y) <= threshold;
+
+    // Fast path: not near any boundary, return the primary cell slice directly
+    if (!nearLeft && !nearRight && !nearBottom && !nearTop) {
+      const start = this.cellOffsets[idx];
+      const end = this.cellOffsets[idx + 1];
+      return this.cellItems.subarray(start, end);
+    }
+
+    // Slow path: merge with adjacent cells, deduping
+    const start = this.cellOffsets[idx];
+    const end = this.cellOffsets[idx + 1];
+    const base = this.cellItems.slice(start, end);
+    const out: number[] = Array.from(base);
+    const seen = new Set<number>(base as unknown as number[]);
+
+    if (nearLeft) SpatialIndex.addCellItemsUnique(this, cx - 1, cy, seen, out);
+    if (nearRight) SpatialIndex.addCellItemsUnique(this, cx + 1, cy, seen, out);
+    if (nearBottom) SpatialIndex.addCellItemsUnique(this, cx, cy - 1, seen, out);
+    if (nearTop) SpatialIndex.addCellItemsUnique(this, cx, cy + 1, seen, out);
+
+    return Int32Array.from(out);
   }
 
   public getItemsInCell(cx: number, cy: number): Int32Array {
@@ -92,6 +118,18 @@ export class SpatialIndex {
     
     const start = this.cellOffsets[cellIndex];
     const end = this.cellOffsets[cellIndex + 1];
-    return this.cellItems.slice(start, end);
+    return this.cellItems.subarray(start, end);
+  }
+
+  private static addCellItemsUnique(self: SpatialIndex, cx: number, cy: number, seen: Set<number>, out: number[]): void {
+    if (cx < 0 || cy < 0 || cx >= self.gridWidth || cy >= self.gridHeight) return;
+    const idx = cx + cy * self.gridWidth;
+    if (idx < 0 || idx >= self.cellOffsets.length - 1) return;
+    const start = self.cellOffsets[idx];
+    const end = self.cellOffsets[idx + 1];
+    for (let i = start; i < end; i++) {
+      const v = self.cellItems[i];
+      if (!seen.has(v)) { seen.add(v); out.push(v); }
+    }
   }
 }
