@@ -29,55 +29,45 @@ export function triangulate(outerBoundary: MyPolygon, holePolygons: MyPolygon[],
   const walkableTriangles = walkableSweepContext.getTriangles();
   console.log(`Generated ${walkableTriangles.length} walkable triangles.`);
 
-  // Step 2: Triangulate each impassable blob separately
-  console.log(`Triangulating ${holePolygons.length} impassable blobs...`);
+  // Step 2: Triangulate impassable blobs (original holes + boundary blobs)
+  console.log(`Triangulating impassable blobs (original + boundary)...`);
   const impassableTriangles: Triangle[] = [];
   const impassableTriangleToBlobIndex: number[] = [];
   
+  // First, triangulate the original hole polygons
   for (let i = 0; i < holePolygons.length; i++) {
     const blob = holePolygons[i];
     if (blob.length < 3) continue; // Skip invalid polygons
-    
     try {
-      // Create a triangulation context for this blob
       const blobSweepContext = new SweepContext(blob.map(p => new Point(p[0], p[1])));
       blobSweepContext.triangulate();
       const blobTriangles = blobSweepContext.getTriangles();
       impassableTriangles.push(...blobTriangles);
-      for (let j = 0; j < blobTriangles.length; j++) {
-        impassableTriangleToBlobIndex.push(i);
-      }
+      for (let j = 0; j < blobTriangles.length; j++) impassableTriangleToBlobIndex.push(i);
     } catch (error) {
       console.warn(`Failed to triangulate blob ${i}: ${error}. Skipping this blob.`);
     }
   }
-  
-  console.log(`Generated ${impassableTriangles.length} impassable triangles.`);
 
-  // Step 2.5: Process boundary triangles if provided (add them to impassable triangles)
-  if (boundaryData) {
-    
-    // Convert boundary triangles from MyPolygon to poly2tri Triangle format and add to impassable
-    boundaryData.boundaryTriangles.forEach((triangleVerts, index) => {
-      const [p1, p2, p3] = triangleVerts;
-      
-      // Create poly2tri points
-      const point1 = new Point(p1[0], p1[1]);
-      const point2 = new Point(p2[0], p2[1]);
-      const point3 = new Point(p3[0], p3[1]);
-      
-      // Create triangle manually and add to impassable triangles
-      const triangle = new Triangle(point1, point2, point3);
-      impassableTriangles.push(triangle);
-      
-      // Map to boundary blob index (first 4 triangles belong to boundary blob 0, next 4 to boundary blob 1)
-      // Boundary blobs are after regular blobs, so add the regular blob count as offset
-      const boundaryBlobIndex = holePolygons.length + Math.floor(index / 4);
-      impassableTriangleToBlobIndex.push(boundaryBlobIndex);
-    });
-    
-    console.log(`Total impassable triangles (including boundary): ${impassableTriangles.length}`);
+  // Then, triangulate boundary blobs (appended after original blobs)
+  const boundaryBlobOffset = holePolygons.length;
+  if (boundaryData && boundaryData.boundaryBlobs) {
+    for (let i = 0; i < boundaryData.boundaryBlobs.length; i++) {
+      const blob = boundaryData.boundaryBlobs[i];
+      if (blob.length < 3) continue;
+      try {
+        const blobSweepContext = new SweepContext(blob.map(p => new Point(p[0], p[1])));
+        blobSweepContext.triangulate();
+        const blobTriangles = blobSweepContext.getTriangles();
+        impassableTriangles.push(...blobTriangles);
+        for (let j = 0; j < blobTriangles.length; j++) impassableTriangleToBlobIndex.push(boundaryBlobOffset + i);
+      } catch (error) {
+        console.warn(`Failed to triangulate boundary blob ${i}: ${error}. Skipping this boundary blob.`);
+      }
+    }
   }
+
+  console.log(`Generated ${impassableTriangles.length} impassable triangles.`);
 
   // Step 3: Combine all triangles and create unified vertex/triangle arrays
   const allTriangles = [...walkableTriangles, ...impassableTriangles];

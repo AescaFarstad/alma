@@ -10,10 +10,10 @@ const __dirname = path.dirname(__filename);
 // true false
 const STEPS_TO_RUN = {
   ensureFilteredPbf: false,
-  processOsm: true,
-  filterGeojson: true,
-  deduplication: true,
-  simplify: true,
+  processOsm: false,
+  filterGeojson: false,
+  deduplication: false,
+  simplify: false,
   buildNavmesh: true,
   generateTiles: false,
   copyData: true,

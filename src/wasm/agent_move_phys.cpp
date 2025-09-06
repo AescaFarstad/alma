@@ -6,6 +6,9 @@
 #include <cmath>
 #include "constants_layout.h"
 #include <cstdio>
+#include <sstream>
+#include <iomanip>
+#include "wasm_log.h"
 
 extern Navmesh g_navmesh;
 extern float g_sim_time;
@@ -109,6 +112,17 @@ void update_agent_phys(int idx, float deltaTime) {
   } else {
     if (deltaTime > 0.0f && moveLnSq > 0.0001f) {
       Point2 endPoint = agent_data.positions[idx] + moveVector;
+
+      // [MDB] Log if we are about to use an invalid triangle index
+      if (agent_data.current_tris[idx] < 0 || agent_data.current_tris[idx] >= g_navmesh.walkable_triangle_count) {
+        wasm_log_agent_state(idx);
+        std::ostringstream _oss; _oss.setf(std::ios::fixed); _oss << std::setprecision(3);
+        _oss << "[MDB] agent_move_phys: test_point_inside_triangle with invalid current_tris: idx=" << idx
+             << " tri=" << agent_data.current_tris[idx]
+             << " pos=(" << agent_data.positions[idx].x << ", " << agent_data.positions[idx].y << ")";
+        wasm_console_error(_oss.str());
+      }
+
       if (test_point_inside_triangle(endPoint, agent_data.current_tris[idx])) {
         agent_data.positions[idx] = endPoint;
       } else {
@@ -152,5 +166,20 @@ void update_agent_phys(int idx, float deltaTime) {
     agent_data.last_valid_tris[idx] = newTri;
   } else {
     agent_data.current_tris[idx] = -1;
+    // If a Standing agent slipped into an unwalkable area, snap it back to the
+    // last valid point and keep it Standing. Also align nav targets to that point
+    // so subsequent logic remains consistent.
+    if (agent_data.states[idx] == AgentState::Standing) {
+      // Teleport back and clear velocity
+      agent_data.positions[idx] = agent_data.last_valid_positions[idx];
+      agent_data.velocities[idx] = {0.0f, 0.0f};
+      agent_data.current_tris[idx] = agent_data.last_valid_tris[idx];
+      agent_data.next_corners[idx] = agent_data.last_valid_positions[idx];
+      agent_data.next_corner_tris[idx] = agent_data.last_valid_tris[idx];
+      agent_data.num_valid_corners[idx] = 1;
+      agent_data.end_targets[idx] = agent_data.last_valid_positions[idx];
+      agent_data.end_target_tris[idx] = agent_data.last_valid_tris[idx];
+      // Remain Standing
+    }
   }
 }

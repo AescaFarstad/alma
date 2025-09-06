@@ -4,13 +4,13 @@ import minimist from 'minimist';
 import { loadBlobs, loadBuildings } from './nav_data_io';
 import { triangulate } from './triangulate';
 
-import { MyPolygon, MyPoint, NavmeshData } from './navmesh_struct';
+import { MyPolygon, NavmeshData } from './navmesh_struct';
 import { printFinalSummary, finalizeNavmeshData } from './nav_summary';
 import { writeNavmeshOutput } from './nav_data_io';
 import { populateTriangulationData, populatePolygonData, populateBuildingData, populatePolygonCentroids } from './populate_navmesh';
 import { finalizeNavmesh, buildFinalTriangleToPolygonMap } from './finalize_navmesh';
 import { drawNavmesh } from './navmesh_visualization';
-import { generateBoundary, validateBoundaryTriangulation } from './navmesh_boundary';
+import { generateBoundary } from './navmesh_boundary';
 import { validateVertexDistance, validateTrianglePolygonMapping, validateIntermediateTrianglePolygonMapping, validateAllPolygonsConvex, validateAllTrianglesCCW, validateWalkablePolygonsCCW, logDuplicatePointsInBlobs } from './navmesh_validation';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -126,15 +126,8 @@ function main() {
   const boundaryData = {
     ...rawBoundaryData,
     outerBoundary: snapPolygon(rawBoundaryData.outerBoundary),
-    boundaryBlobs: rawBoundaryData.boundaryBlobs.map(snapPolygon),
-    boundaryTriangles: rawBoundaryData.boundaryTriangles.map(tri => tri.map(([x, y]): MyPoint => [snapTo2Decimals(x), snapTo2Decimals(y)]))
+    boundaryBlobs: rawBoundaryData.boundaryBlobs.map(snapPolygon)
   };
-
-  const isValidBoundary = validateBoundaryTriangulation(boundaryData);
-  if (!isValidBoundary) {
-    console.error('Boundary triangulation validation failed. Aborting navmesh generation.');
-    process.exit(1);
-  }
 
   // Step 1.6: Validate hole polygons for duplicate points (pre-triangulation diagnostics)
   // Logs only on errors; checks all duplicate coordinates and highlights consecutive ones.

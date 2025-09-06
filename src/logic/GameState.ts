@@ -9,7 +9,6 @@ import agentData from "./agent-data.json";
 import { Spawner } from "./agents/AgentSpawner";
 import { WAgentSpawner } from "./WAgentSpawner";
 import { createWAgentGridSpawner, type WAgentGridSpawner } from "./WAgentGridSpawner";
-import { createWAgentAllSpawner, type WAgentAllSpawner } from "./WAgentAllSpawner";
 import { seededRandom } from "./core/mathUtils";
 import { AgentGrid } from "./agents/AgentGrid";
 import { Agents } from "./agents/Agents";
@@ -124,8 +123,8 @@ export class GameState { // This is a POD class. No functions allowed.
       // createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
     ];
     this.wAgentAllSpawners = [
-      // createWAgentAllSpawner(AgentConfigs.benchmarkerSmart, 100, 12000),
-      createWAgentAllSpawner(AgentConfigs.walker1, 1000, 30000),
+      createWAgentAllSpawner(AgentConfigs.benchmarkerSmart, 300, 15000),
+      // createWAgentAllSpawner(AgentConfigs.walker1, 1000, 32000),
     ];
     this.agentGrid = new AgentGrid();
     this.timeScale = { current: 1.0, previous: 1.0 };

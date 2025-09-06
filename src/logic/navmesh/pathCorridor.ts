@@ -53,7 +53,7 @@ export function findCorridor(
   let iterations = 0;
   while (!pQueue.isEmpty()) {
     iterations++;
-    if (iterations > 500000) {
+    if (iterations > 100000) {
       console.error(`findCorridor: FAILED - iteration limit reached`);
       return null;
     }

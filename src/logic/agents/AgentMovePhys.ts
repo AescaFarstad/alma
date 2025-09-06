@@ -182,12 +182,18 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
     agent.lastValidTri = newTri;
   } else {
     agent.currentTri = -1;
-    
+    // if a Standing agent slips outside the navmesh,
+    // snap back to the last valid position and align nav targets to remain Standing.
+    if (agent.state === AgentState.Standing) {
+      set_(agent.coordinate, agent.lastValidPosition);
+      set(agent.velocity, 0, 0);
+      agent.currentTri = agent.lastValidTri;
+      set_(agent.nextCorner, agent.lastValidPosition);
+      agent.nextCornerTri = agent.lastValidTri;
+      agent.numValidCorners = 1;
+      set_(agent.endTarget, agent.lastValidPosition);
+      agent.endTargetTri = agent.lastValidTri;
+      // keep state as Standing
+    }
   }
-
-  // // Occasional random impulse for testing path correction
-  // if (agent.state !== AgentState.Escaping && Math.random() < 0.05) {
-  //   set(impulse, (Math.random() - 0.5) * 130, (Math.random() - 0.5) * 130);
-  //   add_(agent.velocity, impulse);
-  // }
-} 
+}

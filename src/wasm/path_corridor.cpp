@@ -77,7 +77,7 @@ bool findCorridor(
   int iterations = 0;
   while (!openSet.empty()) {
     iterations++;
-    if (iterations > 500000) {
+    if (iterations > 100000) {
       std::cout << "[WA] findCorridor: FAILED - iteration limit reached"
                 << " start(" << std::fixed << std::setprecision(3) << startPoint.x << ", " << startPoint.y << ")"
                 << " end(" << endPoint.x << ", " << endPoint.y << ")"

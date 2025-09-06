@@ -31,7 +31,7 @@ import { ref, inject } from 'vue';
 import { mapInstance } from '../../../map_instance';
 import type { GameState } from '../../../logic/GameState';
 import { SceneState, ACGREEN, ACINDIGO, ACBLUE, ACYELLOW, ACBROWN } from '../../../logic/drawing/SceneState';
-import { getTriangleFromPoint, getPolygonFromPoint } from '../../../logic/navmesh/NavUtils';
+import { getTriangleFromPoint, getPolygonFromPoint, getBlobFromPoint, getTriangleFromPolyPoint } from '../../../logic/navmesh/NavUtils';
 import { usePointMarks } from '../../../logic/composables/usePointMarks';
 
 const gameState = inject<GameState>('gameState');
@@ -132,33 +132,38 @@ const debugPoint = () => {
   }
   sceneState.addDebugPoint(coords, ACBROWN);
 
-  // 1. log the triangle that corresponds to this point
-  const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
-  console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
+  // 1. log the triangle that corresponds to this point (walkable or blob)
+  const navmesh = gameState.navmesh;
+  let triIndex = getTriangleFromPoint(navmesh, coords);
+  const isTriWalkable = (tIndex: number) => tIndex !== -1 && tIndex < navmesh.walkable_triangle_count;
   if (triIndex !== -1) {
+  console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex} (walkable: ${isTriWalkable(triIndex)})`);
   triangleIndex.value = triIndex.toString();
+  } else {
+  // Fallback: try unwalkable (blob) triangles by first locating the blob polygon
+  const blobPolyIndex = getBlobFromPoint(navmesh, coords);
+  if (blobPolyIndex !== -1) {
+    const triInBlob = getTriangleFromPolyPoint(navmesh, coords, blobPolyIndex);
+    console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triInBlob} (walkable: false, in blob polygon ${blobPolyIndex})`);
+    if (triInBlob !== -1) {
+    triangleIndex.value = triInBlob.toString();
+    }
+  } else {
+    console.log(`Triangle index at ${coords.x}, ${coords.y}: -1 (not in any triangle)`);
+  }
   }
 
   // 2. log the polygon index and specifying if it is walkable
-  const polyIndex = getPolygonFromPoint(gameState.navmesh, coords);
+  let polyIndex = getPolygonFromPoint(navmesh, coords);
   if (polyIndex === -1) {
-  console.log("Point is not within any polygon.");
-  return;
+  // Not in walkable polygons; try blobs (unwalkable polygons)
+  polyIndex = getBlobFromPoint(navmesh, coords);
+  if (polyIndex === -1) {
+    console.log("Point is not within any polygon (walkable or unwalkable).");
+    return;
   }
-
-  const navmesh = gameState.navmesh;
-  const isPolyWalkable = (pIndex: number): boolean => {
-  if (!gameState?.navmesh) return false;
-  const navmesh = gameState.navmesh;
-  const pTriStart = navmesh.poly_tris[pIndex];
-  const pTriEnd = navmesh.poly_tris[pIndex + 1];
-  for (let i = pTriStart; i < pTriEnd; i++) {
-    if (i >= navmesh.walkable_triangle_count) {
-    return false;
-    }
   }
-  return true;
-  }
+  const isPolyWalkable = (pIndex: number): boolean => pIndex < navmesh.walkable_polygon_count;
   
   const polyTriStart = navmesh.poly_tris[polyIndex];
   const polyTriEnd = navmesh.poly_tris[polyIndex + 1];
@@ -209,10 +214,23 @@ const findTriangle = () => {
   }
   const coords = parseCoordinatesFromString(coordinates.value);
   if (coords) {
-  const triIndex = getTriangleFromPoint(gameState.navmesh, coords);
-  console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex}`);
+  const navmesh = gameState.navmesh;
+  let triIndex = getTriangleFromPoint(navmesh, coords);
+  const isTriWalkable = (tIndex: number) => tIndex !== -1 && tIndex < navmesh.walkable_triangle_count;
   if (triIndex !== -1) {
+    console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triIndex} (walkable: ${isTriWalkable(triIndex)})`);
     triangleIndex.value = triIndex.toString();
+  } else {
+    const blobPolyIndex = getBlobFromPoint(navmesh, coords);
+    if (blobPolyIndex !== -1) {
+      const triInBlob = getTriangleFromPolyPoint(navmesh, coords, blobPolyIndex);
+      console.log(`Triangle index at ${coords.x}, ${coords.y}: ${triInBlob} (walkable: false, in blob polygon ${blobPolyIndex})`);
+      if (triInBlob !== -1) {
+        triangleIndex.value = triInBlob.toString();
+      }
+    } else {
+      console.log(`Triangle index at ${coords.x}, ${coords.y}: -1 (not in any triangle)`);
+    }
   }
   }
 };
@@ -238,6 +256,7 @@ const logTriangle = () => {
   return;
   }
   const navmesh = gameState.navmesh;
+  console.log(`Triangle ${triIndex} walkable: ${triIndex < navmesh.walkable_triangle_count}`);
   const triVertexStartIndex = triIndex * 3;
   const p1Index = navmesh.triangles[triVertexStartIndex];
   const p2Index = navmesh.triangles[triVertexStartIndex + 1];
@@ -327,6 +346,7 @@ const logPolygon = () => {
   neighbors.push(navmesh.poly_neighbors[i]);
   }
 
+  console.log(`Polygon ${polyIndex} walkable: ${polyIndex < navmesh.walkable_polygon_count}`);
   console.log(`Polygon ${polyIndex} vertices:`, vertices);
   console.log(`Polygon ${polyIndex} vertex indices:`, vertexIndices);
   console.log(`Polygon ${polyIndex} neighbors:`, neighbors);

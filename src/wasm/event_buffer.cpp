@@ -1,6 +1,7 @@
 ﻿#include "event_buffer.h"
 #include <emscripten/emscripten.h>
 #include "wasm_log.h"
+#include <sstream>
 
 EventBuffer g_event_buffer;
 
@@ -24,6 +25,13 @@ void EventBuffer::commit_frame() {
 void EventBuffer::write_header(uint16_t type, uint16_t size_words) {
   if (cursor + size_words >= cap_words){
     wasm_console_error("Event buffer full");
+    // [MDB] Detailed overflow context
+    std::ostringstream _oss; _oss
+      << "[MDB] write_header overflow: cursor=" << cursor
+      << " size_words=" << size_words
+      << " cap_words=" << cap_words
+      << " type=" << type;
+    wasm_console_error(_oss.str());
     return;
   }
   u32_base[cursor] = (static_cast<uint32_t>(size_words) << 16) | static_cast<uint32_t>(type);

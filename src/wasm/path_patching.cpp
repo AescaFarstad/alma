@@ -5,6 +5,9 @@
 #include "constants_layout.h"
 #include "math_utils.h"
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
+#include "wasm_log.h"
  
 
 extern Navmesh g_navmesh;
@@ -109,13 +112,25 @@ bool attempt_path_patch(
 ) {
   if (raycastTriCorridor.empty()) return false;
 
-  // Build hit edge points from vertex indices for geometric checks
+
+  if (hitV1_idx < 0 || hitV2_idx < 0) {
+    std::ostringstream _oss; _oss.setf(std::ios::fixed); _oss << std::setprecision(3);
+    _oss << "[MDB] attempt_path_patch: invalid hit vertex index used: hitV1_idx=" << hitV1_idx
+         << " hitV2_idx=" << hitV2_idx << " agent_idx=" << idx;
+    wasm_console_error(_oss.str());
+  }
+
   const Point2 hitP1 = g_navmesh.vertices[hitV1_idx];
   const Point2 hitP2 = g_navmesh.vertices[hitV2_idx];
 
   // Unwalkable triangle that blocked the ray
   const int blockingTri = hitTri_idx;
   const int blockingPoly = (blockingTri != -1) ? g_navmesh.triangle_to_polygon[blockingTri] : -1;
+
+  if (blockingTri == -1) {
+    std::ostringstream _oss; _oss << "[MDB] attempt_path_patch: hitTri_idx is -1 with non-empty corridor; agent_idx=" << idx;
+    wasm_console_error(_oss.str());
+  }
 
   // Approach 2: miter-offset around solid/obstacle polygon hit
   if (blockingPoly >= g_navmesh.walkable_polygon_count) {
