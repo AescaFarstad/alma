@@ -17,13 +17,13 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
 
   agent_data.velocities = reinterpret_cast<Point2*>(sharedBuffer + offset);
   offset += sizeof(Point2) * maxAgents;
-  
+
   agent_data.looks = reinterpret_cast<Point2*>(sharedBuffer + offset);
   offset += sizeof(Point2) * maxAgents;
 
   agent_data.states = reinterpret_cast<AgentState*>(sharedBuffer + offset);
   offset += sizeof(AgentState) * maxAgents;
-  
+
   agent_data.is_alive = reinterpret_cast<bool*>(sharedBuffer + offset);
   offset += sizeof(bool) * maxAgents;
 
@@ -31,7 +31,7 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
   // Navigation data
   agent_data.current_tris = reinterpret_cast<int*>(sharedBuffer + offset);
   offset += sizeof(int) * maxAgents;
-  
+
   agent_data.next_corners = reinterpret_cast<Point2*>(sharedBuffer + offset);
   offset += sizeof(Point2) * maxAgents;
 
@@ -67,7 +67,7 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
 
   agent_data.stuck_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
   offset += sizeof(float) * maxAgents;
-  
+
   agent_data.path_frustrations = reinterpret_cast<float*>(sharedBuffer + offset);
   offset += sizeof(float) * maxAgents;
 

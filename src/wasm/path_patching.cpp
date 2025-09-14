@@ -134,7 +134,7 @@ bool attempt_path_patch(
 
   // Approach 2: miter-offset around solid/obstacle polygon hit
   if (blockingPoly >= g_navmesh.walkable_polygon_count) {
-    
+
     const float d1 = math::distancePointToSegment(hitP1, agent_data.last_visible_points_for_next_corner[idx], agent_data.next_corners[idx]);
     const float d2 = math::distancePointToSegment(hitP2, agent_data.last_visible_points_for_next_corner[idx], agent_data.next_corners[idx]);
     const bool useFirst = (d1 <= d2);
@@ -204,7 +204,7 @@ bool attempt_path_patch(
 
   // Approach 1: Intersection-based patch
   {
-    
+
     const Point2& L = agent_data.last_visible_points_for_next_corner[idx];
     const Point2& C = agent_data.next_corners[idx];
     const Point2& A = agent_data.positions[idx];

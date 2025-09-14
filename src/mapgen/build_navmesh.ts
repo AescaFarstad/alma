@@ -74,11 +74,11 @@ function main() {
   const { simplified_vertices: rawHolePolygons, blobToBuildings } = loadBlobs(blobsFilePath, DEBUG_BBOX);
   const buildingsFilePath = path.join(inputDir, 'buildings_s7.txt');
   const buildings = loadBuildings(buildingsFilePath);
-  
+
   // Count total building references in blobs
   const totalBuildingRefs = blobToBuildings.flat().length;
   const uniqueBuildingRefs = new Set(blobToBuildings.flat()).size;
-  
+
   // Step 1.1: Snap all coordinates to 2 decimal precision for consistency
   const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
   const snapPolygon = (poly: MyPolygon): MyPolygon => poly.map(([x, y]) => [snapTo2Decimals(x), snapTo2Decimals(y)]);
@@ -104,9 +104,9 @@ function main() {
   };
 
   const holePolygons = holePolygonsRawSnapped.map(sanitizePolygon);
-  
+
   const processingBbox = calculateProcessingBounds(holePolygons);
-  
+
   // Calculate the inflated bbox used for triangulation
   const inflatedBbox: readonly [number, number, number, number] = [
     processingBbox[0] - BOUNDARY_INFLATION,  // minX - 100
@@ -114,14 +114,14 @@ function main() {
     processingBbox[2] + BOUNDARY_INFLATION,  // maxX + 100
     processingBbox[3] + BOUNDARY_INFLATION   // maxY + 100
   ];
-  
+
   console.log(`Real bbox: [${processingBbox.join(', ')}]`);
   console.log(`Inflated bbox for triangulation: [${inflatedBbox.join(', ')}]`);
-  
+
   // Step 1.5: Generate boundary data and snap coordinates
   console.log('\n=== BOUNDARY GENERATION ===');
   const rawBoundaryData = generateBoundary(processingBbox, BOUNDARY_INFLATION);
-  
+
   // Snap boundary coordinates to 2-decimal precision
   const boundaryData = {
     ...rawBoundaryData,
@@ -151,11 +151,11 @@ function main() {
   // Step 4.1: No longer need to extract polygons, they are in navmeshData.
   validateWalkablePolygonsCCW(navmeshData, 'Polygonization');
   validateAllPolygonsConvex(navmeshData, "Polygonization");
-  
+
   // Create a mapping from the global triangle index to the new global polygon index.
   const impassableT2P = new Map<number, number>();
   const walkableTriangleCount = navmeshData.walkable_triangle_count;
-  
+
   // Map all impassable triangles to their blobs (includes boundary triangles now)
   triangulationResult.impassableTriangleToBlobIndex.forEach((blobIndex, triangleIndexInBlob) => {
     const globalTriangleIndex = walkableTriangleCount + triangleIndexInBlob;
@@ -190,7 +190,7 @@ function main() {
 
   // const optimizedT2P = buildFinalTriangleToPolygonMap(navmeshData, navmeshData.walkable_triangle_count, optimizedWalkable.polygons, walkableT2P, new Map());
   // validateIntermediateTrianglePolygonMapping(optimizedT2P, navmeshData.walkable_triangle_count, optimizedWalkable.polygons.length, "Optimization");
-  
+
   // // Hertel-Mehlhorn guarantees convex polygons, and k-opt is a stub, so we can assume convexity.
   // // A full implementation would require re-validating convexity here.
   // console.log("Polygon convexity validation (after Optimization) passed (stubbed).");
@@ -204,13 +204,13 @@ function main() {
 
   // Step 6: Populate and finalize navmesh data structure
   console.log('\n=== POPULATING AND FINALIZING NAVMESH DATA ===');
-  
+
   // DEBUG: Log polygon sources
   console.log(`Walkable polygons: ${navmeshData.walkable_polygon_count} (from newPolygonization)`);
   console.log(`Impassable polygons: ${holePolygons.length + boundaryData.boundaryBlobs.length} (original holes + boundary blobs)`);
   console.log(`  - Original hole polygons: ${holePolygons.length}`);
   console.log(`  - Boundary blobs: ${boundaryData.boundaryBlobs.length}`);
-  
+
   populatePolygonData(navmeshData, [...holePolygons, ...boundaryData.boundaryBlobs]);
   const allBuildings = [...buildings, ...boundaryData.fakeBuildingsData];
 
@@ -218,13 +218,13 @@ function main() {
   // Map boundary blobs to their fake buildings (add entries for the two boundary blobs)
   extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[0].properties.osm_id]); // First boundary blob
   extendedBlobToBuildings.push([boundaryData.fakeBuildingsData[1].properties.osm_id]); // Second boundary blob
-  
+
   const { reorderedBuildings, buildingVertexStats } = populateBuildingData(navmeshData, allBuildings, extendedBlobToBuildings);
   const triangleToPolygonMap = finalizeNavmesh(
     navmeshData,
     impassableT2P
   );
-  
+
   // Calculate polygon centroids (must be after finalization for poly_tris to be available)
   populatePolygonCentroids(navmeshData);
 
@@ -237,7 +237,7 @@ function main() {
   // Step 7: Write output
   console.log('\n=== WRITING OUTPUT ===');
   const { createdFiles } = writeNavmeshOutput(outputDir, navmeshData, reorderedBuildings, OUTPUT_SETTINGS);
-  
+
   if (OUTPUT_SETTINGS.generateVisualization) {
     const visualizationPath = path.join(outputDir, 'navmesh_visualization.png');
     const visualizationFile = drawNavmesh(navmeshData, visualizationPath);
@@ -251,7 +251,7 @@ function main() {
     const sizeKB = (file.sizeBytes / 1024).toFixed(2);
     const sizeMB = (file.sizeBytes / 1024 / 1024).toFixed(2);
     const fileName = path.basename(file.path);
-    
+
     if (file.sizeBytes >= 1024 * 1024) {
       console.log(`  ${fileName}: ${sizeMB} MB`);
     } else {
@@ -259,7 +259,7 @@ function main() {
     }
     totalSize += file.sizeBytes;
   }
-  
+
   const totalSizeKB = (totalSize / 1024).toFixed(2);
   const totalSizeMB = (totalSize / 1024 / 1024).toFixed(2);
   if (totalSize >= 1024 * 1024) {

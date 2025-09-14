@@ -111,7 +111,7 @@ export class DrawDynamicScene {
     // Render laser blasts
     for (const blast of dynamicScene.laserBlasts) {
       primitives.addLine([blast.start.x, -blast.start.y, blast.end.x, -blast.end.y], laserBlastLineStyle);
-      
+
       // Render corridor
       if (blast.corridor) {
         for (const triIdx of blast.corridor) {
@@ -137,7 +137,7 @@ export class DrawDynamicScene {
       const size = 8; // meters
 
       const angle = Math.atan2(look.y, look.x);
-      
+
       // Create a triangle pointing in the 'look' direction
       const p1 = { x: pos.x + Math.cos(angle) * size, y: pos.y + Math.sin(angle) * size };
       const p2 = { x: pos.x + Math.cos(angle - 1.9) * size * 0.5, y: pos.y + Math.sin(angle - 1.9) * size * 0.5 };

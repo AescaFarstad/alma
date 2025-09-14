@@ -82,7 +82,7 @@ async function testCompleteUniteWorkflow(clipper: any) {
     const unionResult = clipper.clipToPaths(unionParams);
     console.log('UNION SUCCESS!');
     console.log('Union result polygons:', unionResult ? unionResult.length : 0);
-    
+
     if (unionResult && unionResult.length > 0) {
       const unitedPolygons = unionResult.map((path: clipperLib.Path) => fromClipperPath(path, scale));
       console.log('Union result - first polygon points:', unitedPolygons[0].length);

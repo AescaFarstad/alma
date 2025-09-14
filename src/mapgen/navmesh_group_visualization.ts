@@ -14,16 +14,16 @@ function drawTriangle(ctx: CanvasRenderingContext2D, navmeshData: NavmeshData, t
   const v1Index = navmeshData.triangles[triIndex * 3];
   const v2Index = navmeshData.triangles[triIndex * 3 + 1];
   const v3Index = navmeshData.triangles[triIndex * 3 + 2];
-  
+
   ctx.beginPath();
   ctx.moveTo(navmeshData.vertices[v1Index * 2] + CANVAS_CENTER, -navmeshData.vertices[v1Index * 2 + 1] + CANVAS_CENTER);
   ctx.lineTo(navmeshData.vertices[v2Index * 2] + CANVAS_CENTER, -navmeshData.vertices[v2Index * 2 + 1] + CANVAS_CENTER);
   ctx.lineTo(navmeshData.vertices[v3Index * 2] + CANVAS_CENTER, -navmeshData.vertices[v3Index * 2 + 1] + CANVAS_CENTER);
   ctx.closePath();
-  
+
   ctx.fillStyle = color;
   ctx.fill();
-  
+
   ctx.strokeStyle = 'black';
   ctx.lineWidth = 0.5;
   ctx.stroke();

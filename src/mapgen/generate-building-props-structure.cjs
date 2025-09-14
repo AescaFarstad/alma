@@ -22,7 +22,7 @@ function generateStructure({ inputFile, outputFile }) {
   const MAX_ENUM_VALUES = 12;
   const MAX_COMMENT_VALUES = 60;
   const COMMENT_VALUES_PER_ROW = 7;
-  
+
   let output = `// Generated from ${path.basename(inputFile)}\n\n`;
 
   try {
@@ -75,7 +75,7 @@ function generateStructure({ inputFile, outputFile }) {
       let typeString;
       let comment = '';
       let preComment = '';
-      
+
       const hasOnlyStrings = types.length === 1 && types[0] === 'string';
       const hasOnlyNumbers = types.length === 1 && types[0] === 'number';
 
@@ -87,7 +87,7 @@ function generateStructure({ inputFile, outputFile }) {
         } else if (uniqueValuesCount > MAX_ENUM_VALUES) {
           typeString = 'string';
           const sortedValues = Array.from(propInfo.valueCounts.entries()).sort(([, a], [, b]) => b - a);
-          
+
           let commentBlock = '/**\n';
           let row = [];
           for (const [value, count] of sortedValues) {
@@ -113,7 +113,7 @@ function generateStructure({ inputFile, outputFile }) {
       } else {
         typeString = types.map(t => (t === 'object' ? 'any' : t)).join(' | ');
       }
-      
+
       if (!typeString) {
         typeString = 'any';
       }

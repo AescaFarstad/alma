@@ -97,7 +97,7 @@ onMounted(() => {
     // ...
   }),
   });
-  
+
   const buildingsSource = new VectorTileSource({
     tileGrid: customTileGrid,
     tileUrlFunction: (tileCoord) => {

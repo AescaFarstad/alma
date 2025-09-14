@@ -34,7 +34,7 @@ export function raycastCorridor(
 ): RaycastWithCorridorResult {
   hitEdgeIndex = -1;
   hitTriIdx = -1;
-  
+
   const corridor = traceStraightCorridor(navmesh, startPoint, endPoint, startTriIdx, endTriIdx);
 
   if (corridor === null) {
@@ -42,7 +42,7 @@ export function raycastCorridor(
   }
   // Last walkable triangle we are in
   const lastWalkTriIdx = corridor[corridor.length - 1];
-  
+
   // If endTriIdx is provided, trust it - no need for point-in-triangle check
   if (endTriIdx !== undefined) {
     if (lastWalkTriIdx === endTriIdx) {
@@ -54,7 +54,7 @@ export function raycastCorridor(
       return { hitV1_idx: -1, hitV2_idx: -1, hitTri_idx: -1, corridor };
     }
   }
-  
+
   // If we hit a wall, return the blocking edge and blocking triangle
   if (hitEdgeIndex !== -1 && hitTriIdx !== -1) {
     const triVertexStartIndex = lastWalkTriIdx * 3;
@@ -79,7 +79,7 @@ export function raycastPoint(
   endTriIdx?: number,
 ): RaycastHitOnlyResult {
   hitEdgeIndex = -1;
-  
+
   const lastTriIdx = traceStraightCorridorHitOnly(navmesh, startPoint, endPoint, startTriIdx, endTriIdx);
 
   if (lastTriIdx === null) {
@@ -97,7 +97,7 @@ export function raycastPoint(
       return { hitP1: null, hitP2: null };
     }
   }
-  
+
   // If we hit a wall, return the hit edge
   if (hitEdgeIndex !== -1) {
     getTrianglePoints(navmesh, lastTriIdx, triPoints);
@@ -124,7 +124,7 @@ function traceStraightCorridor(
   if (currentTriIdx === -1) {
     return null; // Start point is not on navmesh
   }
-  
+
   // Don't allow raycast from non-walkable areas
   if (currentTriIdx >= navmesh.walkable_triangle_count) {
     return null;
@@ -150,12 +150,12 @@ function traceStraightCorridor(
 
     let nextTriIdx = -1;
     let exitEdgeIdx = -1;
-    
+
     if (previousTriIdx === -1) {
       // For the first triangle, we find the exit portal by identifying which
       // side of the ray each of the triangle's vertices lies on. The ray will
       // exit through the edge that is opposite the "odd-one-out" vertex.
-      
+
       // Use original endpoint for orientation tests - normalization can distort geometry
       const c0 = isToRight(startPoint, endPoint, triPoints[0]);
       const c1 = isToRight(startPoint, endPoint, triPoints[1]);
@@ -172,9 +172,9 @@ function traceStraightCorridor(
       } else { // triPoints[2] is the odd one out (or all are same)
         exitEdgeIdx = c2 ? 2 : 1;
       }
-      
+
       nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-      
+
       if (nextTriIdx >= navmesh.walkable_triangle_count) {
         hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
         hitTriIdx = nextTriIdx;     // Store the blocking unwalkable triangle
@@ -194,7 +194,7 @@ function traceStraightCorridor(
       if (entryEdgeIdx !== -1) {
         const p_entry2 = triPoints[(entryEdgeIdx + 1) % 3];
         const p_apex = triPoints[(entryEdgeIdx + 2) % 3];
-        
+
         // A simple orientation check (cross product) tells us which of the two
         // non-entry edges the ray will cross. This is much faster than
         // a full line segment intersection test.
@@ -244,7 +244,7 @@ function traceStraightCorridorHitOnly(
   if (currentTriIdx === -1) {
     return null; // Start point is not on navmesh
   }
-  
+
   // Don't allow raycast from non-walkable areas
   if (currentTriIdx >= navmesh.walkable_triangle_count) {
     return null;
@@ -268,12 +268,12 @@ function traceStraightCorridorHitOnly(
 
     let nextTriIdx = -1;
     let exitEdgeIdx = -1;
-    
+
     if (previousTriIdx === -1) {
       // For the first triangle, we find the exit portal by identifying which
       // side of the ray each of the triangle's vertices lies on. The ray will
       // exit through the edge that is opposite the "odd-one-out" vertex.
-      
+
       // Use original endpoint for orientation tests - normalization can distort geometry
       const c0 = isToRight(startPoint, endPoint, triPoints[0]);
       const c1 = isToRight(startPoint, endPoint, triPoints[1]);
@@ -290,9 +290,9 @@ function traceStraightCorridorHitOnly(
       } else { // triPoints[2] is the odd one out (or all are same)
         exitEdgeIdx = c2 ? 2 : 1;
       }
-      
+
       nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
-      
+
       if (nextTriIdx >= navmesh.walkable_triangle_count) {
         hitEdgeIndex = exitEdgeIdx; // Store the hit edge index
         return currentTriIdx; // Hit a wall
@@ -311,7 +311,7 @@ function traceStraightCorridorHitOnly(
       if (entryEdgeIdx !== -1) {
         const p_entry2 = triPoints[(entryEdgeIdx + 1) % 3];
         const p_apex = triPoints[(entryEdgeIdx + 2) % 3];
-        
+
         // A simple orientation check (cross product) tells us which of the two
         // non-entry edges the ray will cross. This is much faster than
         // a full line segment intersection test.

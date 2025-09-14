@@ -80,7 +80,7 @@ export function pullAway(polygon: Point2[], minOffset: number, maxError: number)
 
       // Use distance to line segment, not infinite line
       const segmentDist = distancePointToSegment(B, P1, P2);
-      
+
       if (segmentDist < minOffset && segmentDist > 1e-6) {
         const candidateA = movePoint(B, A, P1, P2, minOffset);
         let areaDiffA: number | null = null;

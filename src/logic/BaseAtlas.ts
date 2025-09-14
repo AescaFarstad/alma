@@ -32,10 +32,10 @@ class BaseAtlas {
       }
 
       const atlas = await response.json() as Record<string, AtlasFrame>;
-      
+
       // Sort frame names lexicographically
       const sortedFrameNames = Object.keys(atlas).sort((a, b) => a.localeCompare(b));
-      
+
       // Create frame name to ID mapping
       const frameNameToId = new Map<string, number>();
       sortedFrameNames.forEach((name, index) => {

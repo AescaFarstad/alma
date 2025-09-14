@@ -21,7 +21,7 @@ export function createDynamicLayers(map: OlMap, projection: Projection) {
   const geojsonFormat = new GeoJSON({
   featureProjection: projection
   });
-  
+
   const buildingsSource = new VectorSource({
     features: geojsonFormat.readFeatures(buildings),
     useSpatialIndex: true

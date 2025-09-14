@@ -55,7 +55,7 @@ bool findCorridor(
   } else {
     openSet.clear();
   }
-  
+
   std::fill(cameFrom_parent, cameFrom_parent + array_size, -1);
   const float kUnknown = std::numeric_limits<float>::lowest();
   std::fill(gScore, gScore + array_size, kUnknown);
@@ -84,7 +84,7 @@ bool findCorridor(
                 << std::endl;
       return false;
     }
-    
+
     int current = openSet.get();
 
     if (current == endPoly) {
@@ -105,7 +105,7 @@ bool findCorridor(
 
     const float myScore = gScore[current];
     const Point2 currentCentroid = g_navmesh.poly_centroids[current];
-    
+
     for (int i = 0; i < polyVertCount; i++) {
       const int32_t neighbor = g_navmesh.poly_neighbors[polyVertStart + i];
       if (neighbor >= g_navmesh.walkable_polygon_count) {
@@ -117,13 +117,13 @@ bool findCorridor(
       const float tentativeGScore = travelCost + myScore;
 
       const bool neighborHasScore = (gScore[neighbor] != kUnknown);
-      
+
       if (!neighborHasScore || tentativeGScore <  gScore[neighbor]) {
         cameFrom_parent[neighbor] = current;
         gScore[neighbor] = tentativeGScore;
 
         float heuristicValue;
-        
+
         // Check if heuristic has already been computed for this neighbor
         if (heuristic[neighbor] == kUnknown) {
           heuristicValue = math::distance(neighborCentroid, endCentroid);
@@ -132,24 +132,24 @@ bool findCorridor(
             // Penalize straying too far from the straight line
             const float lineDistNum = std::abs(math::cross(endPoint - startPoint, neighborCentroid - startPoint));
             const float distToLine = lineDistNum / lineDistDenom;
-            
+
             Point2 v = neighborCentroid - startPoint;
             math::normalize_inplace(v);
-            
+
             const float d = math::dot(v, startToEnd) / lineDistDenom;
             const float CFactor = std::max(0.0f, distToLine - FREE_WIDTH) * effectiveCMult * (1.0f + (1.0f - d));
-            
+
             const float backtrack = std::max(0.0f, math::distance(endPoint, neighborCentroid) - lineDistDenom);          
             heuristicValue += CFactor + backtrack;
           }
-          
+
           // Cache the computed heuristic
           heuristic[neighbor] = heuristicValue;
         } else {
           // Use the cached heuristic
           heuristicValue = heuristic[neighbor];
         }
-        
+
         const float fScoreValue = tentativeGScore + heuristicValue;
         if (neighborHasScore) {
           openSet.updatePriority(neighbor, fScoreValue);

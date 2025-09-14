@@ -38,7 +38,7 @@ export function cornerize(
     const pB = list[b_idx];
     const pC = list[c_idx];
     const pD = list[d_idx];
-    
+
     // If B and C are very close, they might form a "rounded" corner
     // that should be a single sharp point.
     const dst = distance(pB, pC);
@@ -103,7 +103,7 @@ export function cornerize(
       const vecBC = subtract(pC, pB);
       const vec_rot90 = { x: -vecBC.y, y: vecBC.x };
       const half_vec_rot90 = { x: vec_rot90.x / 2, y: vec_rot90.y / 2 };
-      
+
       const J = { x: centerBC.x - half_vec_rot90.x, y: centerBC.y - half_vec_rot90.y };
       const K = { x: centerBC.x + half_vec_rot90.x, y: centerBC.y + half_vec_rot90.y };
 

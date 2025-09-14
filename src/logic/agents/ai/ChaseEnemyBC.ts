@@ -69,7 +69,7 @@ export class ChaseEnemyBC implements BrainCell{
     data.end_target_tris[a.idx] = data.last_valid_tris[enemyIdx];
     data.end_targets[a.idx * 2] = data.last_valid_positions[enemyIdx * 2];
     data.end_targets[a.idx * 2 + 1] = data.last_valid_positions[enemyIdx * 2 + 1];
-    
+
 
     if (data.num_valid_corners[a.idx] == 1){
       data.next_corners[a.idx * 2] = data.end_targets[a.idx * 2];

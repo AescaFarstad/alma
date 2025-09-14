@@ -33,7 +33,7 @@ export class TsAgentSpritePool extends BaseAgentSpritePool {
         this.createSprite(displayName, pool);
       }
       const element = pool[drawnCount];
-      
+
       const { sprite } = element;
       const pos = agent.coordinate;
       const look = agent.look;

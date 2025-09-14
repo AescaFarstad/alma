@@ -32,14 +32,14 @@ export function findCorridor(
   if (startPoly === endPoly) {
     return [startPoly];
   }
-  
+
   set(startToEnd, endPoint.x - startPoint.x, endPoint.y - startPoint.y);
   const lineDistDenomSq = distance_sq(startPoint, endPoint);
   const lineDistDenom = Math.sqrt(lineDistDenomSq) + 1;
   const effectiveCMult = lineDistDenom > FREE_WIDTH * 3 ? STRAY_MULT : 0;
   const end_x = navmesh.poly_centroids[endPoly * 2];
   const end_y = navmesh.poly_centroids[endPoly * 2 + 1];
-  
+
   const pQueue = sharedpQueue;
   pQueue.clear();
   const cameFrom = new Map<number, number>();
@@ -79,7 +79,7 @@ export function findCorridor(
         path.push(temp);
       }
       console.log(`Iterations: ${iterations}`);
-      
+
 
       // const corridorLength = calculateCorridorLength(navmesh, path, startPoint, endPoint);
       // const corners = findCorners(navmesh, path, startPoint, endPoint);
@@ -110,7 +110,7 @@ export function findCorridor(
       // for (const [poly, f] of fScore) {
       //   sceneState.addDebugText(Point2(navmesh.poly_centroids[poly * 2], navmesh.poly_centroids[poly * 2 + 1]), `${f?.toFixed(0)}`, ACBLUE);
       // }
-      
+
       return path;
     }
     const polyVertStart = navmesh.polygons[current];
@@ -154,7 +154,7 @@ export function findCorridor(
           heuristic += CFactor + backtrack;
           // console.log(`CFactor: ${CFactor.toFixed(2)} heuristic: ${heuristic.toFixed(2)} backtrack: ${backtrack.toFixed(2)}`);
         }
-        
+
         const fScoreValue = tentativeGScore + heuristic;
         if (neighborScore !== undefined)
           pQueue.updatePriority(neighbor, fScoreValue);

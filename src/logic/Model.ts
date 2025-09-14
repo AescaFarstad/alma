@@ -51,7 +51,7 @@ export function update(gs: GameState, deltaTime: number): void {
   // --- Handle Scheduled Laser Blasts ---
   if (gs.scheduledLaserBlasts > 0) {
     gs.scheduledLaserBlasts--;
-    
+
     const avatar = gs.avatar;
     const startPoint = { ...avatar.coordinate };
     const endPoint = {
@@ -59,7 +59,7 @@ export function update(gs: GameState, deltaTime: number): void {
       y: startPoint.y + avatar.look.y * 5000,
     };
     const raycastResult = raycastCorridor(gs.navmesh, startPoint, endPoint);
-    
+
     let finalEndPoint = endPoint;
     if (raycastResult.hitV1_idx !== -1) {
       const hitP1 = { x: gs.navmesh.vertices[raycastResult.hitV1_idx * 2], y: gs.navmesh.vertices[raycastResult.hitV1_idx * 2 + 1] };
@@ -78,7 +78,7 @@ export function update(gs: GameState, deltaTime: number): void {
       corridor: [...raycastResult.corridor],
     });
   }
-  
+
   if (deltaTime > 0) {
     handleEvents(gs);
     gs.wasm_agents.events.beginFrame();

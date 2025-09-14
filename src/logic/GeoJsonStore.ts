@@ -10,7 +10,7 @@ async function loadAndProcessData() {
     loadGeoJsonData('buildings'),
     loadGeoJsonData('roads')
   ]);
-  
+
   geoJsonData.buildings = buildings;
   geoJsonData.roads = roads;
 }

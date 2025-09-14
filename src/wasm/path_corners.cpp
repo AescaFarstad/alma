@@ -26,9 +26,9 @@ std::vector<Corner> findCorners(const std::vector<int>& corridor, const Point2& 
   if (corridor.empty()) {
     return {{endPoint, -1}};
   }
-  
+
   std::vector<Portal> portals = getPolygonPortals(corridor, startPoint, endPoint);
-  
+
   if (portals.size() < 2) {
     return {{startPoint, corridor[0]}};
   }
@@ -92,7 +92,7 @@ std::vector<Corner> findCorners(const std::vector<int>& corridor, const Point2& 
 
 DualCorner find_next_corner(Point2 pos, const std::vector<int>& corridor, Point2 end_pos, float offset) {
   DualCorner result = {{0,0}, -1, -1, {0,0}, -1, -1, 0};
-  
+
   if (corridor.empty()) {
     result.corner1 = end_pos;
     result.tri1 = -1;
@@ -159,20 +159,20 @@ static Portal getPolygonPortalPoints(int poly1Idx, int poly2Idx) {
   for (int i = 0; i < poly1VertCount; i++) {
     int32_t neighborIdx = poly1VertStart + i;
     int32_t neighbor = g_navmesh.poly_neighbors[neighborIdx];
-    
+
     if (neighbor == poly2Idx) {
       int32_t v1Idx = g_navmesh.poly_verts[poly1VertStart + i];
       int32_t v2Idx = g_navmesh.poly_verts[poly1VertStart + ((i + 1) % poly1VertCount)];
-      
+
       Point2 p1 = g_navmesh.vertices[v1Idx];
       Point2 p2 = g_navmesh.vertices[v2Idx];
-      
+
       Point2 c1 = g_navmesh.poly_centroids[poly1Idx];
       Point2 c2 = g_navmesh.poly_centroids[poly2Idx];
-      
+
       Point2 travelDir = c2 - c1;
       Point2 edgeDir = p2 - p1;
-      
+
       if (math::cross(travelDir, edgeDir) > 0) {
         return {p2, p1, v2Idx, v1Idx};
       } else {
@@ -196,7 +196,7 @@ static bool isPointsEqual(const Point2& p1, const Point2& p2, float epsilon) {
 }
 
 static void funnel_dual(const std::vector<Portal>& portals, const std::vector<int>& corridor, DualCorner& result) {
-  
+
   if (portals.empty()) {
     result.numValid = 0;
     return;
@@ -218,7 +218,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
   for (size_t i = 1; i < portals.size(); ++i) {
     Point2 left = portals[i].left;
     Point2 right = portals[i].right;
-    
+
     float rightTriArea2 = triarea2(portalApex, portalRight, right);
 
     if (rightTriArea2 <= 0.0f) {
@@ -252,7 +252,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
             return;
           }
         }
-        
+
         portalApex = portalLeft;
         apexIndex = leftIndex;
         portalLeft = portalApex;
@@ -296,7 +296,7 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
             return;
           }
         }
-        
+
         portalApex = portalRight;
         apexIndex = rightIndex;
         portalLeft = portalApex;
@@ -322,16 +322,16 @@ static void funnel_dual(const std::vector<Portal>& portals, const std::vector<in
 }
 
 static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2& end_pos, float offset) {
-  
+
   if (vIdx == -1 || tri == -1 || offset <= 0) {
     return;
   }
-  
+
   bool isEndPoint = isPointsEqual(point, end_pos);
   if (isEndPoint) {
     return;
   }
-  
+
   bool foundBlob = false;
 
   RangeView blobView = g_navmesh.blob_index.query(point);
@@ -363,7 +363,7 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     }
     if (foundBlob) break;
   }
-  
+
   // Add grid corner check and warning if blob not found
   if (!foundBlob) {
     printf("apply_offset_to_point: FAILURE - Could not find matching blob for corner, not applying offset. Point: (%.3f, %.3f)\n", 
@@ -371,21 +371,21 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
     printf("apply_offset_to_point: Nearby blobs were: ");
     for (uint32_t bi = 0; bi < blobView.count; ++bi) { printf("%d ", blobView.ptr[bi]); }
     printf("\n");
-    
+
     // Debug: Find the closest vertex across all blobs
     float minDist = 999999.0f;
     Point2 closestVertex = {0, 0};
     int closestBlob = -1;
-    
+
     for (uint32_t bi = 0; bi < blobView.count; ++bi) {
       int blobPolygonId = blobView.ptr[bi];
       int32_t vertStart = g_navmesh.polygons[blobPolygonId];
       int32_t vertEnd = g_navmesh.polygons[blobPolygonId + 1];
-      
+
       for (int32_t i = vertStart; i < vertEnd; ++i) {
         const Point2& p = g_navmesh.vertices[g_navmesh.poly_verts[i]];
         float dist = std::sqrt((p.x - point.x) * (p.x - point.x) + (p.y - point.y) * (p.y - point.y));
-        
+
         if (dist < minDist) {
           minDist = dist;
           closestVertex = p;
@@ -393,7 +393,7 @@ static void apply_offset_to_point(Point2& point, int vIdx, int tri, const Point2
         }
       }
     }
-    
+
     printf("apply_offset_to_point: DEBUG - Closest vertex found at (%.3f, %.3f) in blob %d, distance=%.6f (tolerance=0.015)\n", 
          closestVertex.x, closestVertex.y, closestBlob, minDist);
   }

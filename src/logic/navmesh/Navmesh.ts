@@ -7,7 +7,7 @@ export const SPATIAL_INDEX_CELL_SIZE = 64;
 export class Navmesh {
   // Layout: [x1, y1, x2, y2, x3, y3, ...]
   public vertices: Float32Array;
-  
+
   /**
    * Layout: [t1_v1_idx, t1_v2_idx, t1_v3_idx, t2_v1_idx, t2_v2_idx, t2_v3_idx, ...]
    * To get the actual coordinates: {x:vertices[t1_v1_idx * 2], y:vertices[t1_v1_idx * 2 + 1]}
@@ -65,7 +65,7 @@ export class Navmesh {
     this.triangle_centroids = new Float32Array(0);
     this.bbox = new Float32Array(4);
     this.buffered_bbox = new Float32Array(4);
-    
+
     this.walkable_triangle_count = 0;
     this.walkable_polygon_count = 0;
 

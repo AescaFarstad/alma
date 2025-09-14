@@ -76,7 +76,7 @@ const handleMapEvent = (event: { type: string, payload: any }) => {
   if (event.type === 'map-ready') {
   mapReady.value = true;
   }
-  
+
   // Handle pixie layer ready event
   if (event.type === 'pixie-layer-ready') {
   pixieLayerRef.value = event.payload.pixieLayer;

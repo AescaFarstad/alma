@@ -29,16 +29,16 @@ export function kOptOptimize(
   }
 ): OptimizationResult {
   console.log(`Starting k-opt optimization on ${initialPolygons.length} polygons...`);
-  
+
   let bestPolygons = [...initialPolygons];
   let bestScore = evaluatePolygonSet(bestPolygons);
   let totalIterations = 0;
   let bestSeed = options.initialSeed ?? Math.floor(Math.random() * 1000000);
-  
+
   // Try multiple random restarts
   for (let restart = 0; restart < options.randomRestarts; restart++) {
   console.log(`K-opt restart ${restart + 1}/${options.randomRestarts}`);
-  
+
   const currentSeed = (restart === 0 && options.initialSeed !== undefined) 
     ? options.initialSeed 
     : Math.floor(Math.random() * 1000000);
@@ -46,19 +46,19 @@ export function kOptOptimize(
   let currentPolygons = restart === 0 ? [...initialPolygons] : shufflePolygons([...initialPolygons], currentSeed);
   let currentScore = evaluatePolygonSet(currentPolygons);
   let iterationsWithoutImprovement = 0;
-  
+
   for (let iteration = 0; iteration < options.maxIterations; iteration++) {
     totalIterations++;
     const improved = performKOptStep(currentPolygons, options.kMax);
-    
+
     if (improved) {
     const newScore = evaluatePolygonSet(currentPolygons);
     const improvement = currentScore - newScore;
-    
+
     if (improvement > 0) {
       currentScore = newScore;
       iterationsWithoutImprovement = 0;
-      
+
       if (newScore < bestScore) {
       bestScore = newScore;
       bestPolygons = [...currentPolygons];
@@ -70,19 +70,19 @@ export function kOptOptimize(
     } else {
     iterationsWithoutImprovement++;
     }
-    
+
     // Early termination if no improvement
     if (iterationsWithoutImprovement > options.earlyStopMaxIterations) {
     break;
     }
   }
   }
-  
+
   const originalScore = evaluatePolygonSet(initialPolygons);
   const improvementPercent = originalScore > 0 ? ((originalScore - bestScore) / originalScore) * 100 : 0;
-  
+
   console.log(`K-opt optimization completed: ${initialPolygons.length} -> ${bestPolygons.length} polygons (${improvementPercent.toFixed(1)}% improvement)`);
-  
+
   return {
   polygons: bestPolygons,
   originalCount: initialPolygons.length,

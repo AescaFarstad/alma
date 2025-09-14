@@ -29,14 +29,14 @@ export abstract class BaseAgentSpritePool {
         throw new Error(`Failed to fetch base.json: ${response.status} ${response.statusText}`);
       }
       const atlasData = await response.json();
-      
+
       // Build sorted frame list and mapping
       this.frameNamesSorted = Object.keys(atlasData).sort((a,b)=> a.localeCompare(b));
       this.frameNameToId.clear();
       for (let i = 0; i < this.frameNamesSorted.length; i++) {
         this.frameNameToId.set(this.frameNamesSorted[i], i);
       }
-      
+
       const formattedData = {
         frames: {} as any,
         meta: { scale: AGENT_SCALE }
@@ -98,7 +98,7 @@ export abstract class BaseAgentSpritePool {
       }
     }
   }
-  
+
   protected removeAllAgentsFromContainers(container: PIXI.Container): void {
     for (const pool of this.pools.values()) {
       for (const element of pool) {

@@ -43,7 +43,7 @@ async function unionPolygons(polygons: Point2[][], scale: number): Promise<Point
       try {
         // Use clipToPolyTree which handles open paths - works in BOTH environments
         const polyTreeResult = clipperLibInstance.clipToPolyTree(clipParams);
-        
+
         if (polyTreeResult && polyTreeResult.polygons) {
           // Convert PolyTree result back to paths
           const paths: Point2[][] = [];
@@ -54,7 +54,7 @@ async function unionPolygons(polygons: Point2[][], scale: number): Promise<Point
           }
           return paths;
         }
-        
+
         return [];
       } catch (polyTreeError: any) {
         throw error; // Re-throw original error
@@ -81,18 +81,18 @@ export async function uniteGeometries(buildingsToUnite: BuildingWithPolygon[], i
   }
 
   const allPolygons: Point2[][] = [];
-  
+
   for (const building of buildingsToUnite) {
     if (!building.polygon) {
       continue;
     }
-    
+
     const inflated = await offsetPolygon(building.polygon, inflate, 1e7);
     if(inflated.length > 0) {
       allPolygons.push(...inflated);
     }
   }
-  
+
   if (allPolygons.length === 0) {
     return [];
   }
@@ -103,7 +103,7 @@ export async function uniteGeometries(buildingsToUnite: BuildingWithPolygon[], i
   } catch (unionError) {
     throw unionError;
   }
-  
+
   if (unitedPolygons.length === 0) {
     return [];
   }
@@ -131,18 +131,18 @@ export async function uniteGeometries(buildingsToUnite: BuildingWithPolygon[], i
       buildings: []
     };
     const scaledPolygon = toClipperPath(cleanedDeflated, 1e7);
-    
+
     for (const building of buildingsToUnite) {
       if (building.polygon && building.polygon.length > 0) {
         if (assignedBuildingIds.has(building.id)) continue;
-        
+
         if (isBuildingMostlyInsideBlob(building.polygon, scaledPolygon, clipper, 1e7)) {
           group.buildings.push(building.id);
           assignedBuildingIds.add(building.id);
         }
       }
     }
-    
+
     if(group.buildings.length > 0){
       result.push(group);
     }

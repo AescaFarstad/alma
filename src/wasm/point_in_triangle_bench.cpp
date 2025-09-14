@@ -99,7 +99,7 @@ void point_in_triangle_bench() {
     auto r1 = math::seededRandom(seed); 
     seed = r1.newSeed; 
     float rx = r1.value;
-    
+
     auto r2 = math::seededRandom(seed);
     seed = r2.newSeed;
     float ry = r2.value;
@@ -127,7 +127,7 @@ void point_in_triangle_bench() {
   // results.push_back(runNavmeshMethod("testPointInsideTriangleEE", test_point_inside_triangle_ee, NUM_POINTS, points, candidateArrays));
   results.push_back(runNavmeshMethod("testPointInsideTriangle", test_point_inside_triangle, NUM_POINTS, points, candidateArrays));
   // results.push_back(runNavmeshMethod("testPointInsideTriangleO", test_point_inside_triangle_o, NUM_POINTS, points, candidateArrays));
-  
+
   printf("\nPoint-in-triangle benchmark over %d points (precomputed candidates & coords)\n", NUM_POINTS);
   for (const auto& result : results) {
     printf("- %-30s: t=%.0f\t\tzero=%d\tmulti=%d\n", result.name.c_str(), result.durMs, result.zeroMatches, result.multiMatches);

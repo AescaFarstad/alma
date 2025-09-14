@@ -24,7 +24,7 @@ function generateStructure({ inputDir, outputFile }) {
   const COMMENT_VALUES_PER_ROW = 7;
 
   const fileSuffix = '.geojson';
-  
+
   let output = `// Generated from ${path.basename(inputDir)}\n\n`;
 
   try {
@@ -93,19 +93,19 @@ function generateStructure({ inputDir, outputFile }) {
       const structName = baseName
         .replace(/[-_](.)/g, (_, group1) => group1.toUpperCase())
         .replace(/^(.)/, (_, group1) => group1.toUpperCase()) + 'FeatureStructure';
-      
+
       allStructNames.push(structName);
 
       output += `export type ${structName} = {\n`;
       output += '  type: "Feature";\n';
-      
+
       if (hasIdField && !doesNotHaveIdField) {
         output += '  id: string;\n';
       }
       else if (hasIdField && doesNotHaveIdField) {
         output += '  id?: string;\n';
       }
-      
+
       output += '  geometry: {\n';
       const geomTypesString = Array.from(geometryTypes).map(t => `"${t}"`).join(' | ');
       output += `    type: ${geomTypesString || 'string'};\n`;
@@ -123,7 +123,7 @@ function generateStructure({ inputDir, outputFile }) {
         let typeString;
         let comment = '';
         let preComment = '';
-        
+
         const hasOnlyStrings = types.length === 1 && types[0] === 'string';
         const hasOnlyNumbers = types.length === 1 && types[0] === 'number';
 
@@ -135,7 +135,7 @@ function generateStructure({ inputDir, outputFile }) {
           } else if (uniqueValuesCount > MAX_ENUM_VALUES) {
             typeString = 'string';
             const sortedValues = Array.from(propInfo.valueCounts.entries()).sort(([, a], [, b]) => b - a);
-            
+
             let commentBlock = '/**\n';
             let row = [];
             for (const [value, count] of sortedValues) {
@@ -161,7 +161,7 @@ function generateStructure({ inputDir, outputFile }) {
         } else {
           typeString = types.map(t => (t === 'object' ? 'any' : t)).join(' | ');
         }
-        
+
         if (!typeString) {
           typeString = 'any';
         }

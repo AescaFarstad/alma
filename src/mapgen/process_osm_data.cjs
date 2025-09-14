@@ -46,14 +46,14 @@ class OSMProcessor {
     console.log('=== Initializing OSM Data Processor ===');
     console.log(`Area: ${this.config.areaToExtract} - ${this.selectedArea.description}`);
     console.log(`Features: ${Object.keys(this.featuresToExtract).join(', ')}`);
-    
+
     await this.ensureDir(this.outputDir);
     await this.ensureDir(this.tempDir);
-    
+
     console.log(`Source file: ${this.sourceFile}`);
     console.log(`Outputting to: ${this.outputDir}`);
   }
-  
+
   async ensureDir(dir) {
     try {
       await fs.mkdir(dir, { recursive: true });
@@ -61,7 +61,7 @@ class OSMProcessor {
       if (err.code !== 'EEXIST') throw err;
     }
   }
-  
+
   runCommand(cmd, description) {
     console.log(`\n> ${description}...`);
     if (process.env.DEBUG) {
@@ -69,52 +69,52 @@ class OSMProcessor {
     }
     execSync(cmd, { stdio: 'inherit' });
   }
-  
+
   async extractArea() {
     const bounds = this.selectedArea.bounds;
     const bbox = `${bounds[0]},${bounds[1]},${bounds[2]},${bounds[3]}`;
     this.extractedFile = path.join(this.tempDir, 'area_extract.pbf');
-    
+
     const cmd = `osmium extract -b ${bbox} "${this.sourceFile}" -o "${this.extractedFile}" --overwrite`;
     this.runCommand(cmd, 'Extracting area from source file');
-    
+
     const stats = await fs.stat(this.extractedFile);
     console.log(`  Extracted area size: ${(stats.size / 1024 / 1024).toFixed(1)} MB`);
   }
-  
+
   async filterData() {
     this.filteredFile = path.join(this.tempDir, 'features_filtered.pbf');
-    
+
     let cmd = `osmium tags-filter "${this.extractedFile}"`;
     for (const features of Object.values(this.featuresToExtract)) {
       cmd += ` ${features}`;
     }
     cmd += ` -o "${this.filteredFile}" --overwrite`;
-    
+
     this.runCommand(cmd, 'Filtering for specified features');
-    
+
     const originalStats = await fs.stat(this.extractedFile);
     const filteredStats = await fs.stat(this.filteredFile);
     const reduction = (1 - filteredStats.size / originalStats.size) * 100;
     console.log(`  Size reduction after filtering: ${reduction.toFixed(0)}%`);
   }
-  
+
   async convertToGeoJSON() {
     console.log('\n--- Converting to GeoJSON ---');
-    
+
     for (const [featureType, filter] of Object.entries(this.featuresToExtract)) {
       const tempFile = path.join(this.tempDir, `${featureType}_temp.pbf`);
       const outputFilename = this.outputFilenames[featureType];
       const outputFile = path.join(this.outputDir, outputFilename);
-      
+
       console.log(`\nProcessing ${featureType}:`);
       console.log(`  Filter: ${filter} -> Output: ${outputFilename}`);
-      
+
       const extractCmd = `osmium tags-filter "${this.filteredFile}" ${filter} -o "${tempFile}" --overwrite`;
       this.runCommand(extractCmd, `Extracting ${featureType}`);
-      
+
       const convertCmd = `osmium export "${tempFile}" -o "${outputFile}" --overwrite -f geojson --add-unique-id=type_id`;
-      
+
       try {
         this.runCommand(convertCmd, `Converting ${featureType} to GeoJSON`);
         const stats = await fs.stat(outputFile);
@@ -125,10 +125,10 @@ class OSMProcessor {
         await fs.writeFile(outputFile, JSON.stringify(emptyGeoJSON), 'utf8');
       }
     }
-    
+
     console.log('\nGeoJSON conversion complete!');
   }
-  
+
   generateStructure() {
     console.log('\n--- Generating Structure Definitions ---');
     try {
@@ -150,7 +150,7 @@ class OSMProcessor {
       console.error('  Error during cleanup:', err.message);
     }
   }
-  
+
   async run() {
     try {
       await this.init();
@@ -159,9 +159,9 @@ class OSMProcessor {
       await this.convertToGeoJSON();
       this.generateStructure();
       await this.cleanup();
-      
+
       console.log('\n=== OSM PROCESSING STEP COMPLETE ===');
-      
+
     } catch (error) {
       console.error('\nError during OSM processing:', error.message);
       process.exit(1);

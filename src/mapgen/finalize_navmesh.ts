@@ -26,7 +26,7 @@ export function finalizeNavmesh(
       newTriangleToPolygonMap.set(triIdx, polyId);
     }
   }
-  
+
   // Add impassable triangles
   for (const [triIndex, polygonIndex] of impassableT2P) {
     newTriangleToPolygonMap.set(triIndex, polygonIndex);
@@ -50,7 +50,7 @@ export function finalizeNavmesh(
   let currentTriangleIndex = navmeshData.walkable_triangle_count;
   for (let polyId = navmeshData.walkable_polygon_count; polyId < numPolygons; polyId++) {
     newPolyTris[polyId] = currentTriangleIndex;
-    
+
     if (impassablePolygonTriangles.has(polyId)) {
       const triangles = impassablePolygonTriangles.get(polyId)!;
       triangles.sort((a, b) => a - b); // Ensure triangles are in order
@@ -64,11 +64,11 @@ export function finalizeNavmesh(
   navmeshData.poly_tris = newPolyTris;
 
   const polyNeighborsData: number[] = [];
-  
+
   for (let polyId = 0; polyId < numPolygons; polyId++) {
     const vertStart = navmeshData.polygons[polyId];
     const vertEnd = navmeshData.polygons[polyId + 1];
-    
+
     for (let i = vertStart; i < vertEnd; i++) {
       const vertIndex1 = navmeshData.poly_verts[i];
       const vertIndex2 = navmeshData.poly_verts[i + 1 === vertEnd ? vertStart : i + 1];
@@ -89,10 +89,10 @@ export function finalizeNavmesh(
         for (const [e_v1, e_v2, edgeIndex] of triEdges) {
           if ((e_v1 === vertIndex1 && e_v2 === vertIndex2) || (e_v1 === vertIndex2 && e_v2 === vertIndex1)) {
             const neighborTriIndex = navmeshData.neighbors[triIdx * 3 + edgeIndex];
-            
+
             if (neighborTriIndex !== -1) {
               const neighborPolyId = newTriangleToPolygonMap.get(neighborTriIndex);
-              
+
               if (neighborPolyId !== undefined && neighborPolyId !== polyId) {
                 foundNeighbor = neighborPolyId;
                 break;
@@ -102,22 +102,22 @@ export function finalizeNavmesh(
         }
         if (foundNeighbor !== -1) break;
       }
-      
+
       polyNeighborsData.push(foundNeighbor);
     }
   }
-  
+
   polyNeighborsData.push(-1);
-  
+
   // Ensure we have the exact size needed for poly_neighbors
   if (navmeshData.poly_neighbors.length !== polyNeighborsData.length) {
     navmeshData.poly_neighbors = new Int32Array(polyNeighborsData.length);
   }
-  
+
   navmeshData.poly_neighbors.set(polyNeighborsData);
-  
+
   console.log(`Finalized navmesh: ${numTriangles} triangles sorted, ${polyNeighborsData.length - 1} polygon neighbor relationships computed`);
-  
+
   return triangleToPolygonMap;
 }
 
@@ -126,7 +126,7 @@ export function buildFinalTriangleToPolygonMap(
   impassableT2P: Map<number, number>
 ): Map<number, number> {
   console.log('Building final triangle-to-polygon mapping for optimized polygons...');
-  
+
   const finalMap = new Map<number, number>();
 
   for (let polyId = 0; polyId < navmeshData.walkable_polygon_count; polyId++) {
@@ -141,7 +141,7 @@ export function buildFinalTriangleToPolygonMap(
     // so we don't need to add walkablePolygonCount again
     finalMap.set(triIndex, polygonIndex);
   }
-  
+
   console.log(`Final mapping built: ${finalMap.size} triangles mapped to ${navmeshData.walkable_polygon_count} walkable + ${impassableT2P.size} impassable polygons`);
   return finalMap;
 }

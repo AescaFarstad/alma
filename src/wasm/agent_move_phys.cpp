@@ -31,14 +31,14 @@ void update_agent_phys(int idx, float deltaTime) {
   } else {
     directionToCorner = {0,0};
   }
-  
+
   Point2 desiredVelocity = directionToCorner;
   float desiredMagnitude = 0;
 
   if (agent_data.states[idx] == AgentState::Traveling || agent_data.states[idx] == AgentState::Escaping) {
     float maxSpeed = agent_data.max_speeds[idx];
     float intelligence = agent_data.intelligences[idx];
-    
+
     float slowDownStrength = 1.0f / 8.0f / resistance / resistance;
     slowDownStrength *= math::lerp(0.5f, 2.0f, intelligence);
     float slowBeforeCornerDst = maxSpeed * 0.25f;
@@ -47,10 +47,10 @@ void update_agent_phys(int idx, float deltaTime) {
     if (dstToCorner < slowBeforeCornerDst && agent_data.num_valid_corners[idx] >= 2) {
       Point2 corner1ToCorner2 = agent_data.next_corners2[idx] - agent_data.next_corners[idx];
       math::normalize_inplace(corner1ToCorner2);
-      
+
       Point2 normVelocity = agent_data.velocities[idx];
       math::normalize_inplace(normVelocity);
-      
+
       float turnAlignment = math::dot(normVelocity, corner1ToCorner2);
       turnAlignment = (turnAlignment + 1.0f) * 0.5f;
       turnAlignment = turnAlignment * turnAlignment * turnAlignment;
@@ -73,11 +73,11 @@ void update_agent_phys(int idx, float deltaTime) {
   desiredMagnitude /= frameRateAdjustedResistance;
   const float stuckFactor = agent_data.stuck_ratings[idx] / STUCK_DANGER_2;
   desiredMagnitude *= math::cvt(stuckFactor * stuckFactor, 0.0f, 1.0f, 1.0f, 0.5f);
-  
+
   desiredVelocity = directionToCorner * desiredMagnitude;
 
   Point2 velocityDiff = desiredVelocity - agent_data.velocities[idx];
-  
+
   float effectiveInt = math::length_sq(desiredVelocity) > 0.1f ? agent_data.intelligences[idx] : 1.0f;
 
   Point2 finalAccelDirection = directionToCorner;
@@ -101,7 +101,7 @@ void update_agent_phys(int idx, float deltaTime) {
   Point2 moveVector = agent_data.velocities[idx] * deltaTime;
   const float moveLnSq = math::length_sq(moveVector);
 
-  
+
 
   if (agent_data.states[idx] == AgentState::Escaping) {
     const float distanceToTargetSq = math::distance_sq(agent_data.next_corners[idx], agent_data.positions[idx]);
@@ -130,7 +130,7 @@ void update_agent_phys(int idx, float deltaTime) {
       } else {
         Point2 normVelocity = math::normalize(agent_data.velocities[idx]);
         Point2 endPointForRecast = endPoint + (normVelocity * 0.45f);
-        
+
         auto raycastResult = raycastPoint(agent_data.positions[idx], endPointForRecast, agent_data.current_tris[idx]);
 
         if (std::get<2>(raycastResult)) {
@@ -154,7 +154,7 @@ void update_agent_phys(int idx, float deltaTime) {
       }
     }
   }
-  
+
   int oldTri = agent_data.current_tris[idx];
   int newTri = is_point_in_navmesh(agent_data.positions[idx], agent_data.current_tris[idx]);
   if (oldTri != newTri && newTri != -1) {

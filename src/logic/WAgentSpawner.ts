@@ -46,7 +46,7 @@ export function updateWAgentSpawnersBench(spawners: WAgentSpawner[], dt: number,
         lastValidTri: tri,
         display: "character_black_blue",
       });
-      
+
       if (!wAgent) {
         console.warn("Failed to create WASM agent - no available slots");
         continue;
@@ -84,7 +84,7 @@ export function updateWAgentSpawners(spawners: WAgentSpawner[], dt: number, gs: 
         currentTri: tri,
         lastValidTri: tri
       });
-      
+
       if (!wAgent) {
         console.warn("Failed to create WASM agent - no available slots");
         continue;

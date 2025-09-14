@@ -46,14 +46,14 @@ export class DrawPrimitives {
       }
       graphics.stroke(style);
     }
-    
+
     const resolution = olMap.getView().getResolution()!;
     for (const [style, data] of primitives.textCommands.entries()) {
       for (let i = 0; i < data.length; i += 3) {
         const textContent = data[i] as string;
         const x = data[i + 1] as number;
         const y = data[i + 2] as number;
-        
+
         let text: PIXI.Text;
         if (this.textCache.length > 0) {
           text = this.textCache.pop()!;
@@ -65,16 +65,16 @@ export class DrawPrimitives {
             style: style.textStyle,
           });
         }
-        
+
         text.x = x;
         text.y = y;
         text.anchor.set(0.5);
         text.scale.set(resolution);
-        
+
         textContainer.addChild(text);
       }
     }
-    
+
     for (let i = 0; i < this.textCache.length; i++) {
       this.textCache[i].visible = false;
     }

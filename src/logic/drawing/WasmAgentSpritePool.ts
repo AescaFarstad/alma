@@ -23,7 +23,7 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
 
     // Check if agents should be rendered (for safety, though this should be handled upstream now)
     const shouldRender = this.enabled && globalEnabled && renderMode === 'sprite';
-    
+
     if (!shouldRender) {
       if (this.wasRenderingEnabled) {
         this.removeAllAgentsFromContainers(container);
@@ -63,11 +63,11 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
         this.createSprite(displayName, pool);
       }
       const element = pool[drawnCount];
-      
+
       if (!element) {
         continue;
       }
-      
+
       const { sprite } = element;
       sprite.x = agents.positions[i * 2];
       sprite.y = -agents.positions[i * 2 + 1];

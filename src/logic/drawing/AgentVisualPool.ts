@@ -21,7 +21,7 @@ interface AgentPixiElements {
   velocityDiffLine: PIXI.Graphics;
   desiredVelocityLine: PIXI.Graphics;
   debugText: PIXI.Text;
-  
+
   // Track if elements are currently added to containers
   triangleInContainer: boolean;
   pathLine1InContainer: boolean;
@@ -41,15 +41,15 @@ export class AgentVisualPool {
   private smartAgentPool: AgentPixiElements[] = [];
   private dumbAgentPool: AgentPixiElements[] = [];
   private escapingAgentPool: AgentPixiElements[] = [];
-  
+
   // Track how many agents are currently drawn from each pool
   private smartAgentsDrawn = 0;
   private dumbAgentsDrawn = 0;
   private escapingAgentsDrawn = 0;
-  
+
   // Track if agents were previously visible to handle one-time cleanup
   private wasRenderingEnabled = true;
-  
+
   // --- Drawing Toggles ---
   private readonly SHOW_PATH_LINES = false;
   private readonly SHOW_SPEED_LINE = false;
@@ -87,24 +87,24 @@ export class AgentVisualPool {
       // Skip all agent processing when disabled
       return;
     }
-    
+
     // Mark that rendering is now enabled
     this.wasRenderingEnabled = true;
-    
+
     // Reset counters
     this.smartAgentsDrawn = 0;
     this.dumbAgentsDrawn = 0;
     this.escapingAgentsDrawn = 0;
-    
+
     // Single pass: process each agent
     for (let i = 0; i < agents.length; i++) {
       const agent = agents[i];
       const style = this.determineAgentStyle(agent);
       const element = this.getAgentFromPool(style);
-      
+
       this.updateAgentVisuals(element, agent, i, graphicsContainer, textContainer, olMap);
     }
-    
+
     // Remove remaining agents from containers for each pool
     this.removeUnusedAgentsFromContainers(graphicsContainer, textContainer);
   }
@@ -122,7 +122,7 @@ export class AgentVisualPool {
   private getAgentFromPool(style: AgentStyle): AgentPixiElements {
     let pool: AgentPixiElements[];
     let drawnCount: number;
-    
+
     switch (style) {
       case 'smart':
         pool = this.smartAgentPool;
@@ -137,12 +137,12 @@ export class AgentVisualPool {
         drawnCount = this.escapingAgentsDrawn++;
         break;
     }
-    
+
     // Expand pool if needed
     if (drawnCount >= pool.length) {
       pool.push(this.createAgentPixiElements(style));
     }
-    
+
     return pool[drawnCount];
   }
 
@@ -191,7 +191,7 @@ export class AgentVisualPool {
 
   private createTriangleGraphics(style: AgentStyle): PIXI.Graphics {
     const graphics = new PIXI.Graphics();
-    
+
     // Choose color based on style
     let color: number;
     switch (style) {
@@ -199,18 +199,18 @@ export class AgentVisualPool {
       case 'dumb': color = this.dumbAgentColor; break;
       case 'escaping': color = this.escapingAgentColor; break;
     }
-    
+
     graphics.fill({ color, alpha: 0.8 });
-    
+
     // Create triangle pointing right (will be rotated as needed)
     // Triangle points: front tip, back-left, back-right
     const frontTip = { x: this.agentSize, y: 0 };
     const backLeft = { x: -this.agentSize * 0.5, y: -this.agentSize * 0.5 };
     const backRight = { x: -this.agentSize * 0.5, y: this.agentSize * 0.5 };
-    
+
     graphics.poly([frontTip.x, frontTip.y, backLeft.x, backLeft.y, backRight.x, backRight.y]);
     graphics.fill();
-    
+
     return graphics;
   }
 
@@ -232,11 +232,11 @@ export class AgentVisualPool {
   ): void {
     const pos = agent.coordinate;
     const look = agent.look;
-    
+
     // Update triangle position and rotation (no clearing/repainting)
     this.updateTriangleTransform(element, pos, look);
     this.ensureInContainer(element.triangle, graphicsContainer, 'triangleInContainer', element);
-    
+
     if (this.SHOW_DEBUG_LINES || agent.debug) {
       this.updateAccelLine(element, pos, agent);
       this.ensureInContainer(element.accelLine, graphicsContainer, 'accelLineInContainer', element);
@@ -263,7 +263,7 @@ export class AgentVisualPool {
     if ((this.SHOW_PATH_LINES || agent.debug) && agent.state === AgentState.Traveling) {
       this.updatePathLines(element, pos, agent); // This can repaint as requested
       this.updateTargetCirclePosition(element, agent); // Just move, don't repaint
-      
+
       this.ensureInContainer(element.pathLine1, graphicsContainer, 'pathLine1InContainer', element);
       this.ensureInContainer(element.pathLine2, graphicsContainer, 'pathLine2InContainer', element);
       this.ensureInContainer(element.targetCircle, graphicsContainer, 'targetCircleInContainer', element);
@@ -272,7 +272,7 @@ export class AgentVisualPool {
       this.ensureNotInContainer(element.pathLine2, graphicsContainer, 'pathLine2InContainer', element);
       this.ensureNotInContainer(element.targetCircle, graphicsContainer, 'targetCircleInContainer', element);
     }
-    
+
     // Update debug text with current speed
     if (this.SHOW_DEBUG_TEXT || agent.debug) {
       this.updateDebugText(element, pos, idx, agent, olMap);
@@ -284,11 +284,11 @@ export class AgentVisualPool {
 
   private updateTriangleTransform(element: AgentPixiElements, pos: { x: number, y: number }, look: { x: number, y: number }): void {
     const triangle = element.triangle;
-    
+
     // Update position
     triangle.x = pos.x;
     triangle.y = -pos.y;
-    
+
     // Update rotation to point in look direction
     // Fix: Account for flipped Y coordinate system
     triangle.rotation = Math.atan2(-look.y, look.x);
@@ -342,7 +342,7 @@ export class AgentVisualPool {
     line1.moveTo(pos.x, -pos.y);
     line1.lineTo(agent.nextCorner.x, -agent.nextCorner.y);
     line1.stroke();
-    
+
     // Path line 2: next corner to next corner 2 (can repaint)
     const line2 = element.pathLine2;
     line2.clear();
@@ -373,7 +373,7 @@ export class AgentVisualPool {
     text.text = `f ${agent.pathFrustration} s ${agent.stuckRating.toFixed(2)}`;
     text.x = pos.x;
     text.y = -pos.y + 8; // Offset above the agent
-    
+
     // Scale text inversely with map resolution to keep consistent size
     const resolution = olMap.getView().getResolution()!;
     // Use a small constant scale factor that's inversely proportional to resolution
@@ -422,7 +422,7 @@ export class AgentVisualPool {
       this.ensureNotInContainer(element.desiredVelocityLine, graphicsContainer, 'desiredVelocityLineInContainer', element);
       this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
     }
-    
+
     // Remove unused dumb agents
     for (let i = this.dumbAgentsDrawn; i < this.dumbAgentPool.length; i++) {
       const element = this.dumbAgentPool[i];
@@ -436,7 +436,7 @@ export class AgentVisualPool {
       this.ensureNotInContainer(element.desiredVelocityLine, graphicsContainer, 'desiredVelocityLineInContainer', element);
       this.ensureNotInContainer(element.debugText, textContainer, 'debugTextInContainer', element);
     }
-    
+
     // Remove unused escaping agents
     for (let i = this.escapingAgentsDrawn; i < this.escapingAgentPool.length; i++) {
       const element = this.escapingAgentPool[i];

@@ -18,7 +18,7 @@ export function logAgentEvent(agent: Agent, message: string): void {
   const timestamp = Date.now();
   const logEntry = `[${timestamp}] ${message}`;
   agent.debugLog.push(logEntry);
-  
+
   // Keep only the last 300 entries
   if (agent.debugLog.length > 300) {
     agent.debugLog = agent.debugLog.slice(-300);

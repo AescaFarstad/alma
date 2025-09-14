@@ -96,7 +96,7 @@ export class GameState { // This is a POD class. No functions allowed.
     //   {id:1, x:85.78881648274813, y:16.75091448166262, selected: true},
     //   {id:0, x:31.288327958551292, y:452.45371500383493, selected: true},
     // ]
-    
+
     // Initialize WAgent spawners
     this.lib = new Lib();
     this.invoker = new Invoker();

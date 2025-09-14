@@ -53,7 +53,7 @@ export class Agent {
   debug_desiredVelocity: Point2 = { x: 0, y: 0 };
   look: Point2 = { x: 1, y: 0 };
   isAlive:boolean = true;
-  
+
   // Parameters
   lookSpeed: number = 50;
   maxSpeed: number = 3;
@@ -68,7 +68,7 @@ export class Agent {
   minCorridorLength: number = Number.POSITIVE_INFINITY;
   lastEndTarget: Point2  = { x: 0, y: 0 };
   lastNextCornerTri: number = -1;
-  
+
   debugLog!: string[];
   pathLog: Point2[] = [];
   pathLogMaxLen = 200;

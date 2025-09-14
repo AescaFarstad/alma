@@ -20,14 +20,14 @@ bool findPathToDestination(
 ) {
   int startPoly = navmesh.triangle_to_polygon[startTri];
   int endPoly = navmesh.triangle_to_polygon[endTri];
-  
+
   bool pathFound = findCorridor(navmesh, PATH_FREE_WIDTH, PATH_WIDTH_PENALTY_MULT, agent_data.positions[idx], agent_data.end_targets[idx], agent_data.corridors[idx], startPoly, endPoly);
-  
+
   if (pathFound) {
     DualCorner reusableDualCorner = find_next_corner(agent_data.positions[idx], agent_data.corridors[idx], agent_data.end_targets[idx], CORNER_OFFSET);
-    
+
     if (reusableDualCorner.numValid > 0) {
-      
+
       agent_data.next_corners[idx] = reusableDualCorner.corner1;
       agent_data.next_corners2[idx] = reusableDualCorner.corner2;
       agent_data.next_corner_tris[idx] = reusableDualCorner.tri1;
@@ -37,11 +37,11 @@ bool findPathToDestination(
       agent_data.last_visible_points_for_next_corner[idx] = agent_data.positions[idx];
       return true;
     } else {
-      
+
       return false;
     }
   } else {
-    
+
     return false;
   }
 }
@@ -58,7 +58,7 @@ bool raycastAndPatchCorridor(
   const bool hit = (raycastResult.hitV1_idx != -1);
 
   if (!hit && !triCorridor.empty()) {
-    
+
     auto& agentCorridor = agent_data.corridors[idx];
     std::vector<int> raycastPolyCorridor;
     raycastPolyCorridor.reserve(agentCorridor.capacity());
@@ -79,7 +79,7 @@ bool raycastAndPatchCorridor(
     }
 
     if (targetPolyIndex != -1) {
-      
+
       std::vector<int> newCorridor;
       newCorridor.reserve(targetPolyIndex + 1 + raycastPolyCorridor.size());
       newCorridor.insert(newCorridor.end(), agentCorridor.begin(), agentCorridor.begin() + targetPolyIndex);
@@ -89,13 +89,13 @@ bool raycastAndPatchCorridor(
 
       return true;
     } else if (!raycastPolyCorridor.empty()) {
-      
+
       agent_data.corridors[idx] = raycastPolyCorridor;
       return true;
     }
   }
   else {
-    
+
     return attempt_path_patch(navmesh, idx, raycastResult.hitV1_idx, raycastResult.hitV2_idx, raycastResult.hitTri_idx, triCorridor);
   }
 

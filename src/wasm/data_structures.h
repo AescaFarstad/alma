@@ -79,7 +79,7 @@ struct AgentSoA {
   float* cooldown;
   float* morale;
   float* last_damage_stamp;
-  
+
   // Per-agent dynamic data (managed in C++)
   std::vector<int>* corridors;
 

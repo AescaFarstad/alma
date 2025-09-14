@@ -21,11 +21,11 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     wasm_console_error("[WASM] Memory start is null. Cannot initialize navmesh.");
     return 0;
   }
-  
+
   if (enableLogging) {
     printf("[WASM] Initializing navmesh from buffer. Binary size: %d, Total memory: %d bytes\n", binarySize, totalMemorySize);
   }
-  
+
   // Parse the binary data first to understand its layout
   uint8_t* navmeshBuffer = memoryStart;
   size_t offset = 0;
@@ -44,7 +44,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   // Read header with array lengths
   const int32_t* header = reinterpret_cast<int32_t*>(navmeshBuffer + offset);
   offset += 13 * sizeof(int32_t);
-  
+
   const int vertices_len = header[0];
   const int triangles_len = header[1];
   const int neighbors_len = header[2];
@@ -73,7 +73,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   g_navmesh.blob_buildings_count = blob_buildings_len;
 
   // Set up array pointers to navmesh buffer data
-  
+
   // 1. Core navmesh arrays
   g_navmesh.vertices = reinterpret_cast<Point2*>(navmeshBuffer + offset);
   offset += vertices_len * sizeof(float);
@@ -128,7 +128,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
 
   // Now we know exactly where the binary data ends (aligned start for auxiliary)
   size_t binaryDataEnd = alignTo(offset, SIMD_ALIGNMENT);
-  
+
   // Calculate auxiliary memory area
   uint8_t* auxiliaryMemory = memoryStart + binaryDataEnd;
   size_t auxiliaryMemorySize = totalMemorySize - binaryDataEnd;
@@ -150,7 +150,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   size_t poly_index_offsets_bytes = 0, poly_index_items_bytes = 0;
   size_t bld_index_offsets_bytes = 0, bld_index_items_bytes = 0;
   size_t blob_index_offsets_bytes = 0, blob_index_items_bytes = 0;
-  
+
   // Allocate triangle centroids
   g_navmesh.triangle_centroids_count = totalTriangles;
   if (totalTriangles > 0) {
@@ -159,20 +159,20 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
       g_navmesh.triangle_centroids = reinterpret_cast<Point2*>(auxiliaryMemory + auxOffset);
       auxOffset += centroidsSize;
       aux_triangle_centroids_bytes = centroidsSize;
-      
+
       // Compute triangle centroids
       for (int32_t i = 0; i < totalTriangles; ++i) {
         const int32_t v1_idx = g_navmesh.triangles[i * 3];
         const int32_t v2_idx = g_navmesh.triangles[i * 3 + 1];
         const int32_t v3_idx = g_navmesh.triangles[i * 3 + 2];
-        
+
         const float v1_x = g_navmesh.vertices[v1_idx].x;
         const float v1_y = g_navmesh.vertices[v1_idx].y;
         const float v2_x = g_navmesh.vertices[v2_idx].x;
         const float v2_y = g_navmesh.vertices[v2_idx].y;
         const float v3_x = g_navmesh.vertices[v3_idx].x;
         const float v3_y = g_navmesh.vertices[v3_idx].y;
-        
+
         g_navmesh.triangle_centroids[i].x = (v1_x + v2_x + v3_x) / 3.0f;
         g_navmesh.triangle_centroids[i].y = (v1_y + v2_y + v3_y) / 3.0f;
       }
@@ -184,7 +184,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   } else {
     g_navmesh.triangle_centroids = nullptr;
   }
-  
+
   // Allocate triangle_to_polygon mapping
   g_navmesh.triangle_to_polygon_count = totalTriangles;
   if (totalTriangles > 0) {
@@ -193,21 +193,21 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
       g_navmesh.triangle_to_polygon = reinterpret_cast<int32_t*>(auxiliaryMemory + auxOffset);
       auxOffset += mappingSize;
       aux_triangle_to_polygon_bytes = mappingSize;
-      
+
       // Compute triangle to polygon mapping
       const int32_t totalPolygons = polygons_len > 0 ? polygons_len - 1 : 0;
-      
+
       // Initialize all triangles to -1 (no polygon)
       for (int32_t i = 0; i < totalTriangles; ++i) {
         g_navmesh.triangle_to_polygon[i] = -1;
       }
-      
+
       // Map triangles to polygons using poly_tris ranges
       if (g_navmesh.poly_tris && totalPolygons > 0) {
         for (int32_t polyId = 0; polyId < totalPolygons; ++polyId) {
           const int32_t triStart = g_navmesh.poly_tris[polyId];
           const int32_t triEnd = g_navmesh.poly_tris[polyId + 1];
-          
+
           for (int32_t triIdx = triStart; triIdx < triEnd; ++triIdx) {
             if (triIdx < totalTriangles) {
               g_navmesh.triangle_to_polygon[triIdx] = polyId;
@@ -223,7 +223,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   } else {
     g_navmesh.triangle_to_polygon = nullptr;
   }
-  
+
   // Allocate building_to_blob mapping
   const int32_t totalBuildings = buildings_len > 0 ? buildings_len - 1 : 0;
   g_navmesh.building_to_blob_count = totalBuildings;
@@ -233,21 +233,21 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
       g_navmesh.building_to_blob = reinterpret_cast<int32_t*>(auxiliaryMemory + auxOffset);
       auxOffset += mappingSize;
       aux_building_to_blob_bytes = mappingSize;
-      
+
       // Compute building to blob mapping
       const int32_t totalBlobs = blob_buildings_len > 0 ? blob_buildings_len - 1 : 0;
-      
+
       // Initialize all buildings to -1 (no blob)
       for (int32_t i = 0; i < totalBuildings; ++i) {
         g_navmesh.building_to_blob[i] = -1;
       }
-      
+
       // Map buildings to blobs using blob_buildings ranges
       if (g_navmesh.blob_buildings && totalBlobs > 0) {
         for (int32_t blobId = 0; blobId < totalBlobs; ++blobId) {
           const int32_t buildingStart = g_navmesh.blob_buildings[blobId];
           const int32_t buildingEnd = g_navmesh.blob_buildings[blobId + 1];
-          
+
           for (int32_t buildingIdx = buildingStart; buildingIdx < buildingEnd; ++buildingIdx) {
             if (buildingIdx < totalBuildings) {
               g_navmesh.building_to_blob[buildingIdx] = blobId;
@@ -271,15 +271,15 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   const float spatialMinY = g_navmesh.buffered_bbox[1] - spatialIndexInflation;
   const float spatialMaxX = g_navmesh.buffered_bbox[2] + spatialIndexInflation;
   const float spatialMaxY = g_navmesh.buffered_bbox[3] + spatialIndexInflation;
-  
+
   const float width = spatialMaxX - spatialMinX;
   const float height = spatialMaxY - spatialMinY;
   // cellSize parameter passed from TypeScript
-  
+
   const int gridWidth = static_cast<int>(std::ceil(width / cellSize));
   const int gridHeight = static_cast<int>(std::ceil(height / cellSize));
   const int totalCells = gridWidth * gridHeight;
-  
+
   g_navmesh.triangle_index.gridWidth = gridWidth;
   g_navmesh.triangle_index.gridHeight = gridHeight;
   g_navmesh.triangle_index.cellSize = cellSize;
@@ -287,22 +287,22 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
   g_navmesh.triangle_index.minY = spatialMinY;
   g_navmesh.triangle_index.maxX = spatialMaxX;
   g_navmesh.triangle_index.maxY = spatialMaxY;
-  
+
   // Allocate spatial index arrays from auxiliary memory
   size_t cellOffsetsSize = alignTo((totalCells + 1) * sizeof(uint32_t), SIMD_ALIGNMENT);
-  
+
   // Triangle spatial index
   if (auxOffset + cellOffsetsSize <= auxiliaryMemorySize) {
     g_navmesh.triangle_index.cellOffsetsCount = totalCells + 1;
     g_navmesh.triangle_index.cellOffsets = reinterpret_cast<uint32_t*>(auxiliaryMemory + auxOffset);
     auxOffset += cellOffsetsSize;
     tri_index_offsets_bytes = cellOffsetsSize;
-    
+
     // Initialize to empty (all zeros)
     std::memset(g_navmesh.triangle_index.cellOffsets, 0, (totalCells + 1) * sizeof(uint32_t));
     g_navmesh.triangle_index.cellItemsCount = 0;
     g_navmesh.triangle_index.cellItems = nullptr;
-    
+
     if (enableLogging) {
       printf("[WASM INIT] Triangle index allocated: cells=%d, offsetsBytes=%zu\n", totalCells, tri_index_offsets_bytes);
     }
@@ -316,12 +316,12 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
       printf("[WASM INIT] ERROR: Not enough auxiliary memory for triangle spatial index\n");
     }
   }
-  
+
   // Copy grid parameters to other indices and allocate their cellOffsets
   g_navmesh.polygon_index = g_navmesh.triangle_index;
   g_navmesh.building_index = g_navmesh.triangle_index;
   g_navmesh.blob_index = g_navmesh.triangle_index;
-  
+
   // Polygon spatial index
   if (auxOffset + cellOffsetsSize <= auxiliaryMemorySize) {
     g_navmesh.polygon_index.cellOffsets = reinterpret_cast<uint32_t*>(auxiliaryMemory + auxOffset);
@@ -334,7 +334,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     poly_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.polygon_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
     if (enableLogging) { PRINT_ALLOC("polygon_index", poly_index_offsets_bytes); }
   }
-  
+
   // Building spatial index
   if (auxOffset + cellOffsetsSize <= auxiliaryMemorySize) {
     g_navmesh.building_index.cellOffsets = reinterpret_cast<uint32_t*>(auxiliaryMemory + auxOffset);
@@ -347,7 +347,7 @@ uint32_t init_navmesh_from_buffer(uint8_t* memoryStart, uint32_t binarySize, uin
     bld_index_items_bytes = alignTo(static_cast<size_t>(g_navmesh.building_index.cellItemsCount) * sizeof(int32_t), SIMD_ALIGNMENT);
     if (enableLogging) { PRINT_ALLOC("building_index", bld_index_offsets_bytes); }
   }
-  
+
   // Blob spatial index
   if (auxOffset + cellOffsetsSize <= auxiliaryMemorySize) {
     g_navmesh.blob_index.cellOffsets = reinterpret_cast<uint32_t*>(auxiliaryMemory + auxOffset);

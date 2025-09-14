@@ -15,14 +15,14 @@ function calculateCorridorLength(navmesh: any, corridor: number[], startPoint: a
   }
 
   let totalLength = 0;
-  
+
   // Distance from start to first polygon centroid
   const firstCentroidX = navmesh.poly_centroids[corridor[0] * 2];
   const firstCentroidY = navmesh.poly_centroids[corridor[0] * 2 + 1];
   let dx = firstCentroidX - startPoint.x;
   let dy = firstCentroidY - startPoint.y;
   totalLength += Math.sqrt(dx * dx + dy * dy);
-  
+
   // Distance between polygon centroids
   for (let i = 0; i < corridor.length - 1; i++) {
     const curr = corridor[i];
@@ -35,20 +35,20 @@ function calculateCorridorLength(navmesh: any, corridor: number[], startPoint: a
     dy = nextY - currY;
     totalLength += Math.sqrt(dx * dx + dy * dy);
   }
-  
+
   // Distance from last polygon centroid to end
   const lastCentroidX = navmesh.poly_centroids[corridor[corridor.length - 1] * 2];
   const lastCentroidY = navmesh.poly_centroids[corridor[corridor.length - 1] * 2 + 1];
   dx = endPoint.x - lastCentroidX;
   dy = endPoint.y - lastCentroidY;
   totalLength += Math.sqrt(dx * dx + dy * dy);
-  
+
   return totalLength;
 }
 
 function calculatePathLength(corners: any[]): number {
   if (corners.length < 2) return 0;
-  
+
   let totalLength = 0;
   for (let i = 0; i < corners.length - 1; i++) {
     const dx = corners[i + 1].x - corners[i].x;
@@ -178,10 +178,10 @@ export function usePathfinding(
       const dy = wasmCornerPoints[k + 1].y - wasmCornerPoints[k].y;
       wasmPathLength += Math.sqrt(dx * dx + dy * dy);
       }
-      
+
       // Calculate WASM corridor length
       const wasmCorridorLength = calculateCorridorLength(navmesh, wasmResult.corridor, startPoint, endPoint);
-      
+
       console.log(`[WA] testFindCorridor: Corridor length: ${wasmCorridorLength.toFixed(2)}, Path length: ${wasmPathLength.toFixed(2)}`);
       pathLengths.push(Math.round(wasmPathLength));
       const wasmTriangleCorridor: number[] = [];

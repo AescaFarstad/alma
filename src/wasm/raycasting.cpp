@@ -142,7 +142,7 @@ static std::vector<int> traceStraightCorridor(const Point2& startPoint, const Po
         }
       }
     }
-    
+
     if (exitEdgeIdx != -1) {
       nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
       if (nextTriIdx >= g_navmesh.walkable_triangle_count) {
@@ -175,7 +175,7 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
 
     std::array<Point2, 3> triPoints;
     getTrianglePoints(currentTriIdx, triPoints);
-    
+
     if (endTriIdx == -1 && math::isPointInTriangle(endPoint, triPoints[0], triPoints[1], triPoints[2])) {
       return currentTriIdx;
     }
@@ -209,7 +209,7 @@ static int traceStraightCorridorHitOnly(const Point2& startPoint, const Point2& 
         }
       }
     }
-    
+
     if (exitEdgeIdx != -1) {
       nextTriIdx = g_navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
       // Only treat neighbors >= walkable_triangle_count as walls; -1 is not expected.

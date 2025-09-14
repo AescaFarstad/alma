@@ -17,7 +17,7 @@ type SplitLine = Point2[];
 
 function calculatePolygonArea(points: Point2[]): number {
   if (!points || points.length < 3) return 0;
-  
+
   let area = 0;
   for (let i = 0; i < points.length - 1; i++) {
     area += points[i].x * points[i + 1].y - points[i + 1].x * points[i].y;
@@ -79,7 +79,7 @@ function getSideOfLine(point: Point2, line: SplitLine, rayDir: Point2): number {
       intersections++;
     }
   }
-  
+
   const firstSeg = line[0];
   const firstSegDir = subtract(line[1], firstSeg);
   normalize_(firstSegDir);
@@ -112,7 +112,7 @@ export async function createBlobs(
     if (!points) {
       throw new Error(`Cannot extract points from building ${b.id} for blob generation`);
     }
-    
+
     points = unround(points, 10, 0.45);
     points = flatten(points, 3);
 
@@ -121,9 +121,9 @@ export async function createBlobs(
       polygon: points
     };
   });
-  
+
   let allPoints = buildingsForUnite.flatMap(g => g.polygon);
-  
+
   let unitedBlobs: UnitedGroup[] = [];
   const startedAt = Date.now();
 
@@ -145,7 +145,7 @@ export async function createBlobs(
         partitions[partitionIndex].push(building);
       }
     }
-    
+
     console.log('Partition sizes:', partitions.map(p => p.length));
 
     visualizeBlobs(
@@ -243,9 +243,9 @@ export async function createBlobs(
     const coordsStr = formatCoordsRounded(simplified, 2);
     blobOutput += `${index};[${blobBuildings}];[${coordsStr}]\n`;
   }
-  
+
   console.log(`Blobs: Skipped ${blobsSkippedCount} blobs with < 3 vertices and area < ${safeToSkipArea}.`);
-  
+
   fs.writeFileSync(path.join(outputDir, 'blobs.txt'), blobOutput);
   console.log(`Blob vertices: ${totalBlobVertices}, saved to blobs.txt`);
 }

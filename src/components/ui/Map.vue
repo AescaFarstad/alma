@@ -39,14 +39,14 @@ onMounted(async () => {
   props.layerVisibility
   );
   mapInstance.map = map;
-  
+
   const { init } = useMapInteractions(mapInstance.map, gameState, sceneState, pixieLayer, emit);
 
   if (gameState && sceneState && dynamicScene) {
   const newPixieLayer = new PixiLayer(mapInstance.map, gameState, sceneState, dynamicScene);
   await newPixieLayer.init();
   pixieLayer.value = newPixieLayer;
-  
+
   // Emit the pixieLayer reference to App.vue
   emit('map-event', { type: 'pixie-layer-ready', payload: { pixieLayer: newPixieLayer } });
   }

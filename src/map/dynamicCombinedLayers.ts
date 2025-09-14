@@ -27,7 +27,7 @@ export function createDynamicCombinedLayers(projection: Projection, layerVisibil
   const geojsonFormat = new GeoJSON({
     featureProjection: projection
   });
-  
+
   const buildingFeatures = geojsonFormat.readFeatures(buildings);
 
   buildingFeatures.forEach(f => {
@@ -72,7 +72,7 @@ export function createDynamicCombinedLayers(projection: Projection, layerVisibil
     source: combinedTileSource,
     style: (feature, resolution): Style | Style[] | void => {
       const featureType = feature.get('type');
-      
+
       if (featureType === 'building') {
         if (!layerVisibility.buildings) return;
         return getBuildingStyle(feature, resolution);

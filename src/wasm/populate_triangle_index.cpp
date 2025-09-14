@@ -18,7 +18,7 @@ void populate_triangle_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxil
     const int32_t v1_idx = navmesh.triangles[i * 3];
     const int32_t v2_idx = navmesh.triangles[i * 3 + 1];
     const int32_t v3_idx = navmesh.triangles[i * 3 + 2];
-    
+
     std::vector<Point2> triPoints = {
       navmesh.vertices[v1_idx],
       navmesh.vertices[v2_idx],
@@ -43,7 +43,7 @@ void populate_triangle_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxil
       for (int cy = startY; cy <= endY; ++cy) {
         Point2 cellMin = {index.minX + cx * index.cellSize, index.minY + cy * index.cellSize};
         Point2 cellMax = {index.minX + (cx + 1) * index.cellSize, index.minY + (cy + 1) * index.cellSize};
-        
+
         if (math::triangleAABBIntersectionWithBounds(triPoints, {triMinX, triMinY}, {triMaxX, triMaxY}, cellMin, cellMax)) {
           int cellIndex = cy * index.gridWidth + cx;
           if (cellIndex < totalCells) {
@@ -60,7 +60,7 @@ void populate_triangle_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxil
     wasm_console_error("[WASM] Not enough auxiliary memory to populate triangle index items");
     return;
   }
-  
+
   index.cellItems = reinterpret_cast<int32_t*>(auxiliaryMemory + auxOffset);
   index.cellItemsCount = totalItems;
   auxOffset += itemsSize;

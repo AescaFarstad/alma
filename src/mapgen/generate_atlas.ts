@@ -18,7 +18,7 @@ async function getImagesInFolder(folderPath: string, folderName: string): Promis
     const buffer = await fs.readFile(fullPath);
     const metadata = await sharp(buffer).metadata();
     const id = `${path.parse(imagePath).name}`;
-    
+
     return {
       id,
       width: metadata.width!,

@@ -81,7 +81,7 @@ function findOptimalSimplificationPoint(A: Point2, B: Point2, C: Point2, D: Poin
   }
   const R_t = (t_left + t_right) / 2;
   const R = { x: B.x + R_t * (C.x - B.x), y: B.y + R_t * (C.y - B.y) };
-  
+
   // Ternary search for M on YR to minimize the Hausdorff error.
   let s_left = 0, s_right = 1;
   let bestM: Point2 = Y;
@@ -90,13 +90,13 @@ function findOptimalSimplificationPoint(A: Point2, B: Point2, C: Point2, D: Poin
   for (let i = 0; i < 30; i++) {
     const s1 = s_left + (s_right - s_left) / 3;
     const s2 = s_right - (s_right - s_left) / 3;
-    
+
     const M1 = { x: (1 - s1) * Y.x + s1 * R.x, y: (1 - s1) * Y.y + s1 * R.y };
     const error1 = Math.max(distancePointToSegment(M1, B, C), distancePointToSegment(B, A, M1), distancePointToSegment(C, D, M1));
-    
+
     const M2 = { x: (1 - s2) * Y.x + s2 * R.x, y: (1 - s2) * Y.y + s2 * R.y };
     const error2 = Math.max(distancePointToSegment(M2, B, C), distancePointToSegment(B, A, M2), distancePointToSegment(C, D, M2));
-    
+
     if (error1 < error2) {
       s_right = s2;
       if (error1 < min_error) {
@@ -111,7 +111,7 @@ function findOptimalSimplificationPoint(A: Point2, B: Point2, C: Point2, D: Poin
       }
     }
   }
-  
+
   return {
   M: bestM,
   h: min_error,
@@ -144,7 +144,7 @@ export function unround(
     const B = currentPoints[i % len];
     const C = currentPoints[(i + 1) % len];
     const D = currentPoints[(i + 2) % len];
-    
+
     if (!A || !B || !C || !D) {
       i++;
       continue;
@@ -195,7 +195,7 @@ export function unround(
           i++;
           continue;
         }
-        
+
         const b_idx = i % len;
         const c_idx = (i + 1) % len;
 
@@ -205,7 +205,7 @@ export function unround(
           currentPoints.pop();
           currentPoints.splice(0, 1, result.M);
         }
-        
+
         i++;
         continue;
       }

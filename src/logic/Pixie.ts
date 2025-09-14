@@ -76,7 +76,7 @@ export class PixiLayer {
       style.pointerEvents = 'none';
       style.zIndex = '1';
     }
-    
+
     mapElement.appendChild(this.app.canvas as unknown as Node);
 
     this.staticGraphics = new PIXI.Graphics();
@@ -84,7 +84,7 @@ export class PixiLayer {
 
     this.dynamicGraphics = new PIXI.Graphics();
     this.app.stage.addChild(this.dynamicGraphics);
-    
+
     this.textContainer = new PIXI.Container();
     this.app.stage.addChild(this.textContainer);
 
@@ -104,7 +104,7 @@ export class PixiLayer {
     view.on('change:center', this.boundSync);
     view.on('change:resolution', this.boundSync);
     view.on('change:rotation', this.boundSync);
-    
+
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(mapElement);
 
@@ -119,7 +119,7 @@ export class PixiLayer {
 
   private buildDynamicScene() {
     DrawDynamicScene.buildDynamicPrimitives(this.dynamicPrimitives, this.dynamicScene, this.gameState, this.olMap);
-    
+
     this.agentRenderer.syncWithAgents(
       this.gameState.agents, 
       this.agentGraphicsContainer, 
@@ -129,7 +129,7 @@ export class PixiLayer {
 
     // Pixi WASM-sprite rendering (always on when sprite mode is active)
     const renderMode = this.agentRenderer.getRenderingMode();
-    
+
     if (this.wAgentsEnabled && renderMode === 'sprite') {
       this.agentRenderer.wasmSpritePool.syncWithWasmData(
         this.gameState.wasm_agents,

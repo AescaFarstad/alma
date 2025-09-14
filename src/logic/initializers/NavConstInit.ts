@@ -8,7 +8,7 @@ export function calculateConstMemory(): number {
 export function initializeConst(wasm: WasmFacade, buffer: ArrayBuffer, offset: number): number {
   const i32 = new Int32Array(buffer, offset);
   const f32 = new Float32Array(buffer, offset);
-  
+
   let i = 0;
   f32[i++] = NavConst.STUCK_PASSIVE_X1;
   f32[i++] = NavConst.STUCK_DST_X2;
@@ -43,7 +43,7 @@ export function initializeConst(wasm: WasmFacade, buffer: ArrayBuffer, offset: n
   // console.log("------------------------------------");
 
   const bytesWritten = i * 4;
-  
+
   wasm._set_constants_buffer(offset, false);
 
   return bytesWritten;

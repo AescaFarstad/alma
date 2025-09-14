@@ -92,7 +92,7 @@ export class DrawScene {
         ? selectedPointMarkStyle
         : pointMarkStyle;
       primitives.addCircle(pointMark.x, -pointMark.y, dynamicRadius * 1.5, style);
-      
+
       // Add index text next to the marker (1-based for user friendliness)
       const indexText = (i + 1).toString();
       const textOffset = dynamicRadius * 2; // Offset the text to the right of the marker
@@ -108,14 +108,14 @@ export class DrawScene {
 
       const { start, end } = sceneState.measurementLine;
       primitives.addLine([start.lng, -start.lat, end.lng, -end.lat], measurementLineStyle);
-    
+
       const dx = end.lng - start.lng;
       const dy = end.lat - start.lat;
       const distance = Math.sqrt(dx * dx + dy * dy);
-    
+
       const midX = (start.lng + end.lng) / 2;
       const midY = (-start.lat - end.lat) / 2;
-    
+
       primitives.addText(distance.toFixed(1) + 'm', midX, midY, vertexTextStyle);
     }
 
@@ -229,7 +229,7 @@ export class DrawScene {
     for (const color of debugTextColors) {
       const texts = sceneState.debugTexts[color];
       if (texts.length === 0) continue;
-      
+
       for (const debugText of texts) {
         primitives.addText(debugText.text, debugText.position.x, -debugText.position.y, vertexTextStyle);
       }
@@ -245,7 +245,7 @@ export class DrawScene {
         for (const debugTriangle of triangles) {
           const triIdx = debugTriangle.index;
           const navmesh = gameState.navmesh;
-          
+
           const p1Index = navmesh.triangles[triIdx * 3];
           const p2Index = navmesh.triangles[triIdx * 3 + 1];
           const p3Index = navmesh.triangles[triIdx * 3 + 2];
@@ -271,7 +271,7 @@ export class DrawScene {
     const corridors = sceneState.getAllCorridors();
     if (corridors.length > 0) {
       const blueStyle = debugTransparentStyles['blue'];
-      
+
       if (blueStyle) {
         for (const corridor of corridors) {
           // Get the navmesh from gameState to render triangle geometry
@@ -298,7 +298,7 @@ export class DrawScene {
     const paths = sceneState.getAllPaths();
     if (paths.length > 0) {
       const indigoLineStyle = debugStrokeStyles['indigo'];
-      
+
       if (indigoLineStyle) {
         const dynamicIndigoStyle = { ...indigoLineStyle, width: dynamicWidth };
         for (const path of paths) {
@@ -309,7 +309,7 @@ export class DrawScene {
               const end = path.corners[i + 1];
               primitives.addLine([start.x, -start.y, end.x, -end.y], dynamicIndigoStyle);
             }
-            
+
             // Add text with total path length at the center of the first leg
             if (path.corners.length >= 2) {
               const firstStart = path.corners[0];

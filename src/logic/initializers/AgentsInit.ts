@@ -261,9 +261,9 @@ export function initializeAgents(
   currentOffset += EVENT_BUFFER_WORDS * 4;
 
   const bytesWritten = currentOffset - offset;
-  
+
      wasmModule._init_agents(offset, MAX_AGENTS, gs.rngSeed, eventsOffset, EVENT_BUFFER_WORDS);
-  
+
   // Initialize JS-side free-list of SoA indices: [MAX_AGENTS-1, ..., 1, 0]
   agents.free_list = new Int32Array(MAX_AGENTS);
   for (let i = 0; i < MAX_AGENTS; i++) {

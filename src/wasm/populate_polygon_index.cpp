@@ -23,7 +23,7 @@ void populate_polygon_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxili
   for (int32_t i = 0; i < totalPolygons; ++i) {
     const int32_t vertStart = navmesh.polygons[i];
     const int32_t vertEnd = navmesh.polygons[i + 1];
-    
+
     std::vector<Point2> polyPoints;
     polyPoints.reserve(vertEnd - vertStart);
 
@@ -71,7 +71,7 @@ void populate_polygon_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxili
     wasm_console_error("[WASM] Not enough auxiliary memory to populate polygon index items");
     return;
   }
-  
+
   index.cellItems = reinterpret_cast<int32_t*>(auxiliaryMemory + auxOffset);
   index.cellItemsCount = totalItems;
   auxOffset += itemsSize;

@@ -164,10 +164,10 @@ const debugPoint = () => {
   }
   }
   const isPolyWalkable = (pIndex: number): boolean => pIndex < navmesh.walkable_polygon_count;
-  
+
   const polyTriStart = navmesh.poly_tris[polyIndex];
   const polyTriEnd = navmesh.poly_tris[polyIndex + 1];
-  
+
   const polyTriangleIndexes = [];
   for (let i = polyTriStart; i < polyTriEnd; i++) {
   polyTriangleIndexes.push(i);
@@ -179,7 +179,7 @@ const debugPoint = () => {
 
   // 4. drawing the polygon in transparent blue and all neighbour polygons in transparent yellow
   drawPolygon(polyIndex, ACBLUE);
-  
+
   const polyVertStart = navmesh.polygons[polyIndex];
   const polyVertEnd = navmesh.polygons[polyIndex + 1];
   const neighborPolys = new Set<number>();
@@ -265,7 +265,7 @@ const logTriangle = () => {
   const p1 = { x: navmesh.vertices[p1Index * 2], y: navmesh.vertices[p1Index * 2 + 1] };
   const p2 = { x: navmesh.vertices[p2Index * 2], y: navmesh.vertices[p2Index * 2 + 1] };
   const p3 = { x: navmesh.vertices[p3Index * 2], y: navmesh.vertices[p3Index * 2 + 1] };
-  
+
   const neighbors = [
   navmesh.neighbors[triIndex * 3],
   navmesh.neighbors[triIndex * 3 + 1],
@@ -281,7 +281,7 @@ const drawTriangle = (triIndexToDraw?: number, color = ACGREEN, withLabels = tru
   if (isNaN(triIndex) || !gameState?.navmesh || !sceneState) {
   return;
   }
-  
+
   const navmesh = gameState.navmesh;
   const triVertexStartIndex = triIndex * 3;
   const p1Index = navmesh.triangles[triVertexStartIndex];

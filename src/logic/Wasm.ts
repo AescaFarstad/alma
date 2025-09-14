@@ -16,14 +16,14 @@ export class Wasm {
     try {
       const maxLength = 1000;
       const resultPtr = WasmFacade._wasm_alloc(maxLength * 4); // 4 bytes per int32
-      
+
       const corridorLength = WasmFacade._test_find_corridor(
         startPoint.x, startPoint.y, 
         endPoint.x, endPoint.y, 
         pathFreeWidth, pathWidthPenaltyMult,
         resultPtr, maxLength
       );
-      
+
       if (corridorLength <= 0) {
         WasmFacade._wasm_free(resultPtr);
         return null;
@@ -33,19 +33,19 @@ export class Wasm {
       const corridor: number[] = [];
       const heap32 = WasmFacade.HEAP32;
       const base = resultPtr >>> 2; // Convert to int32 index
-      
+
       for (let i = 0; i < corridorLength; i++) {
         corridor.push(heap32[base + i]);
       }
 
       WasmFacade._wasm_free(resultPtr);
-      
+
       return {
         corridor,
         iterations: -1, // WASM doesn't currently expose iteration count
         length: 0 // Would need to calculate based on corridor
       };
-      
+
     } catch (error) {
       console.error("Error calling WASM test_find_corridor:", error);
       return null;

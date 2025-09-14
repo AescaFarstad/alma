@@ -15,20 +15,20 @@ export interface WasmFacade {
   _set_rng_seed?: (seed: number) => void;
   _set_constants_buffer: (ptr: number, debug : boolean) => void;
   _set_selected_wagent_idx?: (idx: number) => void;
-  
+
   // Navmesh data access functions
   _get_g_navmesh_ptr?: () => number;
   _get_navmesh_bbox_ptr?: () => number;
   _get_spatial_index_data?: () => number;
   _wasm_impulse: (code: number) => void;
-  
+
   // Pathfinding test function
   _test_find_corridor?: (startX: number, startY: number, endX: number, endY: number, pathFreeWidth: number, pathWidthPenaltyMult: number, resultPtr: number, maxLength: number) => number;
   _get_agent_corridor?: (agentIdx: number, resultPtr: number, maxLength: number) => number;
-  
+
   ccall: (fname: string, returnType: string | null, argTypes: string[], args: any[]) => any;
   cwrap: (fname: string, returnType: string | null, argTypes: string[]) => Function;
-  
+
   HEAPU8: Uint8Array;
   HEAP32: Int32Array;
   HEAPU32: Uint32Array;

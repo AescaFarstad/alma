@@ -43,10 +43,10 @@ export function findPathToDestination(
       agent.nextCorner2Tri = reusableDualCorner.tri2;
       agent.numValidCorners = reusableDualCorner.numValid;
       agent.pathFrustration = 0;
-      
+
       agent.lastVisiblePointForNextCorner.x = agent.coordinate.x;
       agent.lastVisiblePointForNextCorner.y = agent.coordinate.y;
-      
+
       return true;
     } else {
       console.error(`Pathfinding failed to find a corner ${errorContext}.`, { agent });
@@ -77,11 +77,11 @@ export function raycastAndPatchCorridor(
   targetTri: number
 ): boolean {
   const raycastResult = raycastCorridor(navmesh, agent.coordinate, targetPoint, agent.currentTri, targetTri);
-  
+
   if (raycastResult.hitV1_idx === -1 && raycastResult.corridor) {
     agent.lastVisiblePointForNextCorner.x = agent.coordinate.x;
     agent.lastVisiblePointForNextCorner.y = agent.coordinate.y;
-    
+
     // Convert triangle corridor from raycast to a polygon corridor
     const raycastPolyCorridor: number[] = [];
     if (raycastResult.corridor.length > 0) {
@@ -92,7 +92,7 @@ export function raycastAndPatchCorridor(
         }
       }
     }
-    
+
     // Find where the target polygon appears in the current corridor
     const targetPoly = navmesh.triangle_to_polygon[targetTri];
     let targetPolyIndex = -1;
@@ -102,7 +102,7 @@ export function raycastAndPatchCorridor(
         break;
       }
     }
-    
+
     if (targetPolyIndex !== -1) {
       agent.corridor = [
         ...agent.corridor.slice(0, targetPolyIndex),
@@ -117,7 +117,7 @@ export function raycastAndPatchCorridor(
   } else {
     return attemptPathPatchInternal(navmesh, agent, raycastResult);
   }
-  
+
   return false;
 }
 
@@ -126,7 +126,7 @@ export function raycastAndPatchCorridor(
 // Helper function to calculate path length from corners
 function calculatePathLength(corners: Point2[]): number {
   if (corners.length < 2) return 0;
-  
+
   let totalLength = 0;
   for (let i = 0; i < corners.length - 1; i++) {
     totalLength += distance(corners[i], corners[i + 1]);
@@ -137,10 +137,10 @@ function calculatePathLength(corners: Point2[]): number {
 // Helper function to draw a path with a specific color
 function drawPath(corners: Point2[], color: string, label: string): void {
   if (corners.length === 0) return;
-  
+
   // Draw first point
   sceneState.addDebugPoint(corners[0], color);
-  
+
   // Draw lines between corners
   for (let i = 1; i < corners.length; i++) {
     sceneState.addDebugLine(corners[i - 1], corners[i], color);
@@ -174,10 +174,10 @@ export function debugPath(
     const corners = findCorners(navmesh, corridor, startPoint, endPoint);
     const cornerPoints = corners.map(c => c.point);
     const pathLength = calculatePathLength(cornerPoints);
-    
+
     // Draw the path
     drawPath(cornerPoints, color, label);
-    
+
     return {
       corners: corners.length,
       length: pathLength,

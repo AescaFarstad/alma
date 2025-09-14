@@ -57,7 +57,7 @@ export function findPath(
     console.error(`findCorridor3: FAILED - invalid polygons`);
     return null;
   }
-  
+
   if (startPoly === endPoly) {
     if (startPoly >= navmesh.walkable_polygon_count) return null;
     return [startPoly];

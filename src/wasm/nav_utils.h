@@ -84,7 +84,7 @@ inline bool test_point_inside_triangle(const Point2& p, int tri_idx) {
   const float o31 = v3_idx > v1_idx
     ? -((v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x))
     : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-    
+
   return o31 >= 0;
 }
 
@@ -130,7 +130,7 @@ inline bool test_point_inside_poly_bi(const Point2 p, int poly_idx) {
     const float o31 = v3_idx > v1_idx
       ? -((v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x))
       : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-      
+
     return o31 >= 0;
   }
 
@@ -173,7 +173,7 @@ inline bool test_point_inside_poly_bi(const Point2 p, int poly_idx) {
         : (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
       if (o < 0) return false;
     }
-    
+
     // Handle the last edge that wraps around (last vertex to first vertex)
     const int32_t a_idx = g_navmesh.poly_verts[poly_start + poly_vert_count - 1];
     const int32_t b_idx = g_navmesh.poly_verts[poly_start + 0];
@@ -193,11 +193,11 @@ inline bool test_point_inside_poly_bi(const Point2 p, int poly_idx) {
 // inline bool test_point_inside_poly_i_debug_positive(const Point2& p, int poly_idx) {  
 //   // Now run again with detailed logging
 //   printf("DEBUG: Polygon %d claims point (%.3f, %.3f) as INSIDE\n", poly_idx, p.x, p.y);
-  
+
 //   int32_t poly_start = g_navmesh.polygons[poly_idx];
 //   int32_t poly_end = g_navmesh.polygons[poly_idx + 1];
 //   int32_t poly_vert_count = poly_end - poly_start;
-  
+
 //   printf("  Polygon: start=%d, end=%d, vert_count=%d\n", poly_start, poly_end, poly_vert_count);
 
 //      // Check all edges except the last one
@@ -247,7 +247,7 @@ inline bool test_point_inside_poly_bi(const Point2 p, int poly_idx) {
 //      printf("  Result: OUTSIDE (failed last edge)\n");
 //      return false;
 //    }
-  
+
 //   printf("  Final result: INSIDE\n\n");
 //   return true;
 // }

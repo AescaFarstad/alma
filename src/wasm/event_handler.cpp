@@ -38,7 +38,7 @@ void process_events() {
         for (uint32_t i = 0; i < count; ++i) {
           corr.push_back(static_cast<int>(g_event_buffer.u32_base[p + 3 + i]));
         }
-        
+
         if (!corr.empty()) {
           if (action == SET_AND_STRAIGHT_CORNER) {
             // Set the next corner to the end target previously provided by TS

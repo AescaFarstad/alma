@@ -201,7 +201,7 @@ function stepGenerateTiles(): void {
 // --- Main Execution ---
 async function main(): Promise<void> {
   console.log('Starting data generation pipeline...');
-  
+
   // Create base directories if they don't exist
   if (!fs.existsSync(BASE_DATA_DIR)) {
     fs.mkdirSync(BASE_DATA_DIR, { recursive: true });

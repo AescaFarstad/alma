@@ -76,11 +76,11 @@ const SCR_TRI = {
 function findEndpointTriangles(group: number[], navmeshData: NavmeshData): number[] {
   const groupSet = new Set(group);
   const endpoints: number[] = [];
-  
+
   for (const triIdx of group) {
     let neighborCount = 0;
     const neighbors: number[] = [];
-    
+
     for (let j = 0; j < 3; j++) {
       const neighborIdx = navmeshData.neighbors[triIdx * 3 + j];
       if (neighborIdx >= 0 && groupSet.has(neighborIdx)) {
@@ -88,12 +88,12 @@ function findEndpointTriangles(group: number[], navmeshData: NavmeshData): numbe
         neighbors.push(neighborIdx);
       }
     }
-    
+
     if (neighborCount <= 1) {
       endpoints.push(triIdx);
     }
   }
-  
+
   return endpoints;
 }
 
@@ -149,11 +149,11 @@ function isPolygonAdmissible(
 class OptimizedGroupProcessor {
   // Nested numeric maps: min(v1,v2) -> max(v1,v2) -> triangle indices
   private edgeToTriangles: Map<number, Map<number, number[]>> = new Map();
-  
+
   constructor(private group: number[], private navmeshData: NavmeshData) {
     this.precomputeEdgeToTriangles();
   }
-  
+
   private precomputeEdgeToTriangles(): void {
     for (const triIdx of this.group) {
       const verts = [
@@ -176,7 +176,7 @@ class OptimizedGroupProcessor {
       }
     }
   }
-  
+
   findTrianglesWithEdge(v1: number, v2: number, used: Set<number>): number[] {
     if (v2 < v1) { const tmp = v1; v1 = v2; v2 = tmp; }
     const inner = this.edgeToTriangles.get(v1);
@@ -191,7 +191,7 @@ class OptimizedGroupProcessor {
     }
     return out;
   }
-  
+
   getTriangleVertices(triIdx: number): [number, number, number] {
     const base = triIdx * 3;
     return [
@@ -200,7 +200,7 @@ class OptimizedGroupProcessor {
       this.navmeshData.triangles[base + 2],
     ];
   }
-  
+
   // Admissibility for current edge using its index in the polygon
   isEdgeAdmissibleAtIndex(
     polygon: number[],
@@ -243,37 +243,37 @@ function createPolygonFromTriangleOptimized(
 ): { polygon: number[], triangles: number[] } {
   used.add(startTriIdx);
   const triangles = [startTriIdx];
-  
+
   // Get vertices of starting triangle
   const startTriVerts = processor.getTriangleVertices(startTriIdx);
-  
+
   // Initialize polygon with starting triangle vertices (assume CCW order)
   const polygon = [...startTriVerts];
-  
+
   let changed = true;
   let iteration = 0;
-  
+
   while (changed) {
     iteration++;
     changed = false;
-    
+
     // Try to consume neighbors for each edge
     for (let i = 0; i < polygon.length; i++) {
       const v1Idx = polygon[i];
       const v2Idx = polygon[(i + 1) % polygon.length];
-      
+
       // Use optimized edge lookup instead of linear search
       const candidateTriangles = processor.findTrianglesWithEdge(v1Idx, v2Idx, used);
-      
+
       let candidateTriIdx = -1;
       let candidateNewVertIdx = -1;
-      
+
       for (const triIdx of candidateTriangles) {
         const triVerts = processor.getTriangleVertices(triIdx);
-        
+
         // Find the unique vertex in this triangle
         const newVertIdx = triVerts.find(v => v !== v1Idx && v !== v2Idx)!;
-        
+
         // Test admissibility using optimized version
         if (processor.isEdgeAdmissibleAtIndex(polygon, i, newVertIdx)) {
           candidateTriIdx = triIdx;
@@ -281,7 +281,7 @@ function createPolygonFromTriangleOptimized(
           break;
         }
       }
-      
+
       // If we found an admissible triangle, consume it
       if (candidateTriIdx !== -1) {
         // Insert the new vertex between v1 and v2
@@ -289,14 +289,14 @@ function createPolygonFromTriangleOptimized(
         used.add(candidateTriIdx);
         triangles.push(candidateTriIdx);
         changed = true;
-        
+
         // Since we modified the polygon, we need to restart the edge checking
         i--; // This will be incremented by the loop, effectively staying at the same position
         break;
       }
     }
   }
-  
+
   return { polygon, triangles };
 }
 
@@ -309,53 +309,53 @@ function createPolygonFromTriangle(
 ): { polygon: number[], triangles: number[] } {
   used.add(startTriIdx);
   const triangles = [startTriIdx];
-  
+
   // Get vertices of starting triangle
   const startTriVerts = [
     navmeshData.triangles[startTriIdx * 3],
     navmeshData.triangles[startTriIdx * 3 + 1],
     navmeshData.triangles[startTriIdx * 3 + 2],
   ];
-  
+
   // Initialize polygon with starting triangle vertices (assume CCW order)
   const polygon = [...startTriVerts];
-  
+
   let changed = true;
   let iteration = 0;
   while (changed) {
     iteration++;
     changed = false;
-    
+
     // Try to consume neighbors for each edge
     for (let i = 0; i < polygon.length; i++) {
       const v1Idx = polygon[i];
       const v2Idx = polygon[(i + 1) % polygon.length];
-      
+
       // Find triangles that share this edge
       let candidateTriIdx = -1;
       let candidateNewVertIdx = -1;
       let testedTriangles = 0;
       let sharingEdgeCount = 0;
-      
+
       for (const triIdx of group) {
         if (used.has(triIdx)) continue;
-        
+
         testedTriangles++;
         const triVerts = [
           navmeshData.triangles[triIdx * 3],
           navmeshData.triangles[triIdx * 3 + 1],
           navmeshData.triangles[triIdx * 3 + 2],
         ];
-        
+
         // Check if this triangle shares the edge v1-v2
         const hasV1 = triVerts.includes(v1Idx);
         const hasV2 = triVerts.includes(v2Idx);
-        
+
         if (hasV1 && hasV2) {
           sharingEdgeCount++;
           // Found a triangle sharing this edge
           const newVertIdx = triVerts.find(v => v !== v1Idx && v !== v2Idx)!;
-          
+
           // Test admissibility
           if (isPolygonAdmissible(polygon, v1Idx, v2Idx, newVertIdx, navmeshData)) {
             candidateTriIdx = triIdx;
@@ -364,7 +364,7 @@ function createPolygonFromTriangle(
           }
         }
       }
-      
+
       // If we found an admissible triangle, consume it
       if (candidateTriIdx !== -1) {
         // Insert the new vertex between v1 and v2
@@ -372,7 +372,7 @@ function createPolygonFromTriangle(
         used.add(candidateTriIdx);
         triangles.push(candidateTriIdx);
         changed = true;
-        
+
         // Since we modified the polygon, we need to restart the edge checking
         // The comment mentions "i-- and check V[1], V[2] again"
         i--; // This will be incremented by the loop, effectively staying at the same position
@@ -380,21 +380,21 @@ function createPolygonFromTriangle(
       }
     }
   }
-  
+
   return { polygon, triangles };
 }
 
 // Process a triangle group completely, creating multiple polygons until all triangles are used
 function processGroup(group: number[], navmeshData: NavmeshData): { polygons: number[][], polygonTriangles: number[][] } {
   if (group.length === 0) return { polygons: [], polygonTriangles: [] };
-  
+
   const used = new Set<number>();
   const polygons: number[][] = [];
   const polygonTriangles: number[][] = [];
-  
+
   const useOptimized = group.length > 10;
   const processor = useOptimized ? new OptimizedGroupProcessor(group, navmeshData) : null;
-  
+
   let polygonCount = 0;
   // Precompute endpoints once and keep a cursor over them
   const endpoints = findEndpointTriangles(group, navmeshData);
@@ -404,7 +404,7 @@ function processGroup(group: number[], navmeshData: NavmeshData): { polygons: nu
   // Continue until all triangles in the group are used
   while (used.size < group.length) {
     polygonCount++;
-    
+
     // Pick the first unused endpoint; if none left, pick first unused in group
     let startTriIdx: number = -1;
     while (endpointCursor < endpoints.length && used.has(endpoints[endpointCursor])) endpointCursor++;
@@ -424,7 +424,7 @@ function processGroup(group: number[], navmeshData: NavmeshData): { polygons: nu
       }
     }
     if (startTriIdx === -1) break;
-    
+
     // Create a polygon starting from this triangle
     const { polygon, triangles } = useOptimized && processor
       ? createPolygonFromTriangleOptimized(startTriIdx, processor, used, navmeshData)
@@ -434,25 +434,25 @@ function processGroup(group: number[], navmeshData: NavmeshData): { polygons: nu
 
     // No need to update endpoints; we skip used entries via cursors
   }
-  
+
   return { polygons, polygonTriangles };
 }
 
 // Optimized group gathering with pre-computed data structures
 class OptimizedGroupGatherer {
   private trianglePoints: Map<number, [Point2, Point2, Point2]> = new Map();
-  
+
   constructor(private navmeshData: NavmeshData, private walkableTriangleCount: number) {
     this.precomputeTriangleData();
   }
-  
+
   private precomputeTriangleData(): void {
     for (let triIdx = 0; triIdx < this.walkableTriangleCount; triIdx++) {
       const vbase = triIdx * 3;
       const v0 = this.navmeshData.triangles[vbase];
       const v1 = this.navmeshData.triangles[vbase + 1];
       const v2 = this.navmeshData.triangles[vbase + 2];
-      
+
       const points: [Point2, Point2, Point2] = [
         getPoint(v0, this.navmeshData),
         getPoint(v1, this.navmeshData),
@@ -461,9 +461,9 @@ class OptimizedGroupGatherer {
       this.trianglePoints.set(triIdx, points);
     }
   }
-  
+
   // No adjacency precompute: compute shared edge on the fly
-  
+
   private computeSharedEdge(tri1_idx: number, tri2_idx: number): [number, number] | null {
     const t1b = tri1_idx * 3;
     const t2b = tri2_idx * 3;
@@ -487,7 +487,7 @@ class OptimizedGroupGatherer {
     if (count < 2) check(t1_2);
     return count === 2 ? [s0, s1] as [number, number] : null;
   }
-  
+
   getTriangleVertices(triIdx: number): [number, number, number] {
     const base = triIdx * 3;
     return [
@@ -496,15 +496,15 @@ class OptimizedGroupGatherer {
       this.navmeshData.triangles[base + 2],
     ];
   }
-  
+
   getTrianglePoints(triIdx: number): [Point2, Point2, Point2] {
     return this.trianglePoints.get(triIdx)!;
   }
-  
+
   getSharedEdge(tri1_idx: number, tri2_idx: number): [number, number] | null {
     return this.computeSharedEdge(tri1_idx, tri2_idx);
   }
-  
+
   // Fast admissibility test using pre-computed points
   isTriangleAdmissibleFast(
     currentTriIdx: number,
@@ -555,9 +555,9 @@ function gatherGroupsOptimized(navmeshData: NavmeshData): { groups: number[][], 
   const visited = new Array(walkableTriangleCount).fill(false);
   const groups: number[][] = [];
   const gatherer = new OptimizedGroupGatherer(navmeshData, walkableTriangleCount);
-  
+
   let totalAdmissibleEdges = 0;
-  
+
   for (let i = 0; i < walkableTriangleCount; i++) {
     if (!visited[i]) {
       const group: number[] = [];
@@ -578,11 +578,11 @@ function gatherGroupsOptimized(navmeshData: NavmeshData): { groups: number[][], 
             const sharedEdge = gatherer.getSharedEdge(triIdx, neighborIdx);
             if (sharedEdge) {
               const [edgeV1, edgeV2] = sharedEdge;
-              
+
               // Find the unique vertex in the neighbor triangle using pre-computed data
               const neighborTriVerts = gatherer.getTriangleVertices(neighborIdx);
               const newVertIdx = neighborTriVerts.find(v => v !== edgeV1 && v !== edgeV2)!;
-              
+
               // Use fast admissibility test
               if (gatherer.isTriangleAdmissibleFast(triIdx, neighborIdx, edgeV1, edgeV2, newVertIdx)) {
                 visited[neighborIdx] = true;
@@ -596,7 +596,7 @@ function gatherGroupsOptimized(navmeshData: NavmeshData): { groups: number[][], 
       groups.push(group);
     }
   }
-  
+
   return { groups, totalAdmissibleEdges };
 }
 
@@ -622,7 +622,7 @@ export function newPolygonization(navmeshData: NavmeshData): void {
   // Process triangle groups to create polygons using the main algorithm
   const allPolygons: number[][] = [];
   const allPolygonTriangles: number[][] = [];
-  
+
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
     const { polygons: groupPolygons, polygonTriangles: groupPolygonTriangles } = processGroup(group, navmeshData);
@@ -641,10 +641,10 @@ export function newPolygonization(navmeshData: NavmeshData): void {
   // Statistics
   const groupSizes = groups.map((g: number[]) => g.length);
   groupSizes.sort((a: number, b: number) => a - b);
-  
+
   const polygonSizes = allPolygons.map((p: number[]) => p.length);
   polygonSizes.sort((a: number, b: number) => a - b);
-  
+
   const largestGroup = groupSizes[groupSizes.length - 1];
   const medianGroup = groupSizes.length % 2 === 1 
     ? groupSizes[Math.floor(groupSizes.length / 2)]
@@ -662,14 +662,14 @@ export function newPolygonization(navmeshData: NavmeshData): void {
   // Populate navmeshData with the generated polygons
   let polyVertsIndex = 0;
   navmeshData.polygons[0] = 0;
-  
+
   // Create the final sorted triangles array (sorted by polygon ID)
   const sortedTriangles = new Int32Array(navmeshData.triangles.length);
   const sortedNeighbors = new Int32Array(navmeshData.neighbors.length);
   const oldToNewTriangleIndex = new Map<number, number>();
-  
+
   let newTriangleIndex = 0;
-  
+
   for (let i = 0; i < allPolygons.length; i++) {
     const poly = allPolygons[i];
     for (let j = 0; j < poly.length; j++) {
@@ -679,24 +679,24 @@ export function newPolygonization(navmeshData: NavmeshData): void {
 
     const triangles = allPolygonTriangles[i];
     navmeshData.poly_tris[i] = newTriangleIndex;
-    
+
     // Copy triangles in the new sorted order
     for (const oldTriIdx of triangles) {
       // Copy triangle vertices
       sortedTriangles[newTriangleIndex * 3] = navmeshData.triangles[oldTriIdx * 3];
       sortedTriangles[newTriangleIndex * 3 + 1] = navmeshData.triangles[oldTriIdx * 3 + 1];
       sortedTriangles[newTriangleIndex * 3 + 2] = navmeshData.triangles[oldTriIdx * 3 + 2];
-      
+
       // Track the remapping
       oldToNewTriangleIndex.set(oldTriIdx, newTriangleIndex);
-      
+
       newTriangleIndex++;
     }
   }
-  
+
   // Set the sentinel for poly_tris
   navmeshData.poly_tris[allPolygons.length] = newTriangleIndex;
-  
+
   // Now remap the triangle neighbors
   for (let oldTriIdx = 0; oldTriIdx < navmeshData.walkable_triangle_count; oldTriIdx++) {
     const newTriIdx = oldToNewTriangleIndex.get(oldTriIdx);
@@ -712,16 +712,16 @@ export function newPolygonization(navmeshData: NavmeshData): void {
       }
     }
   }
-  
+
   // Copy impassable triangles and neighbors (they come after walkable ones)
   for (let oldTriIdx = navmeshData.walkable_triangle_count; oldTriIdx < navmeshData.triangles.length / 3; oldTriIdx++) {
     const newTriIdx = newTriangleIndex++;
-    
+
     // Copy triangle vertices
     sortedTriangles[newTriIdx * 3] = navmeshData.triangles[oldTriIdx * 3];
     sortedTriangles[newTriIdx * 3 + 1] = navmeshData.triangles[oldTriIdx * 3 + 1];
     sortedTriangles[newTriIdx * 3 + 2] = navmeshData.triangles[oldTriIdx * 3 + 2];
-    
+
     // Copy neighbors (remap if they point to walkable triangles)
     for (let edge = 0; edge < 3; edge++) {
       const oldNeighbor = navmeshData.neighbors[oldTriIdx * 3 + edge];
@@ -733,11 +733,11 @@ export function newPolygonization(navmeshData: NavmeshData): void {
       }
     }
   }
-  
+
   // Replace the arrays with sorted versions
   navmeshData.triangles = sortedTriangles;
   navmeshData.neighbors = sortedNeighbors;
-  
+
   navmeshData.walkable_polygon_count = allPolygons.length;
   const __tm3 = Date.now();
   console.log(`[polygonization timing] group=${__tm1 - __tm0}ms, polygonize=${__tm2 - __tm1}ms, remap=${__tm3 - __tm2}ms, total=${__tm3 - __tm0}ms`);

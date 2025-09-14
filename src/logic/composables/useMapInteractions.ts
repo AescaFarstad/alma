@@ -211,7 +211,7 @@ export function useMapInteractions(
       // Fallback for features without an ID. We should never actually need this.
       const clickCoordinate = { x: e.coordinate[0], y: e.coordinate[1] };
       const candidateIds = gameState.navmesh.buildingIndex.query(clickCoordinate.x, clickCoordinate.y);
-      
+
       for (const buildingId of candidateIds) {
       const polygon = getBuildingGeometry(gameState.navmesh, buildingId);
       if (polygon && isPointInPolygon(clickCoordinate, polygon)) {

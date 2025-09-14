@@ -272,7 +272,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
 
             const featureToKeep = features[indexToKeep];
             const featureToDelete = features[indexToDelete];
-            
+
             let propsCopiedThisPair = false;
 
             // Merge properties
@@ -295,7 +295,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
             if (propsCopiedThisPair) {
               propertiesCopiedCount++;
             }
-            
+
             if (indexToDelete === i) {
               break; // Current feature is marked for deletion, move to the next i
             }
@@ -327,7 +327,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
 
                 const featureToKeep = features[indexToKeep];
                 const featureToDelete = features[indexToDelete];
-                
+
                 let propsCopiedThisPair = false;
 
                 // Merge properties
@@ -350,7 +350,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
                 if (propsCopiedThisPair) {
                   propertiesCopiedCount++;
                 }
-                
+
                 if (indexToDelete === i) {
                   break;
                 }
@@ -360,12 +360,12 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
           }
         }
       }
-      
+
       console.log('  ... progress: 100%');
       console.log('\nAnalysis complete. Finalizing results...');
-      
+
       const newFeatures = features.filter((_, i) => !toDelete.has(i));
-      
+
       let totalVertices = 0;
       let outerShellVertices = 0;
 
@@ -386,7 +386,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
           totalVertices += vertexCount;
         }
       }
-      
+
       const geojsonHeader = { ...geojson } as any;
       delete geojsonHeader.features;
       const featuresJson = newFeatures.map(f => JSON.stringify(f));
@@ -398,7 +398,7 @@ async function deduplicateGeojson({ inputDir, outputDir }: DeduplicateOptions): 
 
       console.log(`\nWritten processed file to ${destPath}`);
       console.log(`Output file size: ${fileSizeInKB} KB`);
-      
+
       console.log(`\nResults for ${file}:`);
       console.log(`  - Original feature count: ${features.length}`);
       console.log(`  - Removed entries: ${toDelete.size}`);

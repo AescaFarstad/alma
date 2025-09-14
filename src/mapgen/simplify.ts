@@ -27,7 +27,7 @@ type SplitLine = Point2[];
 // Helper function to calculate polygon area
 function calculatePolygonArea(points: Point2[]): number {
   if (!points || points.length < 3) return 0;
-  
+
   let area = 0;
   for (let i = 0; i < points.length - 1; i++) {
     area += points[i].x * points[i + 1].y - points[i + 1].x * points[i].y;
@@ -69,7 +69,7 @@ async function main() {
   if (!fs.existsSync(buildingsFile)) {
     throw new Error(`Buildings file not found: ${buildingsFile}`);
   }
-  
+
   const content = fs.readFileSync(buildingsFile, 'utf-8');
   const featureCollection = JSON.parse(content) as FeatureCollection;
   let allFeatures: BuildingFeature[] = featureCollection.features as BuildingFeature[];
@@ -79,10 +79,10 @@ async function main() {
   // 2. Manual Corrections
   console.log('Applying manual corrections...');
   let correctedBuildings: BuildingFeature[] = [];
-  
+
   for (const f of allFeatures) {
     let feature = f;
-    
+
     // Convert LineString to Polygon if it's closed, skip if open
     if (f.geometry.type === 'LineString') {
       const points = getPointsFromBuildingFeature(f);
@@ -94,29 +94,29 @@ async function main() {
         continue;
       }
     }
-    
+
     // Validate geometry
     if (feature.geometry.type !== 'Polygon') {
       throw new Error(`Invalid geometry type ${feature.geometry.type} for feature ${feature.id}`);
     }
-    
+
     if (!feature.geometry.coordinates || !feature.geometry.coordinates[0] || feature.geometry.coordinates[0].length < 4) {
       throw new Error(`Invalid polygon geometry for feature ${feature.id}: insufficient points`);
     }
-    
+
     // Validate that we can extract points from the feature
     const points = getPointsFromBuildingFeature(feature);
     if (!points || points.length < 3) {
       throw new Error(`Cannot extract valid points from feature ${feature.id}`);
     }
-    
+
     correctedBuildings.push(feature);
   }
 
   // Remove problematic buildings except for the main one (Ma1036526660)
   const problematicIds = ['Ma27375097540', 'Ma27375097480', 'Ma27375097520', 'Ma27375097500', 'Ma23832971900', 'Ma23832971920', 'Ma23307134820', 'Ma27369249000', 'Ma201207930'];
   const remainingBuildings = correctedBuildings.filter(b => !problematicIds.includes(b.id ?? ''));
-  
+
   const removedCount = correctedBuildings.length - remainingBuildings.length;
   console.log(`Removed ${removedCount} problematic buildings. Main building Ma1036526660 kept.`);
   correctedBuildings = remainingBuildings;
@@ -126,7 +126,7 @@ async function main() {
   console.log(`Filtering out buildings with area < ${MIN_AREA}...`);
   const filteredBuildings: BuildingFeature[] = [];
   let smallBuildingsCount = 0;
-  
+
   for (const building of correctedBuildings) {
     const points = getPointsFromBuildingFeature(building);
     if (points) {
@@ -138,7 +138,7 @@ async function main() {
       }
     }
   }
-  
+
   correctedBuildings = filteredBuildings;
   console.log(`Removed ${smallBuildingsCount} buildings with area < ${MIN_AREA}. Remaining: ${correctedBuildings.length}`);
 
@@ -155,7 +155,7 @@ async function main() {
   // 4. Simplify with S6 logic
   if (RUN_S6) {
     console.log('Simplifying buildings (S6)...');
-  
+
     let s6SkippedCount = 0;
     const simplifiedFeaturesS6: BuildingFeature[] = correctedBuildings.map(building => {
       const points = getPointsFromBuildingFeature(building);
@@ -165,7 +165,7 @@ async function main() {
       res = flatten(res, 1.75);
       res = unround(res, 5, 0.3);
       res = flatten(res, 2);
-      
+
       const simplifiedPoints = res.map(p => ({ x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 }));
 
       if (simplifiedPoints.length < 3 && calculatePolygonArea(simplifiedPoints) < SAFE_TO_SKIP_AREA) {
@@ -204,7 +204,7 @@ async function main() {
   // 6. Simplify with S7 logic
   if (RUN_S7) {
     console.log('Simplifying buildings (S7)...');
-    
+
     let s7Output = '';
     let totalVerticesAfterS7 = 0;
     let s7SkippedCount = 0;
@@ -212,7 +212,7 @@ async function main() {
     for (const building of correctedBuildings) {
       const points = getPointsFromBuildingFeature(building);
       if (!points) continue;
-      
+
       let simplified = await simplifyWithDilationErosion(points, SIMPLIFICATION_INFLATION);
       simplified = unround(simplified, 10, 0.45);
       simplified = flatten(simplified, 3);
@@ -231,10 +231,10 @@ async function main() {
       const coordsStr = formatCoordsRounded(simplified, 2);
       s7Output += `${building.id};${propertiesJson}[${coordsStr}]\n`;
     }
-    
+
     console.log(`S7: Skipped ${s7SkippedCount} buildings with < 3 vertices and area < ${SAFE_TO_SKIP_AREA}.`);
     console.log(`S7 vertices: before: ${totalVerticesBeforeS6} after: ${totalVerticesAfterS7} gone: ${totalVerticesBeforeS6 - totalVerticesAfterS7} (${Date.now() - s7StartedAt}ms)`);
-    
+
     fs.writeFileSync(path.join(outputDir, 'buildings_s7.txt'), s7Output);
     console.log('S7 simplification saved to buildings_s7.txt');
   }

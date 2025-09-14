@@ -59,7 +59,7 @@ Block 1 Navigation updates.
   if corridor empty, 
     if endTarget within 1 meter -> set state 'standing'
     else -> rebuilt path, recalculate corner
-  
+
 Block 2 Action updates
   if standing -> set new endTarget, apply accel to deaccelerate
   if escaping or traveling -> add accel in the direction of the next corner

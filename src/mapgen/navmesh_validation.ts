@@ -108,7 +108,7 @@ export function validateTrianglePolygonMapping(navmeshData: NavmeshData): boolea
     logValidationError('poly_tris array is missing or empty. Cannot validate mapping.');
     return false;
   }
-  
+
   if (polyTris.length !== totalPolygonCount + 1) {
     logValidationError(`poly_tris length is ${polyTris.length}, but expected ${totalPolygonCount + 1} (total polygons + sentinel).`);
     return false;
@@ -316,7 +316,7 @@ function isPolygonConvex(polygon: number[], navmeshData: NavmeshData): boolean {
 
     // Using cross-product to determine turn direction.
     const crossProduct = (p2[0] - p1[0]) * (p3[1] - p2[1]) - (p2[1] - p1[1]) * (p3[0] - p2[0]);
-    
+
     // A small tolerance is used to account for floating-point inaccuracies,
     // especially for points that are nearly collinear.
     if (Math.abs(crossProduct) < 1e-7) continue;

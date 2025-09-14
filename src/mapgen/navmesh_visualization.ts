@@ -21,7 +21,7 @@ function assignPolygonColors(navmeshData: NavmeshData): string[] {
         usedColors.add(polygonColors[neighbor]);
       }
     }
-    
+
     let colorAssigned = false;
     for (const color of availableColors) {
       if (!usedColors.has(color)) {
@@ -30,7 +30,7 @@ function assignPolygonColors(navmeshData: NavmeshData): string[] {
         break;
       }
     }
-    
+
     if (!colorAssigned) {
       polygonColors[i] = availableColors[i % availableColors.length];
     }
@@ -74,7 +74,7 @@ function drawPolygon(ctx: CanvasRenderingContext2D, navmeshData: NavmeshData, po
     const vertexIndex = navmeshData.poly_verts[i];
     ctx.lineTo(navmeshData.vertices[vertexIndex * 2] + CANVAS_CENTER, -navmeshData.vertices[vertexIndex * 2 + 1] + CANVAS_CENTER);
   }
-  
+
   ctx.closePath();
   ctx.fillStyle = color;
   ctx.fill();
@@ -84,7 +84,7 @@ function drawTriangle(ctx: CanvasRenderingContext2D, navmeshData: NavmeshData, t
   const v1Index = navmeshData.triangles[triIndex * 3];
   const v2Index = navmeshData.triangles[triIndex * 3 + 1];
   const v3Index = navmeshData.triangles[triIndex * 3 + 2];
-  
+
   ctx.beginPath();
   ctx.moveTo(navmeshData.vertices[v1Index * 2] + CANVAS_CENTER, -navmeshData.vertices[v1Index * 2 + 1] + CANVAS_CENTER);
   ctx.lineTo(navmeshData.vertices[v2Index * 2] + CANVAS_CENTER, -navmeshData.vertices[v2Index * 2 + 1] + CANVAS_CENTER);
@@ -120,6 +120,6 @@ export function drawNavmesh(navmeshData: NavmeshData, outputPath: string): { pat
   fs.writeFileSync(outputPath, buffer);
   const stats = fs.statSync(outputPath);
   console.log(`Navmesh visualization saved to ${outputPath}`);
-  
+
   return { path: outputPath, sizeBytes: stats.size };
 } 

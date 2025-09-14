@@ -28,7 +28,7 @@ export class AgentGrid {
     this.cellData = new Uint16Array(this.totalCells * this.maxAgentsPerCell);
     this.cellOffsets = new Uint32Array(this.totalCells);
     this.cellCounts = new Uint16Array(this.totalCells);
-    
+
     // Initialize cell offsets
     for (let i = 0; i < this.totalCells; i++) {
       this.cellOffsets[i] = i * this.maxAgentsPerCell;
@@ -68,14 +68,14 @@ export class AgentGrid {
   public getCellIndex(coordinate: Point2): number {
     const offsetX = coordinate.x + this.haltonOffset.x;
     const offsetY = coordinate.y + this.haltonOffset.y;
-    
+
     const gridX = Math.floor((offsetX - WORLD_MIN_X) / CELL_SIZE);
     const gridY = Math.floor((offsetY - WORLD_MIN_Y) / CELL_SIZE);
-    
+
     if (gridX < 0 || gridX >= GRID_WIDTH || gridY < 0 || gridY >= GRID_HEIGHT) {
       return -1;
     }
-    
+
     return gridY * GRID_WIDTH + gridX;
   }
 
@@ -96,13 +96,13 @@ export class AgentGrid {
     let result = 0;
     let fraction = 1;
     let i = index;
-    
+
     while (i > 0) {
       fraction /= base;
       result += (i % base) * fraction;
       i = Math.floor(i / base);
     }
-    
+
     return result;
   }
 }

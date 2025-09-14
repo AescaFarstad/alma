@@ -50,10 +50,10 @@ uint32_t pcg32() {
   uint32_t rot = static_cast<uint32_t>(g_pcg_state >> 59u);
   uint64_t x = g_pcg_state ^ (g_pcg_state >> 18u);
   uint32_t xorshifted = static_cast<uint32_t>((x >> 27u) & 0xFFFFFFFFu);
-  
+
   // Advance state AFTER generating output
   g_pcg_state = g_pcg_state * PCG_MULTIPLIER + g_pcg_inc;
-  
+
   return rotr32(xorshifted, rot);
 }
 
@@ -86,7 +86,7 @@ uint32_t pcg_state_to_output(uint64_t state) {
 float seed_to_random_no_advance(uint64_t* seed_state) {
   uint64_t current_state = seed_to_state(*seed_state);
   uint32_t output = pcg_state_to_output(current_state);
-  
+
   // Advance state for next iteration
   current_state = (current_state * PCG_MULTIPLIER + PCG_INCREMENT);
   *seed_state = current_state >> 32;
@@ -110,28 +110,28 @@ int random_int(int min_inclusive, int max_inclusive) {
 
 bool lineSegmentIntersectionTest(const Point2& p1, const Point2& p2, const Point2& p3, const Point2& p4) {
   constexpr float EPSILON = 1e-10f;
-  
+
   Point2 r = p2 - p1;
   Point2 s = p4 - p3;
   float r_cross_s = cross(r, s);
   Point2 q_minus_p = p3 - p1;
-  
+
   if (std::abs(r_cross_s) < EPSILON) { // Lines are parallel
     if (std::abs(cross(q_minus_p, r)) < EPSILON) { // Lines are collinear
       float t0 = dot(q_minus_p, r) / dot(r, r);
       float t1 = t0 + dot(s, r) / dot(r, r);
-      
+
       float tMin = std::min(t0, t1);
       float tMax = std::max(t0, t1);
-      
+
       return tMax >= -EPSILON && tMin <= 1.0f + EPSILON;
     }
     return false; // Parallel and not collinear
   }
-  
+
   float t = cross(q_minus_p, s) / r_cross_s;
   float u = cross(q_minus_p, r) / r_cross_s;
-  
+
   return t >= -EPSILON && t <= 1.0f + EPSILON && u >= -EPSILON && u <= 1.0f + EPSILON;
 }
 
@@ -140,7 +140,7 @@ Point2 getLineSegmentIntersectionPoint(const Point2& p1, const Point2& p2, const
   if (den == 0) {
     return {0, 0}; // Lines are parallel, return invalid point
   }
-  
+
   float t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / den;
   float u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / den;
 
@@ -156,7 +156,7 @@ Point2 getLineSegmentIntersectionPoint(const Point2& p1, const Point2& p2, const
 
 Point2 lineLineIntersection(const Point2& lineP1, const Point2& lineDir1, const Point2& lineP2, const Point2& lineDir2) {
   float cross_product = cross(lineDir1, lineDir2);
-  
+
   // Lines are parallel or collinear
   if (std::abs(cross_product) < 1e-9f) {
     return {0, 0}; // Return invalid point
@@ -186,7 +186,7 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
     cellMax,
     {cellMin.x, cellMax.y}
   };
-  
+
   for (const Point2& corner : cellCorners) {
     if (isPointInTriangle(corner, triPoints[0], triPoints[1], triPoints[2])) {
       return true;
@@ -199,7 +199,7 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
     {triPoints[1], triPoints[2]},
     {triPoints[2], triPoints[0]}
   };
-  
+
   std::vector<std::pair<Point2, Point2>> cellEdges = {
     {cellCorners[0], cellCorners[1]}, // bottom edge
     {cellCorners[1], cellCorners[2]}, // right edge
@@ -219,7 +219,7 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
   for (int i = 0; i < 3; i++) {
     Point2 edge = triPoints[(i + 1) % 3] - triPoints[i];
     Point2 normal = {-edge.y, edge.x}; // perpendicular to edge
-    
+
     // Project triangle onto this axis
     float triMin = std::numeric_limits<float>::max();
     float triMax = std::numeric_limits<float>::lowest();
@@ -228,7 +228,7 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
       triMin = std::min(triMin, proj);
       triMax = std::max(triMax, proj);
     }
-    
+
     // Project rectangle onto this axis
     float rectMin = std::numeric_limits<float>::max();
     float rectMax = std::numeric_limits<float>::lowest();
@@ -237,7 +237,7 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
       rectMin = std::min(rectMin, proj);
       rectMax = std::max(rectMax, proj);
     }
-    
+
     // Check for separation on this axis
     if (triMax < rectMin || rectMax < triMin) {
       return false; // Separated on this axis
@@ -249,11 +249,11 @@ static bool triangleAABBIntersectionDetailed(const std::vector<Point2>& triPoint
 
 bool triangleAABBIntersection(const std::vector<Point2>& triPoints, const Point2& cellMin, const Point2& cellMax) {
   if (triPoints.size() != 3) return false;
-  
+
   // Calculate triangle bounding box
   float triMinX = triPoints[0].x, triMinY = triPoints[0].y;
   float triMaxX = triPoints[0].x, triMaxY = triPoints[0].y;
-  
+
   for (int i = 1; i < 3; i++) {
     const Point2& p = triPoints[i];
     if (p.x < triMinX) triMinX = p.x;
@@ -261,12 +261,12 @@ bool triangleAABBIntersection(const std::vector<Point2>& triPoints, const Point2
     if (p.x > triMaxX) triMaxX = p.x;
     if (p.y > triMaxY) triMaxY = p.y;
   }
-  
+
   // Quick rejection: if bounding boxes don't overlap
   if (!aabbIntersection({triMinX, triMinY}, {triMaxX, triMaxY}, cellMin, cellMax)) {
     return false;
   }
-  
+
   return triangleAABBIntersectionDetailed(triPoints, cellMin, cellMax);
 }
 
@@ -275,7 +275,7 @@ bool triangleAABBIntersectionWithBounds(const std::vector<Point2>& triPoints, co
   if (!aabbIntersection(triMin, triMax, cellMin, cellMax)) {
     return false;
   }
-  
+
   // If bounding boxes overlap, we need detailed intersection tests
   return triangleAABBIntersectionDetailed(triPoints, cellMin, cellMax);
 }
@@ -284,7 +284,7 @@ bool triangleAABBIntersectionWithBounds(const std::vector<Point2>& triPoints, co
 static bool isPointInPolygon(const Point2& point, const std::vector<Point2>& polygon) {
   int wn = 0; // winding number
   int n = polygon.size();
-  
+
   for (int i = 0; i < n; i++) {
     int j = (i + 1) % n;
     if (polygon[i].y <= point.y) {
@@ -320,7 +320,7 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
     cellMax,
     {cellMin.x, cellMax.y}
   };
-  
+
   for (const Point2& corner : cellCorners) {
     if (isPointInPolygon(corner, polyPoints)) {
       return true;
@@ -333,7 +333,7 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
   for (int i = 0; i < n; i++) {
     polyEdges.push_back({polyPoints[i], polyPoints[(i + 1) % n]});
   }
-  
+
   std::vector<std::pair<Point2, Point2>> cellEdges = {
     {cellCorners[0], cellCorners[1]}, // bottom edge
     {cellCorners[1], cellCorners[2]}, // right edge
@@ -354,7 +354,7 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
   for (int i = 0; i < n; i++) {
     Point2 edge = polyPoints[(i + 1) % n] - polyPoints[i];
     Point2 normal = {-edge.y, edge.x}; // perpendicular to edge
-    
+
     // Project polygon onto this axis
     float polyMin = std::numeric_limits<float>::max();
     float polyMax = std::numeric_limits<float>::lowest();
@@ -363,7 +363,7 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
       polyMin = std::min(polyMin, proj);
       polyMax = std::max(polyMax, proj);
     }
-    
+
     // Project rectangle onto this axis
     float rectMin = std::numeric_limits<float>::max();
     float rectMax = std::numeric_limits<float>::lowest();
@@ -372,7 +372,7 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
       rectMin = std::min(rectMin, proj);
       rectMax = std::max(rectMax, proj);
     }
-    
+
     // Check for separation on this axis
     if (polyMax < rectMin || rectMax < polyMin) {
       return false; // Separated on this axis
@@ -384,11 +384,11 @@ static bool polygonAABBIntersectionDetailed(const std::vector<Point2>& polyPoint
 
 bool polygonAABBIntersection(const std::vector<Point2>& polyPoints, const Point2& cellMin, const Point2& cellMax) {
   if (polyPoints.size() < 3) return false;
-  
+
   // Calculate polygon bounding box
   float polyMinX = polyPoints[0].x, polyMinY = polyPoints[0].y;
   float polyMaxX = polyPoints[0].x, polyMaxY = polyPoints[0].y;
-  
+
   for (size_t i = 1; i < polyPoints.size(); i++) {
     const Point2& p = polyPoints[i];
     if (p.x < polyMinX) polyMinX = p.x;
@@ -396,12 +396,12 @@ bool polygonAABBIntersection(const std::vector<Point2>& polyPoints, const Point2
     if (p.x > polyMaxX) polyMaxX = p.x;
     if (p.y > polyMaxY) polyMaxY = p.y;
   }
-  
+
   // Quick rejection: if bounding boxes don't overlap
   if (!aabbIntersection({polyMinX, polyMinY}, {polyMaxX, polyMaxY}, cellMin, cellMax)) {
     return false;
   }
-  
+
   return polygonAABBIntersectionDetailed(polyPoints, cellMin, cellMax);
 }
 
@@ -410,7 +410,7 @@ bool polygonAABBIntersectionWithBounds(const std::vector<Point2>& polyPoints, co
   if (!aabbIntersection(polyMin, polyMax, cellMin, cellMax)) {
     return false;
   }
-  
+
   // If bounding boxes overlap, we need detailed intersection tests
   return polygonAABBIntersectionDetailed(polyPoints, cellMin, cellMax);
 }

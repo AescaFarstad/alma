@@ -42,7 +42,7 @@ export function loadBlobs(filePath: string, bbox: readonly [number, number, numb
           continue;
         }
       }
-      
+
       polygons.push(polygon);
       blobToBuildings.push(buildingIds);
     } catch (e) {
@@ -50,7 +50,7 @@ export function loadBlobs(filePath: string, bbox: readonly [number, number, numb
       continue;
     }
   }
-  
+
   console.log(`Loaded ${polygons.length} blobs from ${filePath}`);
   return { simplified_vertices: polygons, blobToBuildings };
 }
@@ -63,7 +63,7 @@ export function loadBuildings(buildingsFilePath: string): any[] {
 
   const fileContent = fs.readFileSync(buildingsFilePath, 'utf-8');
   const lines = fileContent.split('\n').filter(line => line.trim() !== '');
-  
+
   const buildings: any[] = [];
   let newId = 0;
 
@@ -75,7 +75,7 @@ export function loadBuildings(buildingsFilePath: string): any[] {
 
       const idStr = line.substring(0, semicolonIndex);
       const originalId = idStr; // Keep as string instead of parseInt
-      
+
       const remainder = line.substring(semicolonIndex + 1);
 
       // Find where coordinates start (the '[' after properties)
@@ -106,7 +106,7 @@ export function loadBuildings(buildingsFilePath: string): any[] {
           osm_id: originalId
         }
       };
-      
+
       buildings.push(feature);
     } catch (e) {
       console.warn(`Error parsing building line: ${line}`, e);
@@ -136,14 +136,14 @@ export function writeNavmeshOutput(outputDir: string, navmeshData: NavmeshData, 
     createdFiles.push({ path: textPath, sizeBytes: stats.size });
     console.log(`Text output: ${textPath}`);
   }
-  
+
   // Write building_meta to separate JSON file
   const buildingPropertiesPath = path.join(outputDir, 'building_properties.json');
   writeBuildingProperties(buildingPropertiesPath, navmeshData.building_meta);
   const buildingPropertiesStats = fs.statSync(buildingPropertiesPath);
   createdFiles.push({ path: buildingPropertiesPath, sizeBytes: buildingPropertiesStats.size });
   console.log(`Building properties output: ${buildingPropertiesPath}`);
-  
+
   const geojsonPath = path.join(outputDir, 'map_render_buildings.geojson');
   writeBuildingsGeoJSON(geojsonPath, buildings);
   const geojsonStats = fs.statSync(geojsonPath);
@@ -225,7 +225,7 @@ function writeNavmeshBinary(outputPath: string, navmeshData: NavmeshData): void 
   // Write array sizes first (header) - reduced to 13 fields since building_meta is now separate
   const header = Buffer.alloc(13 * 4); // 13 fields * 4 bytes per int32
   let headerOffset = 0;
-  
+
   header.writeInt32LE(navmeshData.vertices.length, headerOffset); headerOffset += 4;
   header.writeInt32LE(navmeshData.triangles.length, headerOffset); headerOffset += 4;
   header.writeInt32LE(navmeshData.neighbors.length, headerOffset); headerOffset += 4;
@@ -260,7 +260,7 @@ function writeNavmeshBinary(outputPath: string, navmeshData: NavmeshData): void 
 }
 
 function writeBuildingProperties(outputPath: string, buildingMeta: string[]): void {
-  
+
   const content = `[${buildingMeta.join(',\n')}]`;
   fs.writeFileSync(outputPath, content);
   console.log(`Successfully wrote ${buildingMeta.length} building properties to ${outputPath}`);

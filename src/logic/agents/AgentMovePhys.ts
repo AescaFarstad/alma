@@ -46,7 +46,7 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
     slowDownStrength *= lerp(0.5, 2, agent.intelligence);
     let slowBeforeCornerDst = agent.maxSpeed * 0.25;
     let slowBeforeCornerSpeed = agent.maxSpeed;
-    
+
     if (dstToCorner < slowBeforeCornerDst && agent.numValidCorners >= 2) {
       set_(corner1ToCorner2, agent.nextCorner2);
       subtract_(corner1ToCorner2, agent.nextCorner);
@@ -59,13 +59,13 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
       slowBeforeCornerDst *= lerp(1, 0, turnAlignment);
       slowBeforeCornerSpeed *= lerp(slowDownStrength, 1, turnAlignment);
     }
-    
+
     if (dstToCorner > slowBeforeCornerDst)
       desiredMagnitude = agent.maxSpeed;
     else {
       const minSpeed = agent.numValidCorners == 1 ? agent.arrivalDesiredSpeed * agent.maxSpeed : slowBeforeCornerSpeed
       desiredMagnitude = lerp(minSpeed, agent.maxSpeed, dstToCorner / slowBeforeCornerDst);
-      
+
     }
   }
   else {
@@ -77,25 +77,25 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
   scale_(desiredVelocity, desiredMagnitude);
 
   set_(agent.debug_desiredVelocity, desiredVelocity);
-  
+
   // Dumb agents: accelerate toward desired velocity (A)
   // Smart agents: accelerate toward velocity difference (A - B)
   set_(velocityDiff, desiredVelocity);
   subtract_(velocityDiff, agent.velocity);
   set_(agent.debug_velocityDiff, velocityDiff);
   let effectiveInt = length_sq(desiredVelocity) > 0.1 ? agent.intelligence : 1;
-  
+
   // Blend: (1-intelligence) * A + intelligence * (A-B)
   set_(finalAccelDirection, directionToCorner);
   let requiredAddition = desiredMagnitude - dot(agent.velocity, directionToCorner);
   scale_(finalAccelDirection, requiredAddition * (1 - effectiveInt));
   scale_(velocityDiff, effectiveInt);
   add_(finalAccelDirection, velocityDiff);
-  
+
   const diffLn = length(finalAccelDirection);
   const accelThisFrame = Math.min(diffLn, agent.accel * deltaTime);
   scale_(finalAccelDirection, accelThisFrame / (diffLn > 0.001 ? diffLn : 1));
-  
+
   if (deltaTime > 0.0001) {
     set_(agent.lastAppliedAccel, finalAccelDirection);
     scale_(agent.lastAppliedAccel, 1 / deltaTime);
@@ -116,7 +116,7 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
   // --- Escaping Movement: Beeline to last valid spot, no collision. ---
   if (agent.state === AgentState.Escaping) {
     const distanceToTargetSq = distance_sq(agent.nextCorner, agent.coordinate);
-    
+
     // If the next move would overshoot the target, just snap to it.
     if (moveLnSq >= distanceToTargetSq) {
       set_(agent.coordinate, agent.lastValidPosition);
@@ -135,22 +135,22 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
       if (!testPointInsideTriangle(navmesh, endPoint.x, endPoint.y, agent.currentTri)) {
         set_(normVelocity, agent.velocity);
         normalize_(normVelocity);
-        
+
         set_(tempScaled, normVelocity);
         scale_(tempScaled, 0.45);
         set_(endPointForRecast, endPoint);
         add_(endPointForRecast, tempScaled);
-        
+
         const raycastResult = raycastPoint(navmesh, agent.coordinate, endPointForRecast, agent.currentTri, undefined);
 
         if (raycastResult.hitP1 && raycastResult.hitP2) {
           agent.stuckRating += NavConst.STUCK_HIT_WALL;
           set_(wallVector, raycastResult.hitP2);
           subtract_(wallVector, raycastResult.hitP1);
-          
+
           set(wallNormal, -wallVector.y, wallVector.x);
           normalize_(wallNormal);
-          
+
           if (dot(wallNormal, normVelocity) > 0) {
             scale_(wallNormal, -1);
           }
@@ -167,7 +167,7 @@ export function updateAgentPhys(agent: Agent, deltaTime: number, gs: GameState):
       }
     }
   }
-  
+
   const oldTri = agent.currentTri;
   const newTriRaw = findTriangle(agent.coordinate, gs.navmesh, agent.currentTri);
   if (oldTri !== newTriRaw && newTriRaw !== -1) {

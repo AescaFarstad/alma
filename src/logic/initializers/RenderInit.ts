@@ -16,10 +16,10 @@ export class RenderInit {
     const selectorBytes = new TextEncoder().encode(canvasSelector + '\0');
     const selectorPtr = wasmModule._wasm_alloc(selectorBytes.length);
     wasmModule.HEAPU8.set(selectorBytes, selectorPtr);
-    
+
     // Initialize the renderer
     wasmModule._sprite_renderer_init(selectorPtr);
-    
+
     // Free the temporary string
     if (wasmModule._wasm_free) {
       wasmModule._wasm_free(selectorPtr);
@@ -34,7 +34,7 @@ export class RenderInit {
       console.warn('WASM atlas upload functions not available');
       return;
     }
-    
+
     // Load and upload atlas image
     const img = await fetch(url).then(r => r.blob()).then(createImageBitmap);
     const w = img.width, h = img.height;
@@ -52,7 +52,7 @@ export class RenderInit {
     try {
       await baseAtlas.loadAtlas('/img/base.json', w, h);
       const atlasData = baseAtlas.data;
-      
+
       if (atlasData && wasmModule._sprite_upload_frame_table) {
         const uvBytes = new Uint8Array(atlasData.uvCoordinates.buffer);
         const uvPtr = wasmModule._wasm_alloc!(uvBytes.byteLength) >>> 0;

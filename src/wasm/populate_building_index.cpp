@@ -22,7 +22,7 @@ void populate_building_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxil
   for (int32_t i = 0; i < totalBuildings; ++i) {
     const int32_t vertStart = navmesh.buildings[i];
     const int32_t vertEnd = navmesh.buildings[i + 1];
-    
+
     std::vector<Point2> polyPoints;
     polyPoints.reserve(vertEnd - vertStart);
 
@@ -70,7 +70,7 @@ void populate_building_index(Navmesh& navmesh, size_t& auxOffset, uint8_t* auxil
     wasm_console_error("[WASM] Not enough auxiliary memory to populate building index items");
     return;
   }
-  
+
   index.cellItems = reinterpret_cast<int32_t*>(auxiliaryMemory + auxOffset);
   index.cellItemsCount = totalItems;
   auxOffset += itemsSize;

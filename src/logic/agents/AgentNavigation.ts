@@ -35,7 +35,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
 
   // State: Traveling - Follow the path, check for deviations.
    if (agent.state === AgentState.Traveling) {
-      
+
     if (agent.predicamentRating > 37){
       console.error("Predicament rating is too high, resetting. ", copy(agent.coordinate), "corner:", copy(agent.nextCorner));
       agent.state = AgentState.Standing;
@@ -46,14 +46,14 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
     // Check 1: Have we fallen off the navmesh?
     if (agent.currentTri === -1) {
       agent.state = AgentState.Escaping;
-      
+
 
       set_(agent.preEscapeCorner, agent.nextCorner);
       agent.preEscapeCornerTri = agent.nextCornerTri;
-      
+
       set_(agent.nextCorner, agent.lastValidPosition);
       agent.nextCornerTri = agent.lastValidTri;
-      
+
       return;
     }
 
@@ -66,7 +66,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       let needFullRepath = false;
       if (agent.sightRating < 1) {
         agent.sightRating++;
-        
+
         if (raycastAndPatchCorridor(navmesh, agent, agent.nextCorner, agent.nextCornerTri)) {
           agent.stuckRating = 0;
         }
@@ -130,10 +130,10 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
         }
       }
     }
-    
+
     // Check 3: Have we reached the next corner?
     const distanceToCornerSq = distance_sq(agent.coordinate, agent.nextCorner);
-    
+
     // Check if we've crossed the demarkation line nextCorner2->nextCorner
     let crossedDemarkationLine = false;
     let currentCross = 0;
@@ -142,19 +142,19 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       // Line vector from nextCorner2 to nextCorner
       set_(tempLineVec, agent.nextCorner);
       subtract_(tempLineVec, agent.nextCorner2);
-      
+
       // Vector from nextCorner2 to current position
       set_(tempCurrentVec, agent.coordinate);
       subtract_(tempCurrentVec, agent.nextCorner2);
-      
+
       // Vector from nextCorner2 to last position
       set_(tempLastVec, agent.lastCoordinate);
       subtract_(tempLastVec, agent.nextCorner2);
-      
+
 
       currentCross = cross(tempLineVec, tempCurrentVec);
       lastCross = cross(tempLineVec, tempLastVec);
-      
+
       // If signs are different, we've crossed the line
       crossedDemarkationLine = currentCross * lastCross <= 0;
     }
@@ -170,10 +170,10 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
         agent.nextCorner2Tri = reusableDualCorner.tri2;
         agent.numValidCorners = reusableDualCorner.numValid;
 
-        
+
       }
     }
-    
+
     if (agent.numValidCorners == 1 && distance_sq(agent.coordinate, agent.endTarget) < agent.arrivalThresholdSq) {
       agent.state = AgentState.Standing;
       agent.corridor = [];
@@ -187,7 +187,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
     if (agent.currentTri !== -1) {
       // We're back on the navmesh! Re-path to our original destination.
       agent.state = AgentState.Traveling;
-      
+
 
       if (agent.preEscapeCornerTri !== -1) {
         if (raycastAndPatchCorridor(navmesh, agent, agent.preEscapeCorner, agent.preEscapeCornerTri)) {
@@ -195,11 +195,11 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
           agent.nextCornerTri = agent.preEscapeCornerTri;
           set(agent.preEscapeCorner, 0, 0); // Clear preEscapeCorner by value
           agent.preEscapeCornerTri = -1;
-          
+
           return;
         }
       }
-      
+
       if (agent.endTargetTri !== -1) {
         if (findPathToDestination(navmesh, agent, agent.currentTri, agent.endTargetTri, "after escaping")) {
           agent.state = AgentState.Traveling;
@@ -211,7 +211,7 @@ export function updateAgentNavigation(agent: Agent, gs: GameState, deltaTime: nu
       }
     }
   }
-  
+
   if (agent.state === AgentState.Traveling || agent.state === AgentState.Escaping) {
     if (distance_sq(agent.nextCorner, agent.coordinate) > 0.01) {
       // Rotate look toward the desired direction with angular speed limit

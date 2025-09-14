@@ -73,7 +73,7 @@ bool test_point_inside_poly(const Point2& p, int poly_idx) {
     float orientation = flip
       ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
       : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
-    
+
     const bool ok = flip ? (orientation <= 0) : (orientation >= 0);
     if (!ok) {
       return false;
@@ -91,7 +91,7 @@ bool test_point_inside_poly(const Point2& p, int poly_idx) {
   float orientation = flip
     ? (v1.x - v2.x) * (p.y - v2.y) - (v1.y - v2.y) * (p.x - v2.x)
     : (v2.x - v1.x) * (p.y - v1.y) - (v2.y - v1.y) * (p.x - v1.x);
-  
+
   const bool ok = flip ? (orientation <= 0) : (orientation >= 0);
   if (!ok) {
     return false;
@@ -128,11 +128,11 @@ bool test_point_inside_triangle(const Point2& p, int tri_idx) {
   const float o31 = flip31
     ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
     : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-    
+
   const bool ok12 = flip12 ? (o12 <= 0) : (o12 >= 0);
   const bool ok23 = flip23 ? (o23 <= 0) : (o23 >= 0);
   const bool ok31 = flip31 ? (o31 <= 0) : (o31 >= 0);
-  
+
   return ok12 && ok23 && ok31;
 }
 
@@ -164,6 +164,6 @@ bool test_point_inside_triangle_ee(const Point2& p, int tri_idx) {
   const float o31 = flip31
     ? (v3.x - v1.x) * (p.y - v1.y) - (v3.y - v1.y) * (p.x - v1.x)
     : (v1.x - v3.x) * (p.y - v3.y) - (v1.y - v3.y) * (p.x - v3.x);
-    
+
   return flip31 ? (o31 <= 0) : (o31 >= 0);
 }

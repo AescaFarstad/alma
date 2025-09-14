@@ -15,27 +15,27 @@ struct Navmesh {
   Point2* triangle_centroids;   // Array of Point2 triangle centroids
   float bbox[4];        // [minX, minY, maxX, maxY] - Real/original bounding box
   float buffered_bbox[4];     // [minX, minY, maxX, maxY] - Enlarged bounding box used for triangulation
-  
+
   // Metadata
   int32_t walkable_triangle_count;
   int32_t walkable_polygon_count;
-  
+
   // Extended polygon data
   int32_t* polygons;
   Point2* poly_centroids;
   int32_t* poly_verts;
   int32_t* poly_tris;
   int32_t* poly_neighbors;
-  
+
   // Building data
   int32_t* buildings;
   int32_t* building_verts;
   int32_t* blob_buildings;
-  
+
   // Auxiliary structures
   int32_t* triangle_to_polygon;
   int32_t* building_to_blob;
-  
+
   // Array sizes for memory management
   int32_t vertices_count;
   int32_t triangles_count;
@@ -51,7 +51,7 @@ struct Navmesh {
   int32_t blob_buildings_count;
   int32_t triangle_to_polygon_count;
   int32_t building_to_blob_count;
-  
+
   // Four spatial indices for fast queries
   SpatialIndex triangle_index;   // For triangle queries
   SpatialIndex polygon_index;  // For polygon queries  

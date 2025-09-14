@@ -305,11 +305,11 @@ EMSCRIPTEN_KEEPALIVE void sprite_renderer_init(const char* canvas_selector) {
   if (u_fadeDur_loc >= 0) {
     glUniform1f(u_fadeDur_loc, 0.4f);
   }
-  
+
   // Set up blend state once - this never changes
   glEnable(GL_BLEND);
   glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-  
+
   // Bind static rendering state
   glBindVertexArray(g_vao);
   glActiveTexture(GL_TEXTURE0);

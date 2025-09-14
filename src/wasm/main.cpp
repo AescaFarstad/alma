@@ -97,7 +97,7 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
   initialize_shared_buffer_layout(sharedBuffer, maxAgents);
 
   g_event_buffer.set(reinterpret_cast<uint8_t*>(eventsBasePtr), eventsCapWords);
-  
+
   // Allocate dynamic data arrays
   agent_data.corridors = new std::vector<int>[maxAgents];
 
@@ -114,7 +114,7 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
 EMSCRIPTEN_KEEPALIVE void finalize_init() {
   // Initialize the navmesh structure
   initialize_navmesh_structure();
-  
+
   std::cout << "[WASM] Finalization complete." << std::endl;
 }
 
@@ -150,7 +150,7 @@ EMSCRIPTEN_KEEPALIVE void set_rng_seed_js(uint32_t seed) {
  */
 EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binarySize, uint32_t totalMemorySize, float cellSize, bool enableLogging) {
   uint8_t* memoryStart = reinterpret_cast<uint8_t*>(offset);
-  
+
   if (memoryStart == nullptr) {
     {
       std::ostringstream _oss; _oss << "[WASM] Invalid memory offset: " << offset;
@@ -158,13 +158,13 @@ EMSCRIPTEN_KEEPALIVE int init_navmesh_from_bin(uint32_t offset, uint32_t binaryS
     }
     return 0;
   }
-  
+
   // Set global logging toggle from first call
   g_init_logging_enabled = enableLogging;
-  
+
   // Initialize navmesh from the buffer - C++ will figure out auxiliary memory layout
   uint32_t usedMemory = init_navmesh_from_buffer(memoryStart, binarySize, totalMemorySize, cellSize, enableLogging);
-  
+
   // Return the total memory used
   return static_cast<int>(usedMemory);
 }
@@ -185,7 +185,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_g_navmesh_ptr() {
   if (!navmeshData) {
     navmeshData = static_cast<uint32_t*>(malloc(20 * sizeof(uint32_t)));
   }
-  
+
   // Fill in the pointers as WASM heap offsets (pointers converted to uint32_t)
   navmeshData[0] = reinterpret_cast<uintptr_t>(g_navmesh.vertices);
   navmeshData[1] = reinterpret_cast<uintptr_t>(g_navmesh.triangles);
@@ -198,7 +198,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_g_navmesh_ptr() {
   navmeshData[8] = reinterpret_cast<uintptr_t>(g_navmesh.buildings);
   navmeshData[9] = reinterpret_cast<uintptr_t>(g_navmesh.building_verts);
   navmeshData[10] = reinterpret_cast<uintptr_t>(g_navmesh.blob_buildings);
-  
+
   // Fill in the counts (using signed int32_t values)
   navmeshData[11] = static_cast<uint32_t>(g_navmesh.walkable_triangle_count);
   navmeshData[12] = static_cast<uint32_t>(g_navmesh.walkable_polygon_count);
@@ -206,19 +206,19 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_g_navmesh_ptr() {
   navmeshData[14] = static_cast<uint32_t>(g_navmesh.triangles_count / 3); // totalTriangles 
   navmeshData[15] = static_cast<uint32_t>(g_navmesh.polygons_count > 0 ? g_navmesh.polygons_count - 1 : 0); // totalPolygons (minus sentinel)
   navmeshData[16] = static_cast<uint32_t>(g_navmesh.buildings_count > 0 ? g_navmesh.buildings_count - 1 : 0); // totalBuildings (minus sentinel)
-  
+
   // Fill in auxiliary pointers
   navmeshData[17] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_to_polygon);
   navmeshData[18] = reinterpret_cast<uintptr_t>(g_navmesh.building_to_blob);
-  
+
   // Fill in triangle_centroids pointer
   navmeshData[19] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_centroids);
-  
+
   uint32_t result = reinterpret_cast<uintptr_t>(navmeshData);
   if (g_init_logging_enabled) {
     std::cout << "[WASM] get_g_navmesh_ptr returning: " << result << " (offset in uint32: " << (result/4) << ")" << std::endl;
   }
-  
+
   return result;
 }
 
@@ -232,7 +232,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_navmesh_bbox_ptr() {
   if (!bboxData) {
     bboxData = static_cast<float*>(malloc(8 * sizeof(float)));
   }
-  
+
   // Copy both bboxes to the allocated memory
   bboxData[0] = g_navmesh.bbox[0];    // Real minX
   bboxData[1] = g_navmesh.bbox[1];    // Real minY
@@ -242,7 +242,7 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_navmesh_bbox_ptr() {
   bboxData[5] = g_navmesh.buffered_bbox[1]; // Buffered minY
   bboxData[6] = g_navmesh.buffered_bbox[2]; // Buffered maxX
   bboxData[7] = g_navmesh.buffered_bbox[3]; // Buffered maxY
-  
+
   return reinterpret_cast<uintptr_t>(bboxData);
 }
 
@@ -265,9 +265,9 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_spatial_index_data() {
   if (!spatialIndexData) {
     spatialIndexData = static_cast<uint32_t*>(malloc(23 * sizeof(uint32_t)));
   }
-  
+
   int offset = 0;
-  
+
   // Triangle spatial index
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_index.cellOffsets);
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_index.cellItems);
@@ -281,31 +281,31 @@ EMSCRIPTEN_KEEPALIVE uint32_t get_spatial_index_data() {
   spatialIndexData[offset++] = *reinterpret_cast<uint32_t*>(&g_navmesh.triangle_index.maxY);
   spatialIndexData[offset++] = g_navmesh.triangle_index.cellOffsetsCount;
   spatialIndexData[offset++] = g_navmesh.triangle_index.cellItemsCount;
-  
+
   // Skip auxiliary lookup maps (TypeScript expects to skip 4 values)
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.triangle_to_polygon);
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_to_blob);
   spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.triangles_count / 3); // total_triangles
   spatialIndexData[offset++] = static_cast<uint32_t>(g_navmesh.buildings_count > 0 ? g_navmesh.buildings_count - 1 : 0); // total_buildings
-  
+
   // Polygon spatial index
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.polygon_index.cellOffsets);
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.polygon_index.cellItems);
   spatialIndexData[offset++] = g_navmesh.polygon_index.cellOffsetsCount;
   spatialIndexData[offset++] = g_navmesh.polygon_index.cellItemsCount;
-  
+
   // Blob spatial index
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.blob_index.cellOffsets);
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.blob_index.cellItems);
   spatialIndexData[offset++] = g_navmesh.blob_index.cellOffsetsCount;
   spatialIndexData[offset++] = g_navmesh.blob_index.cellItemsCount;
-  
+
   // Building spatial index
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_index.cellOffsets);
   spatialIndexData[offset++] = reinterpret_cast<uintptr_t>(g_navmesh.building_index.cellItems);
   spatialIndexData[offset++] = g_navmesh.building_index.cellOffsetsCount;
   spatialIndexData[offset++] = g_navmesh.building_index.cellItemsCount;
-  
+
   return reinterpret_cast<uintptr_t>(spatialIndexData);
 }
 
@@ -325,23 +325,23 @@ EMSCRIPTEN_KEEPALIVE int test_find_corridor(float startX, float startY, float en
   if (!resultPtr || maxLength <= 0) {
     return 0;
   }
-  
+
   Point2 startPoint = {startX, startY};
   Point2 endPoint = {endX, endY};
   std::vector<int> corridor;
-  
+
   bool success = findCorridor(g_navmesh, pathFreeWidth, pathWidthPenaltyMult, startPoint, endPoint, corridor, -1, -1);
-  
+
   if (!success || corridor.empty()) {
     return 0;
   }
-  
+
   // Copy corridor to result buffer
   int copyLength = std::min((int)corridor.size(), maxLength);
   for (int i = 0; i < copyLength; i++) {
     resultPtr[i] = corridor[i];
   }
-  
+
   return copyLength;
 }
 

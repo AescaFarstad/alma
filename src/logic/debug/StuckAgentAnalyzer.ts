@@ -28,7 +28,7 @@ export function analyzeStuckAgent(agent: Agent): StuckAgentAnalysis {
   // Check if agent is actually stuck
   const distSq = distance_sq(agent.coordinate, agent.nextCorner);
   analysis.isStuck = distSq < 0.01 && agent.numValidCorners === 1;
-  
+
   if (!analysis.isStuck) {
   analysis.scenario = 'not_stuck';
   return analysis;
@@ -90,42 +90,42 @@ export function testEscapeScenarioHypothesis(agent: Agent): {
 } {
   const evidence: string[] = [];
   let originalBadValueSource: string | undefined;
-  
+
   // Look for evidence in debug log
   const logs = agent.debugLog;
   const escapeSetupIndex = logs.findIndex(log => log.includes('preEscapeCorner saved as'));
   const escapeSuccessIndex = logs.findIndex(log => log.includes('Escaped! nextCorner'));
-  
+
   if (escapeSetupIndex !== -1 && escapeSuccessIndex !== -1) {
   evidence.push('Found escape setup and success logs in agent history');
-  
+
   // Extract coordinates from logs
   const setupLog = logs[escapeSetupIndex];
   const successLog = logs[escapeSuccessIndex];
-  
+
   evidence.push(`Setup log: ${setupLog}`);
   evidence.push(`Success log: ${successLog}`);
-  
+
   // Parse coordinates if possible
   const setupMatch = setupLog.match(/preEscapeCorner saved as: \(([^,]+), ([^)]+)\)/);
   const successMatch = successLog.match(/Escaped! nextCorner: \(([^,]+), ([^)]+)\)/);
-  
+
   if (setupMatch && successMatch) {
     const setupX = parseFloat(setupMatch[1]);
     const setupY = parseFloat(setupMatch[2]);
     const successX = parseFloat(successMatch[1]);
     const successY = parseFloat(successMatch[2]);
-    
+
     if (Math.abs(setupX - successX) < 0.01 && Math.abs(setupY - successY) < 0.01) {
     evidence.push('preEscapeCorner coordinates match escaped nextCorner coordinates');
     }
-    
+
     // Check if these coordinates are close to current position
     const distToCurrentSq = (setupX - agent.coordinate.x) ** 2 + (setupY - agent.coordinate.y) ** 2;
     if (distToCurrentSq < 0.01) {
     evidence.push('preEscapeCorner was very close to current agent position');
     }
-    
+
     // Try to find where the original bad nextCorner value came from
     // Look backwards from the escape setup to find the last corner update
     for (let i = escapeSetupIndex - 1; i >= 0; i--) {
@@ -177,17 +177,17 @@ export function testEscapeScenarioHypothesis(agent: Agent): {
  */
 export function debugStuckAgent(agent: Agent): void {
   console.group('🔍 STUCK AGENT ANALYSIS');
-  
+
   const analysis = analyzeStuckAgent(agent);
   console.log('📊 Analysis:', analysis);
-  
+
   const hypothesis = testEscapeScenarioHypothesis(agent);
   console.log('💡 Escape Hypothesis:', hypothesis);
-  
+
   if (hypothesis.originalBadValueSource) {
   console.log(`🎯 Root Cause: Bad value originated from ${hypothesis.originalBadValueSource}`);
   }
-  
+
   // Reference check (excluding expected preEscapeCorner sharing)
   const refs = {
   nextCorner_vs_coordinate: agent.nextCorner === agent.coordinate,
@@ -195,18 +195,18 @@ export function debugStuckAgent(agent: Agent): void {
   nextCorner_vs_endTarget: agent.nextCorner === agent.endTarget
   };
   console.log('🔗 Reference Check (problematic ones only):', refs);
-  
+
   // Corner progression analysis
   analyzeAgentCornerProgression(agent);
-  
+
   // Reference corruption analysis
   checkReferenceCorruption(agent);
-  
+
   // Recent debug log
   console.log('📝 Recent Debug Log (last 15 entries):');
   agent.debugLog.slice(-15).forEach((log, i) => {
   console.log(`  ${agent.debugLog.length - 15 + i}: ${log}`);
   });
-  
+
   console.groupEnd();
 } 

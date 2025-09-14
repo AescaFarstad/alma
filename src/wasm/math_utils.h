@@ -14,7 +14,7 @@ namespace math {
     float value;
     uint64_t newSeed;
   };
-  
+
   uint64_t advance_seed(uint64_t seed);
   SeededRandomResult seededRandom(uint64_t seed);
 
@@ -154,7 +154,7 @@ namespace math {
   inline bool isPointInTriangle(const Point2& p, const Point2& a, const Point2& b, const Point2& c) {
     return isPointInTriangle(p.x, p.y, a.x, a.y, b.x, b.y, c.x, c.y);
   }
-  
+
   inline float distancePointToSegment(const Point2& p, const Point2& a, const Point2& b) {
     Point2 ab = b - a;
     Point2 ap = p - a;
@@ -166,23 +166,23 @@ namespace math {
 
     float t = dot(ap, ab) / lenSq;
     t = std::max(0.0f, std::min(1.0f, t));
-    
+
     Point2 closestPoint = a + ab * t;
-    
+
     return distance(p, closestPoint);
   }
 
   inline bool isToRight(const Point2& p1, const Point2& p2, const Point2& p3) {
     return cross(p2 - p1, p3 - p1) < 0;
   }
-  
+
   inline bool aabbIntersection(const Point2& min1, const Point2& max1, const Point2& min2, const Point2& max2) {
     return !(max1.x < min2.x || min1.x > max2.x || max1.y < min2.y || min1.y > max2.y);
   }
 
   // Intersection tests
   bool lineSegmentIntersectionTest(const Point2& p1, const Point2& p2, const Point2& p3, const Point2& p4);
-  
+
   inline float pointLineSignedDistance(const Point2& point, const Point2& lineP1, const Point2& lineDir) {
     Point2 normal = {-lineDir.y, lineDir.x};
     Point2 pointVec = point - lineP1;
@@ -192,7 +192,7 @@ namespace math {
 
   Point2 getLineSegmentIntersectionPoint(const Point2& p1, const Point2& p2, const Point2& p3, const Point2& p4);
   Point2 lineLineIntersection(const Point2& lineP1, const Point2& lineDir1, const Point2& lineP2, const Point2& lineDir2);
-  
+
   // Triangle-AABB intersection functions
   bool triangleAABBIntersection(const std::vector<Point2>& triPoints, const Point2& cellMin, const Point2& cellMax);
   bool triangleAABBIntersectionWithBounds(const std::vector<Point2>& triPoints, const Point2& triMin, const Point2& triMax, const Point2& cellMin, const Point2& cellMax);

@@ -193,7 +193,7 @@ export class SceneState {
       const dy = corners[i + 1].y - corners[i].y;
       totalLength += Math.sqrt(dx * dx + dy * dy);
     }
-    
+
     this.paths.set(id, { id, corners, startPoint, endPoint, totalLength });
     this.isDirty = true;
   }

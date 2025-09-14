@@ -16,7 +16,7 @@ export function resetAgentStuck(agent: Agent){
 
 export function updateAgentStatistic(agent: Agent, gs: GameState, deltaTime: number): void {
   if (deltaTime === 0) return;
-  
+
   // agent.pathLogCounter++;
   // if (agent.pathLogCounter >= PATH_LOG_RATE) {
   //   agent.pathLogCounter = 0;
@@ -31,7 +31,7 @@ export function updateAgentStatistic(agent: Agent, gs: GameState, deltaTime: num
 
   if (agent.lastEndTarget.x !== agent.endTarget.x || agent.lastEndTarget.y !== agent.endTarget.y)
     resetAgentStuck(agent)
-  
+
   if (agent.numValidCorners > 0) {
     const velocityMagnitude = Math.max(1, length(agent.velocity));
     const velocityFactor = velocityMagnitude / agent.maxSpeed;

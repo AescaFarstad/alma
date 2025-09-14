@@ -63,7 +63,7 @@ void point_in_polygon_bench() {
     auto r1 = math::seededRandom(seed); 
     seed = r1.newSeed; 
     float rx = r1.value;
-    
+
     auto r2 = math::seededRandom(seed);
     seed = r2.newSeed;
     float ry = r2.value;
@@ -95,7 +95,7 @@ void point_in_polygon_bench() {
   results.push_back(runNavmeshMethod("test_point_inside_poly_bi", test_point_inside_poly_bi, NUM_POINTS, points, candidateArrays));
   results.push_back(runNavmeshMethod("test_point_inside_poly_t", test_point_inside_poly_t, NUM_POINTS, points, candidateArrays));
   // results.push_back(runNavmeshMethod("test_point_inside_poly_i_fixed", test_point_inside_poly_i_fixed, NUM_POINTS, points, candidateArrays));
-  
+
   printf("\nPoint-in-polygon benchmark over %d points (precomputed candidates)\n", NUM_POINTS);
   for (const auto& result : results) {
     printf("- %-30s: t=%.0f\t\tzero=%d\tmulti=%d\n", result.name.c_str(), result.durMs, result.zeroMatches, result.multiMatches);

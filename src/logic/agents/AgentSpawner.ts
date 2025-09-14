@@ -44,14 +44,14 @@ export function updateSpawners(gs: GameState, dt: number) {
         currentTri: currentTri,
         display: "character_blonde_green",
       });
-      
+
       newAgent.lastValidTri = newAgent.currentTri;
       newAgent.debug = false;
       // newAgent.endTarget = { "x": 344.8666687011719, "y": 208.2133331298828 };
       // newAgent.endTargetTri = 2852;
       // findPathToDestination(gs.navmesh, gs, newAgent, newAgent.currentTri, newAgent.endTargetTri, "hardcoded")
       // newAgent.state = AgentState.Traveling
-      
+
       gs.agents.push(newAgent);
     }
   }

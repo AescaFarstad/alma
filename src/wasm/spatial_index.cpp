@@ -28,7 +28,7 @@ void SpatialIndex::initializeFromWasm(uint32_t cellOffsetsPtr, uint32_t cellItem
   // Set up pointers to WASM memory
   this->cellOffsets = reinterpret_cast<uint32_t*>(cellOffsetsPtr);
   this->cellItems = reinterpret_cast<int32_t*>(cellItemsPtr);
-  
+
   // Copy grid parameters
   this->cellOffsetsCount = cellOffsetsCount;
   this->cellItemsCount = cellItemsCount;
@@ -122,7 +122,7 @@ RangeView SpatialIndex::query(Point2 p) const {
 
 std::vector<int> SpatialIndex::queryArea(float areaMinX, float areaMinY, float areaMaxX, float areaMaxY) const {
   std::vector<int> results;
-  
+
   if (cellOffsets == nullptr || cellItems == nullptr) {
     return results;
   }
@@ -132,12 +132,12 @@ std::vector<int> SpatialIndex::queryArea(float areaMinX, float areaMinY, float a
   int endCellX = std::min(gridWidth - 1, static_cast<int>((areaMaxX - minX) / cellSize));
   int startCellY = std::max(0, static_cast<int>((areaMinY - minY) / cellSize));
   int endCellY = std::min(gridHeight - 1, static_cast<int>((areaMaxY - minY) / cellSize));
-  
+
   // Collect items from all cells in the area
   for (int cellY = startCellY; cellY <= endCellY; cellY++) {
     for (int cellX = startCellX; cellX <= endCellX; cellX++) {
       int cellIndex = cellY * gridWidth + cellX;
-      
+
       if (cellIndex < 0 || cellIndex >= static_cast<int>(cellOffsetsCount) - 1) {
         continue;
       }
@@ -147,7 +147,7 @@ std::vector<int> SpatialIndex::queryArea(float areaMinX, float areaMinY, float a
 
       for (uint32_t i = start; i < end; ++i) {
         int itemId = cellItems[i];
-        
+
         // Check for duplicates (can occur when items span multiple cells)
         if (std::find(results.begin(), results.end(), itemId) == results.end()) {
           results.push_back(itemId);

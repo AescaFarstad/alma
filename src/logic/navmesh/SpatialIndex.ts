@@ -34,14 +34,14 @@ export class SpatialIndex {
     // console.log(`  - grid: ${gridWidth}x${gridHeight}, cellSize: ${cellSize}`);
     // console.log(`  - bbox: [${minX}, ${minY}, ${maxX}, ${maxY}]`);
     // console.log(`  - wasmMemory.byteLength: ${wasmMemory.byteLength}`);
-    
+
     if (cellOffsetsPtr !== 0 && cellOffsetsCount > 0) {
       this.cellOffsets = new Uint32Array(wasmMemory, cellOffsetsPtr, cellOffsetsCount);
       // console.log(`[TS SPATIAL INIT DEBUG] cellOffsets created: length=${this.cellOffsets.length}, first few values: [${Array.from(this.cellOffsets.slice(0, 10)).join(', ')}]`);
     } else {
       // console.log(`[TS SPATIAL INIT DEBUG] cellOffsets not initialized (ptr=${cellOffsetsPtr}, count=${cellOffsetsCount})`);
     }
-    
+
     if (cellItemsPtr !== 0 && cellItemsCount > 0) {
       this.cellItems = new Int32Array(wasmMemory, cellItemsPtr, cellItemsCount);
       // console.log(`[TS SPATIAL INIT DEBUG] cellItems created: length=${this.cellItems.length}`);
@@ -56,7 +56,7 @@ export class SpatialIndex {
     this.minY = minY;
     this.maxX = maxX;
     this.maxY = maxY;
-    
+
     // console.log(`[TS SPATIAL INIT DEBUG] Initialization complete. Final state:`);
     // console.log(`  - cellOffsets.length: ${this.cellOffsets.length}, cellItems.length: ${this.cellItems.length}`);
     // console.log(`  - grid: ${this.gridWidth}x${this.gridHeight}, cellSize: ${this.cellSize}`);
@@ -68,7 +68,7 @@ export class SpatialIndex {
       // console.log(`[TS SPATIAL DEBUG] Out of bounds: x=${x} (${this.minX}-${this.maxX}), y=${y} (${this.minY}-${this.maxY})`);
       return new Int32Array(0);
     }
-    
+
     const cx = Math.floor((x - this.minX) / this.cellSize);
     const cy = Math.floor((y - this.minY) / this.cellSize);
 
@@ -115,7 +115,7 @@ export class SpatialIndex {
     if (cellIndex < 0 || cellIndex >= this.cellOffsets.length - 1) {
       return new Int32Array(0);
     }
-    
+
     const start = this.cellOffsets[cellIndex];
     const end = this.cellOffsets[cellIndex + 1];
     return this.cellItems.subarray(start, end);

@@ -116,7 +116,7 @@ const tooltip = reactive({
 
 const buildings = computed((): BuildingDisplayData[] => {
   if (!gameState || !sceneState) return [];
-  
+
   return Array.from(sceneState.selectedBuildingIds)
   .map((id: number) => {
     const props = gameState.navmesh.building_properties[id];
@@ -267,10 +267,10 @@ const uniteAndSimplifySelectedBuildings = async () => {
   if (buildingsToUnite.length === 0) return;
 
   let unitedGroups = await uniteGeometries(buildingsToUnite, MERGE_INFLATION * 2.5);
-  
+
   if (unitedGroups.length === 0) return;
 
-  
+
   for (let i = 0; i < unitedGroups.length; i++) {
     const group = unitedGroups[i];
     // let simplified = [...group.geom];
@@ -331,27 +331,27 @@ const drawBlobs = (id: number) => {
   }
 
   console.log(`Drawing blob for building ${id}`);
-  
+
   const blobIndex = gameState.navmesh.building_to_blob[id];
   console.log(`Building ${id} -> Blob Index: ${blobIndex}`);
-  
+
   if (blobIndex === undefined || blobIndex < 0) {
     console.warn(`Building ${id} does not belong to a blob.`);
     return;
   }
-  
+
   // Convert blob index to polygon ID
   // Blobs are impassable polygons with IDs >= walkable_polygon_count
   const blobPolygonId = gameState.navmesh.walkable_polygon_count + blobIndex;
   console.log(`Blob index ${blobIndex} -> Polygon ID: ${blobPolygonId}`);
   console.log(`Walkable polygon count: ${gameState.navmesh.walkable_polygon_count}`);
   console.log(`Total polygons: ${gameState.navmesh.polygons.length - 1}`);
-  
+
   if (blobPolygonId >= gameState.navmesh.polygons.length - 1) {
     console.warn(`Blob polygon ID ${blobPolygonId} is out of range for polygons array (length: ${gameState.navmesh.polygons.length - 1})`);
     return;
   }
-  
+
   const blobPolygon = getPolygonVertices(gameState.navmesh, blobPolygonId);
   console.log(`Retrieved ${blobPolygon.length} vertices for blob polygon ${blobPolygonId}`);
 
@@ -420,7 +420,7 @@ const debugBlobMapping = () => {
   console.log(`building_properties length: ${gameState.navmesh.building_properties.length}`);
   console.log(`walkable_polygon_count: ${gameState.navmesh.walkable_polygon_count}`);
   console.log(`total polygons: ${gameState.navmesh.polygons.length - 1}`);
-  
+
   // Show first 20 mappings
   const limit = Math.min(20, gameState.navmesh.building_to_blob.length);
   for (let i = 0; i < limit; i++) {
@@ -428,7 +428,7 @@ const debugBlobMapping = () => {
   const blobPolygonId = blobIndex >= 0 ? gameState.navmesh.walkable_polygon_count + blobIndex : -1;
   console.log(`Building ID: ${i}, Blob Index: ${blobIndex}, Blob Polygon ID: ${blobPolygonId}`);
   }
-  
+
   // Count how many buildings have valid blob mappings
   let validMappings = 0;
   for (let i = 0; i < gameState.navmesh.building_to_blob.length; i++) {

@@ -5,7 +5,7 @@ export function printFinalSummary(navmeshData: NavmeshData, walkableOpt: any, im
 
 
   console.log(`BUILDINGS count: ${navmeshData.stats.buildings}`);
-  
+
   // Building vertex statistics
   if (buildingVertexStats) {
     console.log(`Building vertices added specifically for buildings: ${buildingVertexStats.addedForBuildings}`);
@@ -25,7 +25,7 @@ export function printFinalSummary(navmeshData: NavmeshData, walkableOpt: any, im
   console.log(`  - Impassable triangles: ${navmeshData.stats.impassable_triangles}`);
   console.log(`Total polygons: ${navmeshData.stats.polygons}`);
   console.log(`  - Walkable polygons: ${navmeshData.stats.walkable_polygons} (${walkableOpt.improvementPercent.toFixed(1)}% reduction)`);
-  
+
   // Calculate walkable polygon triangle statistics
   if (triangleToPolygonMap && navmeshData.stats.walkable_polygons > 0) {
     const walkablePolygonTriangleCounts = calculateWalkablePolygonTriangleStats(navmeshData, triangleToPolygonMap);
@@ -33,7 +33,7 @@ export function printFinalSummary(navmeshData: NavmeshData, walkableOpt: any, im
     console.log(`  • Average triangles per polygon: ${walkablePolygonTriangleCounts.avgTriangles.toFixed(1)}`);
     console.log(`  • Single triangle polygons: ${walkablePolygonTriangleCounts.singleTriangleCount}`);
   }
-  
+
   console.log(`  - Impassable polygons: ${navmeshData.stats.impassable_polygons} (${impassableOpt.improvementPercent.toFixed(1)}% reduction)`);
 
   // Add new statistics for polygon vertices and triangles
@@ -77,19 +77,19 @@ export function finalizeNavmeshData(navmeshData: NavmeshData, data: any): void {
 function calculateWalkablePolygonTriangleStats(navmeshData: NavmeshData, triangleToPolygonMap: Map<number, number>) {
   const walkablePolygonCount = navmeshData.stats.walkable_polygons;
   const triangleCounts = new Array(walkablePolygonCount).fill(0);
-  
+
   // Count triangles for each walkable polygon
   for (const [triangleIndex, polygonIndex] of triangleToPolygonMap.entries()) {
     if (polygonIndex < walkablePolygonCount) { // Only walkable polygons
       triangleCounts[polygonIndex]++;
     }
   }
-  
+
   const maxTriangles = Math.max(...triangleCounts);
   const totalTriangles = triangleCounts.reduce((sum, count) => sum + count, 0);
   const avgTriangles = totalTriangles / walkablePolygonCount;
   const singleTriangleCount = triangleCounts.filter(count => count === 1).length;
-  
+
   return {
     maxTriangles,
     avgTriangles,
@@ -132,7 +132,7 @@ function getTotalPolygonTriangles(navmeshData: NavmeshData): number {
 function calculateBuildingBlobStats(navmeshData: NavmeshData) {
   const totalBlobs = navmeshData.stats.impassable_polygons;
   const totalBuildings = navmeshData.stats.buildings;
-  
+
   if (totalBlobs === 0) {
     return {
       avgBuildingsPerBlob: 0,
@@ -143,7 +143,7 @@ function calculateBuildingBlobStats(navmeshData: NavmeshData) {
 
   // Calculate buildings per blob using blob_buildings array
   const buildingsPerBlob = new Array(totalBlobs).fill(0);
-  
+
   // blob_buildings maps blobs to their constituent buildings
   // It has num_blobs + 1 entries (including sentinel)
   for (let blobIndex = 0; blobIndex < totalBlobs; blobIndex++) {
@@ -151,10 +151,10 @@ function calculateBuildingBlobStats(navmeshData: NavmeshData) {
     const endIndex = navmeshData.blob_buildings[blobIndex + 1];
     buildingsPerBlob[blobIndex] = endIndex - startIndex;
   }
-  
+
   const avgBuildingsPerBlob = totalBuildings / totalBlobs;
   const singleBuildingBlobs = buildingsPerBlob.filter(count => count === 1).length;
-  
+
   return {
     avgBuildingsPerBlob,
     singleBuildingBlobs,

@@ -47,7 +47,7 @@ function traceStraightTriangleCorridor(
 
     let nextTriIdx = -1;
     let exitEdgeIdx = -1;
-    
+
     if (previousTriIdx === -1) {
       const c0 = isToRight(startPoint, endPoint, triPoints[0]);
       const c1 = isToRight(startPoint, endPoint, triPoints[1]);
@@ -60,7 +60,7 @@ function traceStraightTriangleCorridor(
       } else {
         exitEdgeIdx = c2 ? 2 : 1;
       }
-      
+
       nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
     } else {
       let entryEdgeIdx = -1;
@@ -74,7 +74,7 @@ function traceStraightTriangleCorridor(
       if (entryEdgeIdx !== -1) {
         const p_entry2 = triPoints[(entryEdgeIdx + 1) % 3];
         const p_apex = triPoints[(entryEdgeIdx + 2) % 3];
-        
+
         if (isToRight(startPoint, endPoint, p_apex) !== isToRight(startPoint, endPoint, p_entry2)) {
           exitEdgeIdx = (entryEdgeIdx + 1) % 3;
         } else {
@@ -83,7 +83,7 @@ function traceStraightTriangleCorridor(
         nextTriIdx = navmesh.neighbors[currentTriIdx * 3 + exitEdgeIdx];
       }
     }
-    
+
     if (nextTriIdx !== -1) {
       previousTriIdx = currentTriIdx;
       currentTriIdx = nextTriIdx;
@@ -137,7 +137,7 @@ export function findCorridor3(
     console.error(`findCorridor3: FAILED - invalid polygons`);
     return null;
   }
-  
+
   if (startPoly === endPoly) {
     if (startPoly >= navmesh.walkable_polygon_count) return null;
     return [startPoly];
@@ -181,15 +181,15 @@ export function findCorridor3(
   if (spans.length === 1) {
     return spans[0];
   }
-  
+
   let finalPath = spans[0];
 
   for (let i = 1; i < spans.length; i++) {
     const nextSpan = spans[i];
-    
+
     const lastPolyInPath = finalPath[finalPath.length - 1];
     const firstPolyInNextSpan = nextSpan[0];
-    
+
     const lastPointInPath = { x: navmesh.poly_centroids[lastPolyInPath * 2], y: navmesh.poly_centroids[lastPolyInPath * 2 + 1] };
     const firstPointInNextSpan = { x: navmesh.poly_centroids[firstPolyInNextSpan * 2], y: navmesh.poly_centroids[firstPolyInNextSpan * 2 + 1] };
 
@@ -221,7 +221,7 @@ export function findCorridor3(
         finalPath.push(bridgePoly);
       }
     }
-    
+
     for (const poly of nextSpan) {
       if (finalPath[finalPath.length - 1] !== poly) {
         finalPath.push(poly);
@@ -234,7 +234,7 @@ export function findCorridor3(
     const poly = finalPath[i];
     const polyVertStart = navmesh.polygons[poly];
     const polyVertEnd = navmesh.polygons[poly + 1];
-    
+
     if (i + 3 < finalPath.length) {
       const nextPoly3 = finalPath[i + 3];
       let isNeighbor = false;
@@ -265,6 +265,6 @@ export function findCorridor3(
 
     i++;
   }
-  
+
   return finalPath;
 }

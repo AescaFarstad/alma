@@ -45,7 +45,7 @@ function getFeatureBbox(feature) {
     if (y > maxY) maxY = y;
   };
   processCoords(feature.geometry.coordinates);
-  
+
   if (!isFinite(minX)) return null;
 
   return { minX, minY, maxX, maxY };
@@ -71,7 +71,7 @@ function getOverallBbox(geojsonData) {
     };
     processCoords(feature.geometry.coordinates);
   }
-  
+
   if (!isFinite(minX)) return null;
 
   return { minX, minY, maxX, maxY };
@@ -106,7 +106,7 @@ function worldToTileCoord(worldX, worldY, zoom) {
   const tilesPerAxis = ZOOM_TILE_COUNTS[zoom];
   const x = Math.floor(tilesPerAxis * (worldX - WORLD_MIN_X) / WORLD_SPAN_X);
   const y = Math.floor(tilesPerAxis * (worldY - WORLD_MIN_Y) / WORLD_SPAN_Y);
-  
+
   return {
     x: Math.max(0, Math.min(tilesPerAxis - 1, x)),
     y: Math.max(0, Math.min(tilesPerAxis - 1, y))
@@ -116,7 +116,7 @@ function worldToTileCoord(worldX, worldY, zoom) {
 function generateTileFeatures(spatialIndex, z, x, y) {
   const bounds = tileToWorldBounds(z, x, y);
   const { minX, minY, maxX, maxY } = bounds;
-  
+
   const tileBbox = [minX, minY, maxX, maxY];
   const results = spatialIndex.search({ minX, minY, maxX, maxY });
 
@@ -132,12 +132,12 @@ function generateTileFeatures(spatialIndex, z, x, y) {
       Math.round(TILE_EXTENT * (cy - minY) / tileHeight)
     ];
   };
-  
+
   const transformRing = (ring) => ring.map(transform);
   const transformMulti = (multi) => multi.map(transformRing);
 
   const tileFeatures = [];
-  
+
   for (const result of results) {
     const feature = result.original;
     const newFeature = JSON.parse(JSON.stringify(feature));
@@ -152,29 +152,29 @@ function generateTileFeatures(spatialIndex, z, x, y) {
           featureType = 1;
         }
         break;
-        
+
       case 'LineString':
         clippedGeometry = lineclip(newFeature.geometry.coordinates, tileBbox).map(transformRing);
         if (clippedGeometry.length > 0) featureType = 2;
         break;
-        
+
       case 'Polygon':
         const tilePolygon = [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]];
         clippedGeometry = polygonClipping.intersection(newFeature.geometry.coordinates, tilePolygon).map(transformMulti);
         if (clippedGeometry.length > 0) featureType = 3;
         break;
-        
+
       case 'MultiLineString':
         clippedGeometry = newFeature.geometry.coordinates.flatMap(line => lineclip(line, tileBbox)).map(transformRing);
         if (clippedGeometry.length > 0) featureType = 2;
         break;
-        
+
       case 'MultiPolygon':
         const multiTilePolygon = [[[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY], [minX, minY]]];
         clippedGeometry = newFeature.geometry.coordinates.flatMap(poly => polygonClipping.intersection(poly, multiTilePolygon)).map(transformMulti);
         if (clippedGeometry.length > 0) featureType = 3;
         break;
-        
+
       default:
         continue;
     }
@@ -187,7 +187,7 @@ function generateTileFeatures(spatialIndex, z, x, y) {
       });
     }
   }
-  
+
   return tileFeatures.length > 0 ? { features: tileFeatures } : null;
 }
 
@@ -205,7 +205,7 @@ async function generateTilesForFeature(inputDir, outputDir, featureName) {
   fs.emptyDirSync(featureOutputDir);
 
   const geojsonData = JSON.parse(fs.readFileSync(inputFile, 'utf-8'));
-  
+
   const overallBbox = getOverallBbox(geojsonData);
   if (!overallBbox) {
     console.log(`  No features with coordinates found in ${featureName}.`);
@@ -218,18 +218,18 @@ async function generateTilesForFeature(inputDir, outputDir, featureName) {
   const spatialIndex = createSpatialIndex(geojsonData);
 
   let generatedCount = 0;
-  
+
   for (let z = MIN_ZOOM; z <= MAX_ZOOM; z++) {
     const tilesPerAxis = ZOOM_TILE_COUNTS[z];
     const totalTiles = tilesPerAxis * tilesPerAxis;
     const tileSize = WORLD_SPAN_X / tilesPerAxis;
-    
+
     console.log(`  Processing zoom level ${z}... (${tilesPerAxis}x${tilesPerAxis} = ${totalTiles} tiles, ${tileSize.toFixed(0)}m per tile)`);
-    
+
     // Calculate the range of tiles that might contain features
     const minTileCoord = worldToTileCoord(overallBbox.minX, overallBbox.minY, z);
     const maxTileCoord = worldToTileCoord(overallBbox.maxX, overallBbox.maxY, z);
-    
+
     // Add a small buffer to ensure we don't miss edge cases, but clamp to valid range
     const minTileX = Math.max(0, minTileCoord.x);
     const maxTileX = Math.min(tilesPerAxis - 1, maxTileCoord.x);
@@ -246,19 +246,19 @@ async function generateTilesForFeature(inputDir, outputDir, featureName) {
         if (tile && tile.features.length > 0) {
           const tileDir = path.join(featureOutputDir, z.toString(), x.toString());
           fs.ensureDirSync(tileDir);
-          
+
           const pbfData = fromGeojsonVt({ [featureName]: tile });
           const buffer = Buffer.from(pbfData);
-          
+
           const tilePath = path.join(tileDir, `${y}.pbf`);
           fs.writeFileSync(tilePath, buffer);
-          
+
           zoomGeneratedCount++;
           generatedCount++;
         }
       }
     }
-    
+
     console.log(`  Generated ${zoomGeneratedCount} tiles for zoom ${z}`);
   }
 

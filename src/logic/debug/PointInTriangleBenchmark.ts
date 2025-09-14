@@ -60,13 +60,13 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
     const px = pxs[i];
     const py = pys[i];
     const candidates = candidateArrays[i];
-    
+
     // Warm up all methods using navmesh structures
     for (const triIdx of candidates) {
       testPointInsideTriangle(navmesh, px, py, triIdx);
       // testPointInsideTriangleEarlyExit(px, py, triIdx);
       // testPointInsideTriangleLoop(px, py, triIdx);
-      
+
       // Extract coordinates for coordinate methods
       const base = triIdx * 3;
       const i1 = navmesh.triangles[base];
@@ -78,7 +78,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
       const by = navmesh.vertices[i2 * 2 + 1];
       const cx = navmesh.vertices[i3 * 2];
       const cy = navmesh.vertices[i3 * 2 + 1];
-      
+
       isPointInTriangle(px, py, ax, ay, bx, by, cx, cy);
       isPointInTriangle2(px, py, ax, ay, bx, by, cx, cy);
     }
@@ -127,7 +127,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
         const by = navmesh.vertices[i2 * 2 + 1];
         const cx = navmesh.vertices[i3 * 2];
         const cy = navmesh.vertices[i3 * 2 + 1];
-        
+
         if (method(px, py, ax, ay, bx, by, cx, cy)) {
           matches++;
         }
@@ -151,7 +151,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
   // Build summary
   let summary = "";
   summary += `Point-in-triangle benchmark over ${NUM_POINTS} points (precomputed candidates & coords)\n`;
-  
+
   for (const result of results) {
     summary += `- ${result.name}:\tt=${result.durMs.toFixed()}\t\tzero=${result.zeroMatches}\tmulti=${result.multiMatches}\n`;
   }
@@ -159,7 +159,7 @@ export function runPointInTriangleBenchmark(gameState: GameState): void {
   // Find fastest and slowest
   const fastest = results.reduce((min, r) => r.durMs < min.durMs ? r : min);
   const slowest = results.reduce((max, r) => r.durMs > max.durMs ? r : max);
-  
+
   summary += `\nFastest: ${fastest.name} (${fastest.durMs.toFixed()}ms)\n`;
   summary += `Slowest: ${slowest.name} (${slowest.durMs.toFixed()}ms)\n`;
   summary += `Speed difference: ${(slowest.durMs / fastest.durMs).toFixed(2)}x`;

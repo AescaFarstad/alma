@@ -12,7 +12,7 @@ export function simplifyBuildingGeometry(geometry: number[][][], tolerance: numb
   if (!geometry || geometry.length === 0) {
     return [];
   }
-  
+
   // 1. Extract the coordinate ring. The data can have an extra nesting level.
   const outerShell = geometry[0];
   let coordinateRing: number[][];
@@ -25,11 +25,11 @@ export function simplifyBuildingGeometry(geometry: number[][][], tolerance: numb
     // Flat structure: geometry[0] is the ring
     coordinateRing = outerShell as number[][];
   }
-  
+
   if (!coordinateRing || coordinateRing.length < 3) {
     return []; // Not a valid polygon to simplify
   }
-  
+
   console.log(`[Simplify] Original geometry has ${coordinateRing.length} points.`);
   console.log(`[Simplify] Using tolerance: ${tolerance}m`);
 
@@ -46,7 +46,7 @@ export function simplifyBuildingGeometry(geometry: number[][][], tolerance: numb
     console.warn(`[Simplify] Simplification resulted in fewer than 3 points, returning empty array.`);
     return [];
   }
-  
+
   const firstPoint = simplifiedPoints[0];
   const lastPoint = simplifiedPoints[simplifiedPoints.length - 1];
   if (firstPoint.x !== lastPoint.x || firstPoint.y !== lastPoint.y) {
@@ -66,6 +66,6 @@ export function simplifyBuildingGeometryByPercentage(geometry: number[][][], kee
 
   const outerShell = geometry[0];
   const targetPoints = Math.max(4, Math.floor(outerShell.length * keepPercentage));
-  
+
   return simplifyBuildingGeometry(geometry, targetPoints);
 } 

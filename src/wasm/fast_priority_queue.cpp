@@ -39,7 +39,7 @@ void FastPriorityQueue::updatePriority(int item, float newPriority) {
     if (heap_[i].item == item) {
       float oldPriority = heap_[i].priority;
       heap_[i].priority = newPriority;
-      
+
       // Restore heap property
       if (newPriority < oldPriority) {
         siftUp(i);

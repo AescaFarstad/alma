@@ -70,7 +70,7 @@ function getFeatureBbox(feature: GeoJSONFeature): BoundingBox | null {
     if (y > maxY) maxY = y;
   };
   processCoords(feature.geometry.coordinates);
-  
+
   if (!isFinite(minX)) return null;
 
   return { minX, minY, maxX, maxY };
@@ -96,7 +96,7 @@ function getOverallBbox(geojsonData: GeoJSONData): BoundingBox | null {
     };
     processCoords(feature.geometry.coordinates);
   }
-  
+
   if (!isFinite(minX)) return null;
 
   return { minX, minY, maxX, maxY };
@@ -106,7 +106,7 @@ function worldToTileCoord(worldX: number, worldY: number, zoom: number): TileCoo
   const tilesPerAxis = ZOOM_TILE_COUNTS[zoom];
   const x = Math.floor(tilesPerAxis * (worldX - WORLD_MIN_X) / WORLD_SPAN_X);
   const y = Math.floor(tilesPerAxis * (worldY - WORLD_MIN_Y) / WORLD_SPAN_Y);
-  
+
   return {
     x: Math.max(0, Math.min(tilesPerAxis - 1, x)),
     y: Math.max(0, Math.min(tilesPerAxis - 1, y))
@@ -127,7 +127,7 @@ export async function generateTilesForFeature(inputDir: string, outputDir: strin
   fs.emptyDirSync(featureOutputDir);
 
   const geojsonData: GeoJSONData = JSON.parse(fs.readFileSync(inputFile, 'utf-8'));
-  
+
   const overallBbox = getOverallBbox(geojsonData);
   if (!overallBbox) {
     console.log(`  No features with coordinates found in ${featureName}.`);
@@ -140,18 +140,18 @@ export async function generateTilesForFeature(inputDir: string, outputDir: strin
   const tileIndex = (geojsonvt as any)(geojsonData, { maxZoom: MAX_ZOOM, extent: TILE_EXTENT });
 
   let generatedCount = 0;
-  
+
   for (let z = MIN_ZOOM; z <= MAX_ZOOM; z++) {
     const tilesPerAxis = ZOOM_TILE_COUNTS[z];
     const totalTiles = tilesPerAxis * tilesPerAxis;
     const tileSize = WORLD_SPAN_X / tilesPerAxis;
-    
+
     console.log(`  Processing zoom level ${z}... (${tilesPerAxis}x${tilesPerAxis} = ${totalTiles} tiles, ${tileSize.toFixed(0)}m per tile)`);
-    
+
     // Calculate the range of tiles that might contain features
     const minTileCoord = worldToTileCoord(overallBbox.minX, overallBbox.minY, z);
     const maxTileCoord = worldToTileCoord(overallBbox.maxX, overallBbox.maxY, z);
-    
+
     // Add a small buffer to ensure we don't miss edge cases, but clamp to valid range
     const minTileX = Math.max(0, minTileCoord.x);
     const maxTileX = Math.min(tilesPerAxis - 1, maxTileCoord.x);
@@ -168,19 +168,19 @@ export async function generateTilesForFeature(inputDir: string, outputDir: strin
         if (tile && tile.features.length > 0) {
           const tileDir = path.join(featureOutputDir, z.toString(), x.toString());
           fs.ensureDirSync(tileDir);
-          
+
           const pbfData = fromGeojsonVt({ [featureName]: tile });
           const buffer = Buffer.from(pbfData);
-          
+
           const tilePath = path.join(tileDir, `${y}.pbf`);
           fs.writeFileSync(tilePath, buffer);
-          
+
           zoomGeneratedCount++;
           generatedCount++;
         }
       }
     }
-    
+
     console.log(`  Generated ${zoomGeneratedCount} tiles for zoom ${z}`);
   }
 

@@ -39,7 +39,7 @@ export function detectAgentReferenceIssues(agent: Agent): ReferenceMap {
 
   // Map each object to the fields that reference it
   const objectToFields = new Map<object, string[]>();
-  
+
   for (const field of fields) {
   const obj = agent[field as keyof Agent] as Point2 | null;
   if (obj) {
@@ -56,7 +56,7 @@ export function detectAgentReferenceIssues(agent: Agent): ReferenceMap {
     // Filter out the expected case where only nextCorner and preEscapeCorner share a reference
     const isOnlyNextCornerAndPreEscape = fieldList.length === 2 && 
     fieldList.includes('nextCorner') && fieldList.includes('preEscapeCorner');
-    
+
     if (!isOnlyNextCornerAndPreEscape) {
     for (const field of fieldList) {
       refs[field as keyof ReferenceMap].add(fieldList.join(', '));
@@ -111,7 +111,7 @@ export function snapshotAgentPoints(agent: Agent, label: string): void {
   (window as any).agentSnapshots = [];
   }
   (window as any).agentSnapshots.push(snapshot);
-  
+
   // Keep only last 50 snapshots to avoid memory bloat
   if ((window as any).agentSnapshots.length > 50) {
   (window as any).agentSnapshots.shift();

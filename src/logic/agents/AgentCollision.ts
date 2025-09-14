@@ -22,30 +22,30 @@ export function updateAgentCollisions(agents: Agent[], grid: AgentGrid): void {
   const cellData = grid.cellData;
   const cellCounts = grid.cellCounts;
   const cellOffsets = grid.cellOffsets;
-  
+
   // Iterate over all cells
   for (let cellIndex = 0; cellIndex < grid.totalCells; cellIndex++) {
     const count = cellCounts[cellIndex];
     if (count < 2) continue; // Skip cells with 0 or 1 agents
-    
+
     const offset = cellOffsets[cellIndex];
-    
+
     // Check all agent pairs within this cell
     for (let i = 0; i < count; i++) {
       const agentIndex1 = cellData[offset + i];
       const agent1 = agents[agentIndex1];
-      
+
       for (let j = i + 1; j < count; j++) {
         const agentIndex2 = cellData[offset + j];
         const agent2 = agents[agentIndex2];
 
         // Check for overlap using distance_sq optimization
         const distanceSq = distance_sq(agent1.coordinate, agent2.coordinate);
-        
+
         if (distanceSq < minDistanceSq && distanceSq > 0.001) {
           const distance = Math.sqrt(distanceSq);
           const depth = minDistance - distance;
-          
+
           // Calculate normalized separation vector
           const dx = agent2.coordinate.x - agent1.coordinate.x;
           const dy = agent2.coordinate.y - agent1.coordinate.y;

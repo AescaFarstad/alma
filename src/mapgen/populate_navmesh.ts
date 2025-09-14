@@ -3,7 +3,7 @@ import { NavmeshData, MyPolygon } from './navmesh_struct';
 export function populateTriangulationData(navmeshData: NavmeshData, triangulationResult: any, MEMORY_SETTINGS: { growthFactor: number }): void {
   const vertexCount = triangulationResult.finalPoints.length;
   const triangleCount = triangulationResult.finalTriangles.length / 3;
-  
+
   // Simple allocation for now, assuming enough capacity from initialization
   navmeshData.vertices = new Float32Array(vertexCount * 2);
   navmeshData.triangles = new Int32Array(triangleCount * 3);
@@ -32,7 +32,7 @@ export function populatePolygonData(
 
   // Helper to snap coordinates back to 2-decimal precision (Float32Array causes precision loss)
   const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
-  
+
   const vertexMap = new Map<string, number>();
   for (let i = 0; i < navmeshData.stats.vertices; i++) {
     // Snap the Float32Array coordinates back to 2 decimals for consistent key generation
@@ -63,9 +63,9 @@ export function populatePolygonData(
       }
     }
   }
-  
+
   console.log(`Vertex matching: ${missingVertexCount} missing out of ${impassablePolygons.reduce((sum, poly) => sum + poly.length, 0)} polygon vertices`);
-  
+
   // Add sentinel
   impassablePolygonsIndexArray.push(impassablePolyVerts.length);
   impassablePolyVerts.push(-1);
@@ -95,18 +95,18 @@ export function populatePolygonData(
     // Copy existing walkable polygon triangle mappings
     const walkableCopyLength = Math.min(navmeshData.walkable_polygon_count + 1, navmeshData.poly_tris.length);
     newPolyTris.set(navmeshData.poly_tris.subarray(0, walkableCopyLength));
-    
+
     // For impassable polygons, we need to set placeholder ranges that will be properly
     // populated later in finalizeNavmesh when the impassableT2P mapping is available
     // For now, just set consecutive ranges starting after walkable triangles
     const walkableTriangleCount = navmeshData.walkable_triangle_count;
     let currentTriangleIndex = walkableTriangleCount;
-    
+
     for (let i = navmeshData.walkable_polygon_count + 1; i <= totalPolygonCount; i++) {
       newPolyTris[i] = currentTriangleIndex;
       // Note: This will be updated in finalizeNavmesh with actual triangle counts per blob
     }
-    
+
     navmeshData.poly_tris = newPolyTris;
     console.log(`Resized poly_tris from ${navmeshData.poly_tris.length} to ${requiredPolyTrisLength} elements (${navmeshData.walkable_polygon_count} walkable + ${impassablePolygons.length} impassable + 1 sentinel)`);
   }
@@ -174,7 +174,7 @@ export function populateBuildingData(
 
   // Helper to snap coordinates back to 2-decimal precision (Float32Array causes precision loss)
   const snapTo2Decimals = (coord: number): number => Math.round(coord * 100) / 100;
-  
+
   // First, populate vertexMap with ALL existing navmesh vertices
   for (let i = 0; i < navmeshData.stats.vertices; i++) {
     // Snap the Float32Array coordinates back to 2 decimals for consistent key generation
@@ -207,15 +207,15 @@ export function populateBuildingData(
     const oldVerticesLength = navmeshData.stats.vertices * 2; // Each vertex is x,y
     const newTotalLength = oldVerticesLength + newVertices.length;
     const expandedVertices = new Float32Array(newTotalLength);
-    
+
     // Copy existing vertices
     expandedVertices.set(navmeshData.vertices.subarray(0, oldVerticesLength));
-    
+
     // Add new building vertices
     for (let i = 0; i < newVertices.length; i++) {
       expandedVertices[oldVerticesLength + i] = newVertices[i];
     }
-    
+
     navmeshData.vertices = expandedVertices;
     navmeshData.stats.vertices = currentVertexCount;
   }
@@ -237,7 +237,7 @@ export function populateBuildingData(
       }
     }
   }
-  
+
   buildingsIndexArray.push(buildingVertsData.length); // Sentinel
   buildingVertsData.push(-1);
 
@@ -277,52 +277,52 @@ export function populateBuildingData(
 
 export function populatePolygonCentroids(navmeshData: NavmeshData): void {
   console.log('Calculating polygon centroids...');
-  
+
   const numPolygons = navmeshData.stats.polygons;
   const walkablePolygonCount = navmeshData.walkable_polygon_count;
-  
+
   // Ensure we have the exact size needed for centroids
   if (navmeshData.poly_centroids.length !== numPolygons * 2) {
     navmeshData.poly_centroids = new Float32Array(numPolygons * 2);
   }
-  
+
   for (let polyId = 0; polyId < numPolygons; polyId++) {
     let centroidX: number, centroidY: number;
-    
+
     if (polyId < walkablePolygonCount) {
       // Walkable polygon: calculate centroid from vertices
       const vertStartIdx = navmeshData.polygons[polyId];
       const vertEndIdx = navmeshData.polygons[polyId + 1];
-      
+
       let sumX = 0, sumY = 0;
       let vertexCount = 0;
-      
+
       for (let vertIdx = vertStartIdx; vertIdx < vertEndIdx; vertIdx++) {
         const vertexIndex = navmeshData.poly_verts[vertIdx];
         if (vertexIndex === -1) break; // Hit sentinel
-        
+
         sumX += navmeshData.vertices[vertexIndex * 2];
         sumY += navmeshData.vertices[vertexIndex * 2 + 1];
         vertexCount++;
       }
-      
+
       centroidX = vertexCount > 0 ? sumX / vertexCount : 0;
       centroidY = vertexCount > 0 ? sumY / vertexCount : 0;
     } else {
       // Blob polygon: calculate from triangle centroids, then use nearest triangle centroid
       const triStartIdx = navmeshData.poly_tris[polyId];
       const triEndIdx = navmeshData.poly_tris[polyId + 1];
-      
+
       const triangleCentroids: { x: number, y: number }[] = [];
       let overallSumX = 0, overallSumY = 0;
       let triangleCount = 0;
-      
+
       // Calculate each triangle's centroid
       for (let triIdx = triStartIdx; triIdx < triEndIdx; triIdx++) {
         const v1Idx = navmeshData.triangles[triIdx * 3];
         const v2Idx = navmeshData.triangles[triIdx * 3 + 1];
         const v3Idx = navmeshData.triangles[triIdx * 3 + 2];
-        
+
         const triCentroidX = (
           navmeshData.vertices[v1Idx * 2] + 
           navmeshData.vertices[v2Idx * 2] + 
@@ -333,13 +333,13 @@ export function populatePolygonCentroids(navmeshData: NavmeshData): void {
           navmeshData.vertices[v2Idx * 2 + 1] + 
           navmeshData.vertices[v3Idx * 2 + 1]
         ) / 3;
-        
+
         triangleCentroids.push({ x: triCentroidX, y: triCentroidY });
         overallSumX += triCentroidX;
         overallSumY += triCentroidY;
         triangleCount++;
       }
-      
+
       if (triangleCount === 0) {
         centroidX = 0;
         centroidY = 0;
@@ -347,31 +347,31 @@ export function populatePolygonCentroids(navmeshData: NavmeshData): void {
         // Calculate overall centroid
         const overallCentroidX = overallSumX / triangleCount;
         const overallCentroidY = overallSumY / triangleCount;
-        
+
         // Find nearest triangle centroid to overall centroid
         let nearestTriCentroid = triangleCentroids[0];
         let minDistanceSquared = Number.MAX_VALUE;
-        
+
         for (const triCentroid of triangleCentroids) {
           const dx = triCentroid.x - overallCentroidX;
           const dy = triCentroid.y - overallCentroidY;
           const distanceSquared = dx * dx + dy * dy;
-          
+
           if (distanceSquared < minDistanceSquared) {
             minDistanceSquared = distanceSquared;
             nearestTriCentroid = triCentroid;
           }
         }
-        
+
         centroidX = nearestTriCentroid.x;
         centroidY = nearestTriCentroid.y;
       }
     }
-    
+
     // Store the centroid
     navmeshData.poly_centroids[polyId * 2] = centroidX;
     navmeshData.poly_centroids[polyId * 2 + 1] = centroidY;
   }
-  
+
   console.log(`Calculated centroids for ${numPolygons} polygons (${walkablePolygonCount} walkable, ${numPolygons - walkablePolygonCount} blobs).`);
 } 

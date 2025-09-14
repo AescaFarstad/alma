@@ -76,10 +76,10 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
         reset_agent_stuck(idx);
       }
     }
-    
+
     const int currentPoly = g_navmesh.triangle_to_polygon[agent_data.current_tris[idx]];
     auto& corridor = agent_data.corridors[idx];
-    
+
     if (agent_data.alien_polys[idx] != currentPoly) {
       const int maxCheck = std::min((int)CORRIDOR_EXPECTED_JUMP, (int)corridor.size());
       int currentCorridorPolyIndex = -1;
@@ -122,22 +122,22 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
     }
 
     float distanceToCornerSq = math::distance_sq(agent_data.positions[idx], agent_data.next_corners[idx]);
-    
+
     bool crossedDemarkationLine = false;
     if (agent_data.num_valid_corners[idx] > 1) {
       tempLineVec = agent_data.next_corners[idx] - agent_data.next_corners2[idx];
       tempCurrentVec = agent_data.positions[idx] - agent_data.next_corners2[idx];
       tempLastVec = agent_data.last_coordinates[idx] - agent_data.next_corners2[idx];
-      
+
       float currentCross = math::cross(tempLineVec, tempCurrentVec);
       float lastCross = math::cross(tempLineVec, tempLastVec);
-      
+
       crossedDemarkationLine = currentCross * lastCross <= 0;
     }
 
     if (agent_data.num_valid_corners[idx] == 2 && (distanceToCornerSq < CORNER_OFFSET_SQ || crossedDemarkationLine)) {
       agent_data.last_visible_points_for_next_corner[idx] = agent_data.next_corners[idx];
-      
+
       DualCorner corners = find_next_corner(agent_data.positions[idx], agent_data.corridors[idx], agent_data.end_targets[idx], CORNER_OFFSET);
       if (corners.numValid > 0) {
         agent_data.next_corners[idx] = corners.corner1;
@@ -156,7 +156,7 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
   else if (state == AgentState::Escaping) {
     if (agent_data.current_tris[idx] != -1) {
       agent_data.states[idx] = AgentState::Traveling;
-      
+
       if (agent_data.pre_escape_corner_tris[idx] != -1) {
         if (raycastAndPatchCorridor(g_navmesh, idx, agent_data.pre_escape_corners[idx], agent_data.pre_escape_corner_tris[idx])) {
           agent_data.next_corners[idx] = agent_data.pre_escape_corners[idx];
@@ -166,7 +166,7 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
           return;
         }
       }
-      
+
       if (agent_data.end_target_tris[idx] != -1) {
         if (findPathToDestination(g_navmesh, idx, agent_data.current_tris[idx], agent_data.end_target_tris[idx], "after escaping")) {
           agent_data.states[idx] = AgentState::Traveling;
@@ -178,7 +178,7 @@ void update_agent_navigation(int idx, float deltaTime, uint64_t* rng_seed) {
       }
     }
   }
-  
+
   if (state == AgentState::Traveling || state == AgentState::Escaping) {
     if (math::distance_sq(agent_data.next_corners[idx], agent_data.positions[idx]) > 0.01f) {
       Point2 targetDir = agent_data.next_corners[idx] - agent_data.positions[idx];

@@ -93,7 +93,7 @@ function processFeature(feature, log) {
     const processedHighway = processHighway(feature, log);
     return processedHighway ? [processedHighway] : null;
   }
-  
+
   return null; 
 }
 
@@ -137,7 +137,7 @@ function processBuilding(feature, log) {
 
     const foundCommercialProps = commercialChecks.filter(p => props[p]);
     const foundPaymentProps = Object.keys(props).filter(p => p.startsWith('payment:'));
-    
+
     if (foundCommercialProps.length > 0 || foundPaymentProps.length > 0) {
       props.building = 'commercial';
       const triggers = [...foundCommercialProps, ...foundPaymentProps];
@@ -166,7 +166,7 @@ function processBuilding(feature, log) {
   if (!addr.housenumber && props['addr:unit']) addr.housenumber = props['addr:unit'];
   else if (addr.housenumber && props['addr:unit']) addr.housenumber = `${addr.housenumber}-${props['addr:unit']}`;
   if(addr.housenumber) props['addr:housenumber'] = addr.housenumber;
-  
+
   if (!props['addr:street'] && props['addr:street:ru']) props['addr:street'] = props['addr:street:ru'];
 
   const namePriority = ['name:ru', 'name:en', 'name:es', 'name:de', 'name:fr', 'name:kk', 'name:tr', 'name:tt', 'name:zh', 'name:cv', 'name:ko', 'name:alt', 'name:old'];
@@ -184,7 +184,7 @@ function processBuilding(feature, log) {
 
   if (!props['building:levels'] && (props.levels || props.level)) props['building:levels'] = props.levels || props.level;
   if (!props['building:colour'] && props['roof:colour']) props['building:colour'] = props['roof:colour'];
-  
+
   // 2.1.3. `building` Category Condensation
   const buildingCategoryMap = {
     residential: ['apartments', 'house', 'residential', 'detached', 'dormitory', 'hut', 'yes'],
@@ -222,7 +222,7 @@ function processBuilding(feature, log) {
   if (props.name) finalProps.name = props.name;
 
   feature.properties = finalProps;
-  
+
   return feature;
 }
 
@@ -233,7 +233,7 @@ function processHighway(feature, log) {
     log.removed.highway_invalid_geometry_type[feature.geometry.type] = (log.removed.highway_invalid_geometry_type[feature.geometry.type] || 0) + 1;
     return null;
   }
-  
+
   // 2.2.1. Feature Removal
   const removeHighways = ['crossing', 'traffic_signals', 'speed_camera', 'bus_stop'];
   if (removeHighways.includes(props.highway)) {
@@ -323,7 +323,7 @@ function createLog() {
 function printLog(log, fileName) {
   console.log(`\n--- Processing Log for ${fileName} ---`);
   console.log("Removals:");
-  
+
   // Invalid geometry by type
   if (Object.keys(log.removed.invalid_geometry).length > 0) {
     console.log("  invalid_geometry:");
@@ -331,7 +331,7 @@ function printLog(log, fileName) {
       console.log(`  ${geomType}: ${count}`);
     }
   }
-  
+
   // Building-specific removals
   if (log.removed.building_linestring_not_closed > 0) {
     console.log(`  building_linestring_not_closed: ${log.removed.building_linestring_not_closed}`);
@@ -345,7 +345,7 @@ function printLog(log, fileName) {
   if (log.removed.building_with_barrier > 0) {
     console.log(`  building_with_barrier: ${log.removed.building_with_barrier}`);
   }
-  
+
   // Highway-specific removals
   if (Object.keys(log.removed.highway_invalid_geometry_type).length > 0) {
     console.log("  highway_invalid_geometry_type:");
@@ -365,7 +365,7 @@ function printLog(log, fileName) {
       console.log(`  ${props}: ${count}`);
     }
   }
-  
+
   if (log.removed.empty_properties > 0) {
     console.log(`  empty_properties: ${log.removed.empty_properties}`);
   }
@@ -374,7 +374,7 @@ function printLog(log, fileName) {
   if (log.modified.building_set_to_healthcare > 0) {
     console.log(`  building_set_to_healthcare: ${log.modified.building_set_to_healthcare}`);
   }
-  
+
   if (Object.keys(log.modified.building_yes_to_commercial_by_props).length > 0) {
     console.log("  building_yes_to_commercial_by_props:");
     for (const [props, count] of Object.entries(log.modified.building_yes_to_commercial_by_props)) {
@@ -393,14 +393,14 @@ function printLog(log, fileName) {
       console.log(`  ${props}: ${count}`);
     }
   }
-  
+
   if (Object.keys(log.modified.building_category_condensed).length > 0) {
     console.log("  building_category_condensed:");
     for (const [transformation, count] of Object.entries(log.modified.building_category_condensed)) {
       console.log(`  ${transformation}: ${count}`);
     }
   }
-  
+
   if (Object.keys(log.modified.highway_category_condensed).length > 0) {
     console.log("  highway_category_condensed:");
     for (const [transformation, count] of Object.entries(log.modified.highway_category_condensed)) {
@@ -476,7 +476,7 @@ function main() {
     const filePath = path.join(inputDir, fileName);
     const content = fs.readFileSync(filePath, 'utf-8');
     const geojson = JSON.parse(content);
-    
+
     const log = createLog();
     log.totals.read = geojson.features.length;
 
@@ -521,13 +521,13 @@ function main() {
     if (log.totals.highways === 0) delete log.totals.highways;
 
     const outputPath = path.join(outputDir, fileName);
-    
+
     const geojsonHeader = { ...geojson };
     delete geojsonHeader.features;
     const featuresJson = processedFeatures.map(f => JSON.stringify(f));
     const outputContent = JSON.stringify(geojsonHeader).slice(0, -1) + ',"features":[\n' + featuresJson.join(',\n') + '\n]}';
     fs.writeFileSync(outputPath, outputContent);
-    
+
     printLog(log, fileName);
     console.log(`\nWritten processed file to ${outputPath}`);
     const stats = fs.statSync(outputPath);
