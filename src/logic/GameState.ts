@@ -15,7 +15,7 @@ import { Agents } from "./agents/Agents";
 import { getRandomTriangle } from "./navmesh/NavUtils";
 import { WAgent } from "./WAgent";
 import { AgentConfigs } from "./agents/AgentConfigs";
-import { createWAgentAllSpawner } from "./WAgentAllSpawner";
+import { createWAgentAllSpawner, WAgentAllSpawner } from "./WAgentAllSpawner";
 import { BrainCellType } from "./agents/ai/Brain";
 
 const INITIAL_SPAWN_SEED = 12345;
@@ -121,9 +121,13 @@ export class GameState { // This is a POD class. No functions allowed.
       // createWAgentGridSpawner({ x: 1249, y: 1135 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
       // createWAgentGridSpawner({ x: -1263, y: -1264 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
       // createWAgentGridSpawner({ x: 1245, y: -859 }, { x: 300, y: 300 }, AgentConfigs.walker2, 300, 16000),
+      createWAgentGridSpawner({ x: 1170, y: 314 }, { x: 100, y: 100 }, AgentConfigs.soldier1, 10, 2000),
+      createWAgentGridSpawner({ x: 228, y: 257 }, { x: 100, y: 100 }, AgentConfigs.zombie1, 10, 2000),
+      // createWAgentGridSpawner({ x: -77, y: 72 }, { x: 10, y: 10 }, AgentConfigs.soldier1, 1, 1),
+      // createWAgentGridSpawner({ x: -70, y: 82 }, { x: 10, y: 10 }, AgentConfigs.zombie1, 1, 1),
     ];
     this.wAgentAllSpawners = [
-      createWAgentAllSpawner(AgentConfigs.benchmarkerSmart, 300, 15000),
+      // createWAgentAllSpawner(AgentConfigs.benchmarkerSmart, 300, 15000),
       // createWAgentAllSpawner(AgentConfigs.walker1, 1000, 32000),
     ];
     this.agentGrid = new AgentGrid();

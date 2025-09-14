@@ -2,6 +2,7 @@
 #include "data_structures.h"
 #include "agent_grid.h"
 #include "math_utils.h"
+#include <limits>
 
 const float AGENT_RADIUS = 2.5f;
 const float PUSH_FORCE = 10.0f;
@@ -9,6 +10,8 @@ const float ESCAPING_WEIGHT_MULTIPLIER = 20.0f;
 
 extern AgentSoA agent_data;
 extern AgentGridData agent_grid;
+
+static std::vector<float> distancesSq;
 
 void update_agent_collisions(int num_agents) {
   const float min_distance_sq = (AGENT_RADIUS * 2.0f) * (AGENT_RADIUS * 2.0f);
@@ -18,6 +21,24 @@ void update_agent_collisions(int num_agents) {
     if (count < 2) continue;
 
     int offset = agent_grid.cell_offsets[cell_index];
+    distancesSq.clear();
+
+    for (int i = 0; i < count; ++i) {
+      int agent_index = agent_grid.cell_data[offset + i];
+      uint32_t cur_handle = agent_data.nearest_enemy[agent_index];
+      if (cur_handle != 0u) {
+        int cur_idx = static_cast<int>(cur_handle & INDEX_MASK);
+        uint16_t cur_gen = static_cast<uint16_t>(cur_handle >> INDEX_BITS);
+        if (agent_data.generation[cur_idx] == cur_gen) {
+          distancesSq.push_back(math::distance_sq(agent_data.positions[agent_index], agent_data.positions[cur_idx]));
+        } else {
+          distancesSq.push_back(std::numeric_limits<float>::max());
+          agent_data.nearest_enemy[agent_index] = 0u;
+        }
+      } else {
+        distancesSq.push_back(std::numeric_limits<float>::max());
+      }
+    }
 
     for (int i = 0; i < count; ++i) {
       int agent_index1 = agent_grid.cell_data[offset + i];
@@ -30,6 +51,19 @@ void update_agent_collisions(int num_agents) {
 
         float dist_sq = math::distance_sq(pos1, pos2);
 
+        if (agent_data.team[agent_index1] != agent_data.team[agent_index2]) {
+          if (dist_sq < distancesSq[i]) {
+            uint32_t handle = (static_cast<uint32_t>(agent_data.generation[agent_index2]) << INDEX_BITS) | static_cast<uint32_t>(agent_index2);
+            agent_data.nearest_enemy[agent_index1] = handle;
+            distancesSq[i] = dist_sq;
+          }
+          if (dist_sq < distancesSq[j]) {
+            uint32_t handle = (static_cast<uint32_t>(agent_data.generation[agent_index1]) << INDEX_BITS) | static_cast<uint32_t>(agent_index1);
+            agent_data.nearest_enemy[agent_index2] = handle;
+            distancesSq[j] = dist_sq;
+          }
+        }
+
         if (dist_sq < min_distance_sq && dist_sq > 0.001f) {
           float dist = sqrt(dist_sq);
           Point2 delta = pos1 - pos2;
@@ -37,7 +71,7 @@ void update_agent_collisions(int num_agents) {
 
           float overlap = (AGENT_RADIUS * 2.0f) - dist;
           float force = overlap * PUSH_FORCE;
-          
+
           float weight1 = (agent_data.states[agent_index1] == AgentState::Escaping) ? ESCAPING_WEIGHT_MULTIPLIER : 1.0f;
           float weight2 = (agent_data.states[agent_index2] == AgentState::Escaping) ? ESCAPING_WEIGHT_MULTIPLIER : 1.0f;
 
@@ -52,4 +86,4 @@ void update_agent_collisions(int num_agents) {
       }
     }
   }
-} 
+}

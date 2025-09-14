@@ -1,7 +1,7 @@
 import type { GameState } from "./GameState";
 import { wagentsLimit } from "./GameState";
 import type { AgentConfig } from "./agents/AgentConfigs";
-import { createWasmAgent } from "./WAgentSpawner";
+import { createWasmAgent } from "./SpawnWAgent";
 
 export interface WAgentAllSpawner {
   config: AgentConfig;
@@ -38,7 +38,7 @@ export function updateWAgentAllSpawners(
   if (!spawners) return;
 
   // Ensure WASM agents are initialized
-  if (!gs.wasm_agents.positions || !gs.wasm_agents.is_alive) {
+  if (!gs.wasm_agents.positions) {
     return;
   }
 
@@ -85,4 +85,3 @@ export function updateWAgentAllSpawners(
     }
   }
 }
-

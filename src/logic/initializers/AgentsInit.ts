@@ -74,8 +74,20 @@ export function calculateAgentsMemory(): number {
   totalSize += sizeOfFloat * MAX_AGENTS; // arrival_threshold_sqs
   totalSize += sizeOfFloat * MAX_AGENTS; // predicament_ratings
 
-  // At very end: frame_ids
+  // Combat/AI
+  totalSize += sizeOfInt * MAX_AGENTS;   // proto
+  totalSize += sizeOfInt * MAX_AGENTS;   // weapon_proto
+  totalSize += sizeOfInt * MAX_AGENTS;   // team
+  totalSize += sizeOfInt * MAX_AGENTS;   // hp
+  totalSize += sizeOfInt * MAX_AGENTS;   // nearest_enemy
+  totalSize += sizeOfInt * MAX_AGENTS;   // target
+  totalSize += sizeOfFloat * MAX_AGENTS; // cooldown
+  totalSize += sizeOfFloat * MAX_AGENTS; // morale
+  totalSize += sizeOfFloat * MAX_AGENTS; // last_damage_stamp
+
+  // At very end: frame_ids, generation
   totalSize += 2 * MAX_AGENTS; // frame_ids (uint16)
+  totalSize += 2 * MAX_AGENTS; // generation (uint16)
 
   // Events buffer (single stream, word-addressable)
   totalSize += EVENT_BUFFER_WORDS * 4; // u32 words
@@ -83,7 +95,6 @@ export function calculateAgentsMemory(): number {
   // C++ dynamic allocations
   totalSize += calculateAgentGridMemory();
   totalSize += MAX_AGENTS * 24; // corridors (approximate size of std::vector)
-  totalSize += MAX_AGENTS * 4; // corridor_indices
   totalSize += MAX_AGENTS * 4; // wall_contact
 
   return totalSize;
@@ -210,8 +221,39 @@ export function initializeAgents(
   agents.predicament_ratings = new Float32Array(buffer, currentOffset, MAX_AGENTS);
   currentOffset += MAX_AGENTS * 4;
 
+  // Combat/AI
+  agents.proto = new Int32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.weapon_proto = new Int32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.team = new Int32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.hp = new Int32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.nearest_enemy = new Uint32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.target = new Uint32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.cooldown = new Float32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.morale = new Float32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
+  agents.last_damage_stamp = new Float32Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 4;
+
   // At very end
   agents.frame_ids = new Uint16Array(buffer, currentOffset, MAX_AGENTS);
+  currentOffset += MAX_AGENTS * 2;
+
+  agents.generation = new Uint16Array(buffer, currentOffset, MAX_AGENTS);
   currentOffset += MAX_AGENTS * 2;
 
   const eventsOffset = currentOffset;
@@ -222,5 +264,16 @@ export function initializeAgents(
   
      wasmModule._init_agents(offset, MAX_AGENTS, gs.rngSeed, eventsOffset, EVENT_BUFFER_WORDS);
   
+  // Initialize JS-side free-list of SoA indices: [MAX_AGENTS-1, ..., 1, 0]
+  agents.free_list = new Int32Array(MAX_AGENTS);
+  for (let i = 0; i < MAX_AGENTS; i++) {
+    agents.free_list[i] = (MAX_AGENTS - 1 - i) | 0;
+  }
+  agents.free_list_cursor = 0;
+
+  // Initialize dead indices buffer
+  agents.dead_indices = new Int32Array(MAX_AGENTS);
+  agents.dead_count = 0;
+
   return bytesWritten;
 }

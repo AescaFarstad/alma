@@ -16,6 +16,7 @@ import { updateWAgentAllSpawners } from "./WAgentAllSpawner";
 import { updateAgentStatistic } from "./agents/AgentStatistic";
 import { updateAgentCollisions } from "./agents/AgentCollision";
 import { WasmFacade } from "./WasmFacade";
+import { MAX_AGENTS } from "./agents/Agents";
 import { handleEvents } from "./agents/EventHandler";
 
 /**
@@ -104,13 +105,32 @@ export function update(gs: GameState, deltaTime: number): void {
       updateAgentCollisions(gs.agents, gs.agentGrid);
     }
 
-    // wasm agents
     for (const agent of gs.wagents) {
       agent.brain.stack[agent.brain.stack.length - 1].update(gs, agent, effectiveDeltaTime);
     }
+    // Prune dead wagents efficiently using the list populated during updates
+    {
+      const deadCount = gs.wasm_agents.dead_count || 0;
+      if (deadCount > 0) {
+        if (deadCount <= 2) {
+          for (let di = 0; di < deadCount; di++) {
+            const deadIdx = gs.wasm_agents.dead_indices[di] | 0;
+            for (let i = gs.wagents.length - 1; i >= 0; i--) {
+              if (gs.wagents[i].idx === deadIdx) {
+                gs.wagents.splice(i, 1);
+                break;
+              }
+            }
+          }
+        } else {
+          gs.wagents = gs.wagents.filter(w => gs.wasm_agents.is_alive[w.idx] !== 0);
+        }
+        gs.wasm_agents.dead_count = 0;
+      }
+    }
     gs.wasm_agents.events.commitFrame();
-    WasmFacade._update_simulation(effectiveDeltaTime, gs.wagents.length);
 
+    WasmFacade._update_simulation(effectiveDeltaTime, MAX_AGENTS);
   }
 
   dynamicScene.avatar = gs.avatar;

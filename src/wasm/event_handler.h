@@ -8,6 +8,8 @@ enum AgentEventType : uint16_t {
   CMD_SET_CORRIDOR = 1,
   // WASM -> JS event: selected agent's full corridor broadcast
   EVT_SELECTED_CORRIDOR = 2,
+  // JS -> WASM command: navigate to current target (agent_data.target[idx])
+  CMD_NAVIGATE_TO_NEARBY_TARGET = 3,
 };
 
 // Process inbound JS->WASM events from the shared event buffer.

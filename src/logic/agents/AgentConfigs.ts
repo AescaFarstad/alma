@@ -6,7 +6,39 @@ export type AgentConfig = Readonly<Partial<Omit<Agent, 'brain'>> & { brainCells:
 
 export class AgentConfigs {
 
+  static readonly soldier1 = {
+    proto: 1,
+    coordinate: { x: 0, y: 0 },
+    accel: 150,
+    resistance: 0.997,
+    maxFrustration: 14,
+    intelligence: 1,
+    arrivalDesiredSpeed: 0.05,
+    arrivalThresholdSq: 25,
+    display: "character_brown_white",
+    lookSpeed: 30,
+    maxSpeed: 217,
+    brainCells: [BrainCellType.RANDOM_JOURNEY],
+  } as const;
+
+  static readonly zombie1 = {
+    proto: 2,
+    coordinate: { x: 0, y: 0 },
+    accel: 300,
+    resistance: 0.995,
+    maxFrustration: 14,
+    intelligence: 1,
+    arrivalDesiredSpeed: 0.05,
+    arrivalThresholdSq: 25,
+    display: "character_black_green",
+    lookSpeed: 30,
+    maxSpeed: 217,
+    brainCells: [BrainCellType.WANDERER_DIR],
+    team: 1,
+  } as const;
+
   static readonly walker2 = {
+    proto: 3,
     coordinate: { x: 0, y: 0 },
     accel: 500,
     resistance: 0.99,
@@ -21,6 +53,7 @@ export class AgentConfigs {
   } as const;
 
   static readonly walker1 = {
+    proto: 4,
     coordinate: { x: 0, y: 0 },
     accel: 500,
     resistance: 0.99,

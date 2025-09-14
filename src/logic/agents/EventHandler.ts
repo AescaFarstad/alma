@@ -7,6 +7,7 @@ export enum AgentEventType {
   NONE = 0,
   CMD_SET_CORRIDOR = 1,
   EVT_SELECTED_CORRIDOR = 2,
+  CMD_NAVIGATE_TO_NEARBY_TARGET = 3,
 }
 
 export enum CorridorAction {
@@ -17,10 +18,20 @@ export enum CorridorAction {
 
 export function handleEvents(gs: GameState) {
   const events = gs.wasm_agents.events;
+  // Always start reading from the beginning of the event buffer for this frame.
+  // JS writes use the same cursor later (after beginFrame()), so reset here.
+  events.cursor = 0;
   while (events.u32[events.cursor] != 0) {
     const header = events.u32[events.cursor];
     const type = header & 0xffff;
     const size = (header >> 16) & 0xffff;
+    // Safety: prevent malformed events from freezing the main thread
+    if (size <= 0 || (events.cursor + size) > events.capWords) {
+      try { console.error(`[EVT] Malformed header at ${events.cursor} type:${type} size:${size} cap:${events.capWords}`); } catch {}
+      // Skip the rest of the buffer defensively
+      events.cursor = events.capWords;
+      break;
+    }
     switch (type) {
       case AgentEventType.EVT_SELECTED_CORRIDOR: {
         const agentIdx = events.u32[events.cursor + 1] | 0;
@@ -55,5 +66,15 @@ export function cmdSetCorridor(buf: EventBuffer, agent_index: number, corridor1:
   for (let i = 0; i < corridor1.length; i++) {
     buf.u32[base + 2 + i] = corridor1[i] >>> 0;
   }
+  buf.cursor += sizeWords;
+}
+
+// Ask WASM to navigate this agent to its implicit `target`.
+// Target is resolved in WASM: agent_data.target[agent_index].
+export function cmdNavigateToNearbyTarget(buf: EventBuffer, agent_index: number) {
+  const sizeWords = 2; // header + agent
+  buf.writeHeader(AgentEventType.CMD_NAVIGATE_TO_NEARBY_TARGET, sizeWords);
+  const base = buf.cursor + 1;
+  buf.u32[base] = agent_index >>> 0;
   buf.cursor += sizeWords;
 }

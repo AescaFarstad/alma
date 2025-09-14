@@ -60,8 +60,13 @@ export class DrawDynamicScene {
       const endPoint = { x: agents.end_targets[selIdx * 2], y: agents.end_targets[selIdx * 2 + 1] };
 
       const corridor = dynamicScene.selectedWAgentCorridor || [];
+      // Limit debug rendering to avoid heavy work even if corridor is large
+      const MAX_CORRIDOR_POLYS_TO_DRAW = 400;
+      const MAX_CORRIDOR_POLYS_FOR_CORNERS = 200;
+      const corridorForPolys = corridor.length > MAX_CORRIDOR_POLYS_TO_DRAW ? corridor.slice(0, MAX_CORRIDOR_POLYS_TO_DRAW) : corridor;
+      const corridorForCorners = corridor.length > MAX_CORRIDOR_POLYS_FOR_CORNERS ? corridor.slice(0, MAX_CORRIDOR_POLYS_FOR_CORNERS) : corridor;
 
-      for (const polyIdx of corridor) {
+      for (const polyIdx of corridorForPolys) {
         const pvStart = navmesh.polygons[polyIdx];
         const pvEnd = navmesh.polygons[polyIdx + 1];
         if (pvStart < 0 || pvEnd <= pvStart) continue;
@@ -76,8 +81,8 @@ export class DrawDynamicScene {
         primitives.addPolygon(verts, lightBlueCorridorPolyStyle);
       }
 
-      if (corridor.length > 0) {
-        const corners = findCorners(navmesh, corridor, startPoint, endPoint);
+      if (corridorForCorners.length > 0) {
+        const corners = findCorners(navmesh, corridorForCorners, startPoint, endPoint);
         if (corners.length > 0) {
           for (const c of corners) {
             primitives.addCircle(c.point.x, -c.point.y, 0.75, { fillStyle: emeraldDotStyle.fillStyle });

@@ -101,6 +101,8 @@ void update_agent_phys(int idx, float deltaTime) {
   Point2 moveVector = agent_data.velocities[idx] * deltaTime;
   const float moveLnSq = math::length_sq(moveVector);
 
+  
+
   if (agent_data.states[idx] == AgentState::Escaping) {
     const float distanceToTargetSq = math::distance_sq(agent_data.next_corners[idx], agent_data.positions[idx]);
     if (moveLnSq >= distanceToTargetSq) {

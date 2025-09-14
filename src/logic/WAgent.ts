@@ -58,6 +58,17 @@ export function serialize_wagent(gameState: GameState, idx: number) {
     arrival_threshold_sq: wasm_agents.arrival_threshold_sqs[idx],
     predicament_rating: wasm_agents.predicament_ratings[idx],
 
+    // Combat/AI
+    proto: wasm_agents.proto[idx],
+    weapon_proto: wasm_agents.weapon_proto[idx],
+    team: wasm_agents.team[idx],
+    hp: wasm_agents.hp[idx],
+    nearest_enemy: wasm_agents.nearest_enemy[idx],
+    target: wasm_agents.target[idx],
+    cooldown: wasm_agents.cooldown[idx],
+    morale: wasm_agents.morale[idx],
+    last_damage_stamp: wasm_agents.last_damage_stamp[idx],
+
     // At very end
     frame_id: wasm_agents.frame_ids[idx],
   };

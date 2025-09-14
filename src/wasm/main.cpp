@@ -100,9 +100,11 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
   
   // Allocate dynamic data arrays
   agent_data.corridors = new std::vector<int>[maxAgents];
-  agent_data.corridor_indices = new int[maxAgents];
 
   initialize_agent_grid(maxAgents);
+
+  // Set zero/invalid defaults across all agent data
+  initialize_agent_defaults();
 }
 
 /**

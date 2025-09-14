@@ -6,6 +6,7 @@
         <button class="btn" @click="handleClick(deselectWAgent)">deselect</button>
         <button class="btn" :disabled="!selectedIdxValid" @click="handleClick(copySelectedState)">copy state</button>
         <button class="btn" :disabled="!selectedIdxValid" @click="handleClick(flyToSelected)">fly</button>
+        <AgentBrainHints :selected-idx="selectedIdx" />
       </div>
     </div>
 
@@ -160,6 +161,39 @@
         <div class="cell key">is_alive</div>
         <div class="cell val">{{ stateObj.is_alive }}</div>
         <div class="cell act"></div>
+
+        <!-- Combat/AI fields -->
+        <div class="cell key">proto</div>
+        <div class="cell val">{{ stateObj.proto }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">weapon_proto</div>
+        <div class="cell val">{{ stateObj.weapon_proto }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">team</div>
+        <div class="cell val">{{ stateObj.team }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">hp</div>
+        <div class="cell val">{{ stateObj.hp }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">nearest_enemy</div>
+        <div class="cell val">{{ stateObj.nearest_enemy }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">target</div>
+        <div class="cell val">{{ stateObj.target }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">cooldown</div>
+        <div class="cell val">{{ stateObj.cooldown }}</div>
+        <div class="cell act"></div>
+
+        <div class="cell key">morale</div>
+        <div class="cell val">{{ fmtNumber(stateObj.morale) }}</div>
+        <div class="cell act"></div>
       </div>
     </template>
   </div>
@@ -167,6 +201,7 @@
 
 <script setup lang="ts">
 import { computed, inject, onMounted, onBeforeUnmount, ref } from 'vue';
+import AgentBrainHints from './AgentBrainHints.vue';
 import type { GameState } from '../../../logic/GameState';
 import { SceneState, ACINDIGO } from '../../../logic/drawing/SceneState';
 import { serialize_wagent } from '../../../logic/WAgent';
@@ -261,6 +296,7 @@ const adjustStuck = (delta: number) => {
 const handleClick = (fn: () => void) => {
   try { fn(); } catch (e) { console.error(e); }
 };
+
 </script>
 
 <style scoped>

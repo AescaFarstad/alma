@@ -18,130 +18,6 @@ Next the algorithm runs on each of the groups separately.
 for the initial implementation I just want to run some statistics and calculate the size of the largest group and median group.
 
 
-=== NAVMESH GENERATION SUMMARY ===
-BUILDINGS count: 5116
-Building vertices added specifically for buildings: 4312
-Total building vertices: 26273
-Average buildings per blob: 1.3
-Single building blobs: 3378
-Total blobs: 4046
-
-Total vertices: 25144
-Total triangles: 50282
-  - Walkable triangles: 33226
-  - Impassable triangles: 17056
-Total polygons: 21644
-  - Walkable polygons: 17598 (0.0% reduction)
-  • Largest polygon: 8 triangles
-  • Average triangles per polygon: 1.9
-  • Single triangle polygons: 7702
-  - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 93570
-Polygon triangles count: 50282
-Average triangle area: 1578.70
-Average polygon area: 0.00
-
-
-=== NAVMESH GENERATION SUMMARY ===
-BUILDINGS count: 5115
-Building vertices added specifically for buildings: 6676
-Total building vertices: 26754
-Average buildings per blob: 1.3
-Single building blobs: 3378
-Total blobs: 4046
-
-Total vertices: 25079
-Total triangles: 50152
-  - Walkable triangles: 33161
-  - Impassable triangles: 16991
-Total polygons: 15994
-  - Walkable polygons: 11948 (0.0% reduction)
-  • Largest polygon: 13 triangles
-  • Average triangles per polygon: 2.8
-  • Single triangle polygons: 1449
-  - Impassable polygons: 4046 (0.0% reduction)
-Polygon vertices count: 82140
-Polygon triangles count: 50152
-Average triangle area: 1582.79
-Average polygon area: 0.00
-
-
-=== NAVMESH GENERATION SUMMARY ===
-BUILDINGS count: 5059
-Building vertices added specifically for buildings: 6001
-Total building vertices: 26528
-Average buildings per blob: 1.3
-Single building blobs: 3352
-Total blobs: 4012
-
-Total vertices: 23483
-Total triangles: 46960
-  - Walkable triangles: 31497
-  - Impassable triangles: 15463
-Total polygons: 15327
-  - Walkable polygons: 11315 (0.0% reduction)
-  • Largest polygon: 10 triangles
-  • Average triangles per polygon: 2.8
-  • Single triangle polygons: 1365
-  - Impassable polygons: 4012 (0.0% reduction)
-Polygon vertices count: 77614
-Polygon triangles count: 46960
-Average triangle area: 1690.37
-Average polygon area: 0.00
-
-773;[Ma1025358640,Ma1025358660];[-482.22,334.74,-484.17,368.04,-496.89,367.3,-498.18,380.22,-547.31,376.77,-546.4,363.77,-496.89,367.3,-494.94,334]
-
-5047;[Ma630236540,Ma630236560];[-241.61,-104.16,-245.02,-67.58,-209.44,-64.29,-210.67,-50.94,-246.25,-54.23,-245.02,-67.58,-259.56,-68.91,-256.51,-101.53,-252.53,-101.16,-252.16,-105.14]
-
-614.64, 423.05
-
-
-
-
---- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
-Blob index: 4458
-Building IDs: [Ma8284566580]
-Repeated coordinate (2608.18;1057.85) at indices [6, 7]
-Duplicate adjacent edge at indices 6 -> 7: (2608.18;1057.85)
-Origin: Present in raw input geometry (pre-snapping)
-Snapped geometry (10 points): [[2621.87,1075.96],[2610.13,1077.01],[2609.22,1075.43],[2607.34,1074.94],[2605.97,1060.26],[2608.15,1058.86],[2608.18,1057.85],[2608.18,1057.85],[2608.23,1056.84],[2619.73,1055.63]]
---- END OF BLOB ERROR ---
---- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
-Blob index: 5643
-Building IDs: [Ma5789903120, Ma5789903140]
-Repeated coordinate (1316.17;-84.19) at indices [2, 3]
-Duplicate adjacent edge at indices 2 -> 3: (1316.17;-84.19)
-Origin: Present in raw input geometry (pre-snapping)
-Snapped geometry (10 points): [[1313.21,-96.88],[1314.84,-84.77],[1316.17,-84.19],[1316.17,-84.19],[1317.18,-84.05],[1318.09,-74.49],[1297.04,-72.5],[1296.13,-82.11],[1301.69,-83.32],[1301.1,-96.03]]
---- END OF BLOB ERROR ---
---- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
-Blob index: 12163
-Building IDs: [Ma8631416820]
-Repeated coordinate (-1874.18;126.06) at indices [2, 3]
-Duplicate adjacent edge at indices 2 -> 3: (-1874.18;126.06)
-Origin: Present in raw input geometry (pre-snapping)
-Snapped geometry (18 points): [[-1874.52,118.89],[-1874.78,125.09],[-1874.18,126.06],[-1874.18,126.06],[-1873.22,126.52],[-1873.88,133.37],[-1875.64,134.48],[-1875.61,155.37],[-1877.36,156.47],[-1878,163.3],[-1897.63,161.87],[-1899.01,163.27],[-1906.14,162.46],[-1907.56,160.99],[-1913.06,160.55],[-1912.07,147.94],[-1889.97,149.32],[-1887.16,117.9]]
---- END OF BLOB ERROR ---
---- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
-Blob index: 12781
-Building IDs: [Ma5051687840]
-Repeated coordinate (332.51;-717.06) at indices [13, 14]
-Duplicate adjacent edge at indices 13 -> 14: (332.51;-717.06)
-Origin: Present in raw input geometry (pre-snapping)
-Snapped geometry (33 points): [[305.23,-736.08],[306.88,-736.84],[314.35,-732.27],[316.16,-734.09],[325.04,-733.31],[326.5,-730.96],[332.93,-732.8],[334.8,-731.63],[339.61,-733.45],[342.71,-726.09],[338.16,-723.08],[338.13,-721.44],[332.52,-718.85],[332.51,-717.06],[332.51,-717.06],[333.02,-716.03],[327.9,-708.46],[326.53,-709.51],[324.32,-708.42],[323.95,-701.66],[321.92,-700.68],[321.36,-696.57],[312.32,-697.03],[312.25,-702.38],[310.61,-703.23],[309.72,-710.92],[307.64,-711.35],[305.19,-718.29],[305.95,-721],[300.56,-725.74],[300.43,-728.21],[297.38,-730.61],[302.49,-737.83]]
---- END OF BLOB ERROR ---
---- PRE-TRIANGULATION ERROR: Duplicate vertices found in hole polygon (blob) ---
-Blob index: 14032
-Building IDs: [Ma8762574220, Ma8762574240]
-Repeated coordinate (-914.91;-1960.56) at indices [7, 8]
-Duplicate adjacent edge at indices 7 -> 8: (-914.91;-1960.56)
-Origin: Present in raw input geometry (pre-snapping)
-Snapped geometry (20 points): [[-934.18,-1979.92],[-930.22,-1978.66],[-928.77,-1974.64],[-919.12,-1965.82],[-917.03,-1965.81],[-914.46,-1962.91],[-915.64,-1961.44],[-914.91,-1960.56],[-914.91,-1960.56],[-915.39,-1959.33],[-919.51,-1957.71],[-928.65,-1947.65],[-929.56,-1944.47],[-932.91,-1943.36],[-935.83,-1945.49],[-936.43,-1947.87],[-948.78,-1958.26],[-952.86,-1958.13],[-965.52,-1970.41],[-945.59,-1990.95]]
---- END OF BLOB ERROR ---
-
-
-
-
  name: 'PointError',
   points: [
     <ref *1> Point {
@@ -467,3 +343,61 @@ Polygon vertices count: 640594
 Polygon triangles count: 380570
 Average triangle area: 1480.71
 Average polygon area: 0.00
+
+
+
+I'm developing a web game where tens of thousands of agents are acting in a huge map. I use ts and wasm.
+
+The agents are stores in SoA of typed arrays for the most part.
+There is also a AoS part with not-so-performance-critical data which is convenient to have in ts.
+
+So there is SoA struct and Agent[] in the game state.
+Agent stores index to access SoA part of the data.
+
+This is all fine and dandi until I need to remove and overwrite the dead agents.
+I'm pondering how to implement that feature.
+
+I see two options:
+
+1) There is 'generation' property which is increased when agent dies. Any code that stores a reference to an agent via index should also store teh current generation and compare it when acting  to know that this is the same agent by that index.
+There is a global Agent[] array which stores an agent for every possible index - for pooling and by-index access.
+But another Agent AoS is maintained with only currently alive agents - for faster iteration.
+SoA block is allocated once for the maximum amount of agents.
+
+Cons: every code that references an agent by index must check generation, but there is no way to formaly guaratntee that.
+
+2) Agents have 'index' property. There is no longer a guarantee that agent N is at position N in SoA block. Instead a separate map should be used each time for by-index access.
+
+Cons: map is slower than array.
+
+
+What do you think I should do?
+How is it typically solved in the industry?
+Are there more options?
+
+
+In order to refer to an agent by index we need to check its generation for equality.
+Both index and generation should be packed into a single number (generation << INDEX_BITS) | index ( src/logic/agents/Agents.ts )
+Brain cells (`src/logic/agents/ai/Brain.ts`) that deal with an index of another agent should rename that field to 'handle' instead of 'index' or 'idx'. Once per call before accessing data from the other agent, they should verify that the generation is identical. (generation property is SoA). If it's not, they they should treat that as if the agent they are indexing is dead.
+Don't create a separate function for packing/unpacking.
+
+Treat 0 as invalid handle.
+(we will deal with the consequances of 0 being invalid later i.e. adding a dummy 0 agent to arrays)
+
+c++ code that writes the nearest_enemy should write the packed handle instead.
+
+
+
+Let's deal with dead agents.
+
+
+Agents should keep a list of free SoA indexes (typed array). Populated at start with all indexes backwards (so that the 0 index would be last in the array). It should also maintain cursor into that array since typed arrays are fixed length.
+
+When a new agent is created `src/logic/SpawnWAgent.ts` the index should be taken from that array.
+damage_agent in src/logic/agents/ai/MeleeAttackBC.ts should increment the agent's generation and 'push' the newly freed index into the array.
+0 generation must always be skipped via double increment. (it is always invalid)
+
+
+At the end of the model update killed agents must be removed from wagents array.
+A list of killed agents must be maintained.
+Instead of passing teh number of agents to c++ update, ts should pass start index and end index of agnets. Between these two indecies some dead agents may be present, but c++ model should filter those out based on is_alive property. ts simply passes the 

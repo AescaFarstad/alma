@@ -9,10 +9,12 @@
 #include <cmath>
 #include <vector>
 #include "data_structures.h"
+#include "model.h"
 #include <iostream>
 
 // Pull SoA and counters from main TU (C++ linkage)
 extern AgentSoA agent_data;
+extern Model g_model; // for sim_time (updated via update_simulation)
 
 namespace {
 EMSCRIPTEN_WEBGL_CONTEXT_HANDLE g_ctx = 0;
@@ -28,6 +30,8 @@ GLuint g_instance_vbo = 0;
 GLint u_worldToClip_loc = -1;
 GLint u_atlas_loc = -1;
 GLint u_uv_loc = -1;
+GLint u_time_loc = -1;
+GLint u_fadeDur_loc = -1;
 bool g_debugOverlay = false;
 // Derived each frame: pixels per world unit
 float g_pixelsPerWorld = 1.0f;
@@ -37,18 +41,27 @@ std::vector<float> g_frameUVs; // length = g_frameCount * 4
 int g_frameCount = 0;
 
 // Persistent instance storage to avoid per-frame allocations
-struct Instance { float x, y, cosv, sinv, scale; };
+// Per-instance data passed to GPU
+// x, y         : world position
+// cosv, sinv   : rotation basis
+// scale        : sprite height in world units
+// lastStamp    : game-time when last damage occurred (seconds)
+struct Instance { float x, y, cosv, sinv, scale, lastStamp; };
 
 const char* kVS = R"(#version 300 es
 layout(location=0) in vec2 a_pos;    // quad unit vertex: (-0.5..+0.5)
 layout(location=1) in vec2 i_worldXY;  // instance
 layout(location=2) in vec2 i_cosSin;   // instance
-layout(location=3) in float i_scale;   // instance
+layout(location=3) in float i_scale;     // instance
+layout(location=4) in float i_lastStamp; // instance
 
 uniform mat3 u_worldToClip; // 3x3 affine to NDC
 uniform vec4 u_uv; // u0,v0,u1,v1
 uniform sampler2D u_atlas; // for textureSize
+uniform float u_time;      // current simulation time
+uniform float u_fadeDur;   // fade duration in seconds
 out vec2 v_uv;
+out float v_dmgMix;
 
 void main() {
   // derive aspect ratio of the frame in pixels (handles non-square atlases)
@@ -66,6 +79,11 @@ void main() {
   vec2 world = i_worldXY + rotated;
   vec2 uv01 = a_pos + 0.5; // 0..1 within the quad
   v_uv = mix(u_uv.xy, u_uv.zw, uv01);
+  // Compute quadratic fade: mix = clamp(1 - age/dur, 0,1)^2
+  float age = u_time - i_lastStamp;
+  float lin = 1.0 - (age / max(u_fadeDur, 1e-6));
+  float clamped = clamp(lin, 0.0, 1.0);
+  v_dmgMix = clamped * clamped;
   vec3 clip = u_worldToClip * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
 }
@@ -75,10 +93,13 @@ const char* kFS = R"(#version 300 es
 precision mediump float;
 uniform sampler2D u_atlas;
 in vec2 v_uv;
+in float v_dmgMix;
 out vec4 o_color;
 void main(){
   vec4 tex = texture(u_atlas, v_uv);
-  o_color = tex;
+  // Lerp original color towards red based on damage mix
+  vec3 tinted = mix(tex.rgb, vec3(1.0, 0.0, 0.0), clamp(v_dmgMix, 0.0, 1.0));
+  o_color = vec4(tinted, tex.a);
 }
 )";
 
@@ -123,6 +144,8 @@ void ensurePipeline() {
   u_worldToClip_loc = glGetUniformLocation(g_program, "u_worldToClip");
   u_atlas_loc = glGetUniformLocation(g_program, "u_atlas");
   u_uv_loc = glGetUniformLocation(g_program, "u_uv");
+  u_time_loc = glGetUniformLocation(g_program, "u_time");
+  u_fadeDur_loc = glGetUniformLocation(g_program, "u_fadeDur");
 
   // Unit quad
   const float quadVerts[] = {
@@ -146,10 +169,10 @@ void ensurePipeline() {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g_ebo);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIdx), quadIdx, GL_STATIC_DRAW);
 
-  // Instance buffer (pos, cossin, scale)
+  // Instance buffer (pos, cossin, scale, lastStamp)
   glGenBuffers(1, &g_instance_vbo);
   glBindBuffer(GL_ARRAY_BUFFER, g_instance_vbo);
-  const GLsizei stride = sizeof(float)*5; // 2 + 2 + 1
+  const GLsizei stride = sizeof(float)*6; // 2 + 2 + 1 + 1
   glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_STREAM_DRAW);
 
   glEnableVertexAttribArray(1);
@@ -163,6 +186,10 @@ void ensurePipeline() {
   glEnableVertexAttribArray(3);
   glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float)*4));
   glVertexAttribDivisor(3, 1);
+
+  glEnableVertexAttribArray(4);
+  glVertexAttribPointer(4, 1, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float)*5));
+  glVertexAttribDivisor(4, 1);
 
   glBindVertexArray(0);
 }
@@ -222,7 +249,12 @@ void renderInstances(const float* m3x3, int active_agents) {
       batches.push_back(std::move(fb));
       batchIndex = (int)batches.size() - 1;
     }
-    batches[batchIndex].instances.push_back({ p.x, p.y, cosv, sinv, scaleWorld });
+    float stamp = 0.0f;
+    if (agent_data.last_damage_stamp) {
+      stamp = agent_data.last_damage_stamp[i];
+    }
+
+    batches[batchIndex].instances.push_back({ p.x, p.y, cosv, sinv, scaleWorld, stamp });
   }
 
   // Draw each batch
@@ -270,6 +302,9 @@ EMSCRIPTEN_KEEPALIVE void sprite_renderer_init(const char* canvas_selector) {
   // Set up static GL state once - these never change
   glUseProgram(g_program);
   glUniform1i(u_atlas_loc, 0);
+  if (u_fadeDur_loc >= 0) {
+    glUniform1f(u_fadeDur_loc, 0.4f);
+  }
   
   // Set up blend state once - this never changes
   glEnable(GL_BLEND);
@@ -333,6 +368,9 @@ EMSCRIPTEN_KEEPALIVE void render(float dt, int active_agents, const float* m3x3,
 
   ensurePipeline();
   ensureTexture();
+  if (u_time_loc >= 0) {
+    glUniform1f(u_time_loc, g_model.sim_time);
+  }
 
   renderInstances(m3x3, active_agents);
 }

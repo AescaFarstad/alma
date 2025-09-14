@@ -55,7 +55,7 @@ void clear_and_reindex_grid(int num_agents) {
 
   for (int i = 0; i < num_agents; i++) {
     if (!agent_data.is_alive[i]) continue;
-    
+
     Point2 pos = agent_data.positions[i];
     int cell_index = get_cell_index(pos);
 

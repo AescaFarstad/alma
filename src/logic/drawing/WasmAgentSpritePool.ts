@@ -33,7 +33,7 @@ export class WasmAgentSpritePool extends BaseAgentSpritePool {
     }
 
     // Check if WASM agents are initialized and we have active agents
-    if (!agents.positions || !agents.is_alive || wagentsCount === 0) {
+    if (!agents.positions || wagentsCount === 0) {
       if (this.wasRenderingEnabled) {
         this.removeAllAgentsFromContainers(container);
         this.wasRenderingEnabled = false;

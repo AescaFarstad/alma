@@ -79,6 +79,16 @@ export class Agent {
 
   // Logging/Debug identifiers and state
   id: number = -1;
+
+  // Combat/AI
+  proto: number = 0;
+  weaponProto: number = 0;
+  team: number = 0;
+  hp: number = 100;
+  nearestEnemy: number = 0;
+  target: number = 0;
+  cooldown: number = 0;
+  morale: number = 1.0;
 }
 
 let NEXT_AGENT_ID = 1;

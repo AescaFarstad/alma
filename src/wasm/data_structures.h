@@ -6,6 +6,13 @@
 
 #include "point2.h"
 
+// Packed handle configuration: 32-bit handle = (generation << INDEX_BITS) | index
+// 0 is reserved as an invalid handle.
+constexpr uint32_t INDEX_BITS = 16u;
+constexpr uint32_t GENERATION_BITS = 16u;
+constexpr uint32_t INDEX_MASK = (1u << INDEX_BITS) - 1u;
+constexpr uint32_t GENERATION_MASK = (1u << GENERATION_BITS) - 1u;
+
 // Enum for agent state, mirroring AgentState in Agent.ts
 enum AgentState : uint8_t {
   Standing,
@@ -61,13 +68,24 @@ struct AgentSoA {
   float* arrival_desired_speeds;
   float* arrival_threshold_sqs;
   float* predicament_ratings;
+
+  // Combat/AI
+  int* proto;
+  int* weapon_proto;
+  int* team;
+  int* hp;
+  uint32_t* nearest_enemy;
+  uint32_t* target;
+  float* cooldown;
+  float* morale;
+  float* last_damage_stamp;
   
   // Per-agent dynamic data (managed in C++)
   std::vector<int>* corridors;
-  int* corridor_indices;
 
   // Placed at the very end of the shared layout
   uint16_t* frame_ids;
+  uint16_t* generation;
 
   int capacity;
 };

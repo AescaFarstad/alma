@@ -1,6 +1,7 @@
 import { mapInstance } from '../map_instance';
 import { WasmFacade } from './WasmFacade';
 import { GameState } from './GameState';
+import { MAX_AGENTS } from './agents/Agents';
 import { Point2 } from './core/math';
 
 export class Wasm {
@@ -94,9 +95,8 @@ export class Wasm {
     const base = Wasm.cameraMatrixPtr >>> 2; // float index
     for (let i = 0; i < 9; i++) heap[base + i] = m3x3RowMajor[i];
 
-    // Call render-only with dt=0 since we're not doing simulation
     if (WasmFacade._render) {
-      WasmFacade._render(0, gameState.wagents.length, Wasm.cameraMatrixPtr, widthPx, heightPx, dpr);
+      WasmFacade._render(0, MAX_AGENTS, Wasm.cameraMatrixPtr, widthPx, heightPx, dpr);
     }
   }
 }

@@ -1,6 +1,7 @@
 #include "agent_init.h"
 #include "agent_statistic.h"
 #include <cmath>
+#include <algorithm>
 
 extern AgentSoA agent_data;
 
@@ -120,53 +121,101 @@ void initialize_shared_buffer_layout(uint8_t* sharedBuffer, int maxAgents) {
   agent_data.predicament_ratings = reinterpret_cast<float*>(sharedBuffer + offset);
   offset += sizeof(float) * maxAgents;
 
+  // Combat/AI
+  agent_data.proto = reinterpret_cast<int*>(sharedBuffer + offset);
+  offset += sizeof(int) * maxAgents;
+
+  agent_data.weapon_proto = reinterpret_cast<int*>(sharedBuffer + offset);
+  offset += sizeof(int) * maxAgents;
+
+  agent_data.team = reinterpret_cast<int*>(sharedBuffer + offset);
+  offset += sizeof(int) * maxAgents;
+
+  agent_data.hp = reinterpret_cast<int*>(sharedBuffer + offset);
+  offset += sizeof(int) * maxAgents;
+
+  agent_data.nearest_enemy = reinterpret_cast<uint32_t*>(sharedBuffer + offset);
+  offset += sizeof(uint32_t) * maxAgents;
+
+  agent_data.target = reinterpret_cast<uint32_t*>(sharedBuffer + offset);
+  offset += sizeof(uint32_t) * maxAgents;
+
+  agent_data.cooldown = reinterpret_cast<float*>(sharedBuffer + offset);
+  offset += sizeof(float) * maxAgents;
+
+  agent_data.morale = reinterpret_cast<float*>(sharedBuffer + offset);
+  offset += sizeof(float) * maxAgents;
+
+  agent_data.last_damage_stamp = reinterpret_cast<float*>(sharedBuffer + offset);
+  offset += sizeof(float) * maxAgents;
+
   // At very end
   agent_data.frame_ids = reinterpret_cast<uint16_t*>(sharedBuffer + offset);
   offset += sizeof(uint16_t) * maxAgents;
+
+  agent_data.generation = reinterpret_cast<uint16_t*>(sharedBuffer + offset);
+  offset += sizeof(uint16_t) * maxAgents;
 }
 
-void initialize_agent_defaults(int idx, float x, float y) {
-  // Basic state
-  agent_data.positions[idx] = {x, y};
-  agent_data.last_coordinates[idx] = {x, y};
-  agent_data.velocities[idx] = {0.0f, 0.0f};
-  agent_data.looks[idx] = {1.0f, 0.0f};
-  agent_data.states[idx] = AgentState::Standing;
-  agent_data.is_alive[idx] = true;
+void initialize_agent_defaults() {
+  const int n = agent_data.capacity;
+
+  // Core physics
+  std::fill_n(agent_data.positions, n, Point2{0, 0});
+  std::fill_n(agent_data.last_coordinates, n, Point2{0, 0});
+  std::fill_n(agent_data.velocities, n, Point2{0, 0});
+  std::fill_n(agent_data.looks, n, Point2{0, 0});
+  std::fill_n(agent_data.states, n, AgentState::Standing); // 0
+  std::fill_n(agent_data.is_alive, n, false);
 
   // Navigation defaults
-  agent_data.current_tris[idx] = -1;
-  agent_data.next_corners[idx] = {0,0};
-  agent_data.next_corner_tris[idx] = -1;
-  agent_data.next_corners2[idx] = {0,0};
-  agent_data.next_corner_tris2[idx] = -1;
-  agent_data.num_valid_corners[idx] = 0;
-  agent_data.pre_escape_corners[idx] = {0,0};
-  agent_data.pre_escape_corner_tris[idx] = -1;
-  agent_data.end_targets[idx] = {0,0};
-  agent_data.end_target_tris[idx] = -1;
-  agent_data.last_valid_positions[idx] = {x,y};
-  agent_data.last_valid_tris[idx] = -1;
-  agent_data.stuck_ratings[idx] = 0.0f;
-  agent_data.path_frustrations[idx] = 0.0f;
-  agent_data.predicament_ratings[idx] = 0.0f;
-  
-  // Default parameters (can be overridden from JS)
-  agent_data.max_speeds[idx] = 3.0f;
-  agent_data.accels[idx] = 20.0f;
-  agent_data.resistances[idx] = 0.1f;
-  agent_data.intelligences[idx] = 0.5f;
-  agent_data.look_speeds[idx] = 0.1f;
-  agent_data.max_frustrations[idx] = 10.0f;
-  agent_data.arrival_desired_speeds[idx] = 1.0f;
-  agent_data.arrival_threshold_sqs[idx] = 4.0f;
-  
-  // Initialize corridor data
-  agent_data.corridors[idx].clear();
-  agent_data.corridor_indices[idx] = 0;
-  
-  // Initialize frame id
-  agent_data.frame_ids[idx] = 0;
+  std::fill_n(agent_data.current_tris, n, -1);
+  std::fill_n(agent_data.next_corners, n, Point2{0, 0});
+  std::fill_n(agent_data.next_corner_tris, n, -1);
+  std::fill_n(agent_data.next_corners2, n, Point2{0, 0});
+  std::fill_n(agent_data.next_corner_tris2, n, -1);
+  std::fill_n(agent_data.num_valid_corners, n, static_cast<uint8_t>(0));
+  std::fill_n(agent_data.pre_escape_corners, n, Point2{0, 0});
+  std::fill_n(agent_data.pre_escape_corner_tris, n, -1);
+  std::fill_n(agent_data.end_targets, n, Point2{0, 0});
+  std::fill_n(agent_data.end_target_tris, n, -1);
+  std::fill_n(agent_data.last_valid_positions, n, Point2{0, 0});
+  std::fill_n(agent_data.last_valid_tris, n, -1);
+  std::fill_n(agent_data.stuck_ratings, n, 0.0f);
+  std::fill_n(agent_data.path_frustrations, n, 0.0f);
+  std::fill_n(agent_data.predicament_ratings, n, 0.0f);
+  std::fill_n(agent_data.alien_polys, n, -1);
+  std::fill_n(agent_data.last_visible_points_for_next_corner, n, Point2{0, 0});
 
-  reset_agent_stuck(idx);
+  // Statistics
+  std::fill_n(agent_data.last_end_targets, n, Point2{0, 0});
+  std::fill_n(agent_data.min_corridor_lengths, n, 0);
+  std::fill_n(agent_data.last_distances_to_next_corner, n, 0.0f);
+  std::fill_n(agent_data.sight_ratings, n, 0.0f);
+  std::fill_n(agent_data.last_next_corner_tris, n, -1);
+
+  // Parameters (overridden from JS on spawn)
+  std::fill_n(agent_data.max_speeds, n, 0.0f);
+  std::fill_n(agent_data.accels, n, 0.0f);
+  std::fill_n(agent_data.resistances, n, 0.0f);
+  std::fill_n(agent_data.intelligences, n, 0.0f);
+  std::fill_n(agent_data.look_speeds, n, 0.0f);
+  std::fill_n(agent_data.max_frustrations, n, 0.0f);
+  std::fill_n(agent_data.arrival_desired_speeds, n, 0.0f);
+  std::fill_n(agent_data.arrival_threshold_sqs, n, 0.0f);
+
+  // Combat/AI defaults
+  std::fill_n(agent_data.proto, n, 0);
+  std::fill_n(agent_data.weapon_proto, n, 0);
+  std::fill_n(agent_data.team, n, 0);
+  std::fill_n(agent_data.hp, n, 0);
+  std::fill_n(agent_data.nearest_enemy, n, 0u); // invalid handle
+  std::fill_n(agent_data.target, n, 0u);        // invalid handle
+  std::fill_n(agent_data.cooldown, n, 0.0f);
+  std::fill_n(agent_data.morale, n, 0.0f);
+  std::fill_n(agent_data.last_damage_stamp, n, 0.0f);
+
+  // At very end
+  std::fill_n(agent_data.frame_ids, n, static_cast<uint16_t>(0));
+  std::fill_n(agent_data.generation, n, static_cast<uint16_t>(0));
 }

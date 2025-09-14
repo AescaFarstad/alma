@@ -1,6 +1,12 @@
 import { EventBuffer } from "../EventBuffer";
 import { WAgent } from "../WAgent";
 
+export const INDEX_BITS = 16;
+export const GENERATION_BITS = 16;
+
+export const INDEX_MASK = (1 << INDEX_BITS) - 1;
+export const GENERATION_MASK = (1 << GENERATION_BITS) - 1;
+
 // Maximum number of agents supported by the system
 export const MAX_AGENTS = 36100;
 
@@ -49,8 +55,39 @@ export class Agents {
   public arrival_threshold_sqs! : Float32Array;
   public predicament_ratings! : Float32Array;
 
+  // Combat/AI
+  public proto!: Int32Array;
+  public weapon_proto!: Int32Array;
+  public team!: Int32Array;
+  public hp!: Int32Array;
+  public nearest_enemy!: Uint32Array;
+  public target!: Uint32Array;
+  public cooldown!: Float32Array;
+  public morale!: Float32Array;
+  public last_damage_stamp!: Float32Array;
+
   // At very end
   public frame_ids! : Uint16Array;
+  public generation! : Uint16Array;
 
   public events!: EventBuffer;
+
+  // Free-list of available SoA indices (stack semantics)
+  public free_list!: Int32Array; // length MAX_AGENTS; values are indices
+  public free_list_cursor: number = 0; // points to next slot to pop from
+
+  // Dead indices recorded during a frame for efficient pruning of wrappers
+  public dead_indices!: Int32Array; // length MAX_AGENTS
+  public dead_count: number = 0;
 }
+
+// When adding a new field to Agents:
+// - Add the typed array property here with the correct type.
+// - Update memory sizing in `src/logic/initializers/AgentsInit.ts::calculateAgentsMemory`.
+// - Map the new view in `initializeAgents` with correct order and element size.
+// - Mirror the layout in WASM:
+//   * Add pointer in `src/wasm/data_structures.h` AgentSoA.
+//   * Map it in `src/wasm/agent_init.cpp::initialize_shared_buffer_layout`.
+//   * Initialize zero or invalid defaults in `initialize_agent_defaults`.
+// - If needed for tools/UI, extend serializers and dev UI (`src/logic/WAgent.ts`, `src/wasm/wasm_log.h`, `src/components/ui/devUI/DevAgentExplorer.vue`).
+// - If the field is likely to be explicitly inited when creating an agent, add the property to `src/logic/agents/Agent.ts`:Agent.

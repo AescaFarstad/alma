@@ -2,7 +2,7 @@ import type { GameState } from "./GameState";
 import { wagentsLimit } from "./GameState";
 import type { AgentConfig } from "./agents/AgentConfigs";
 import type { Navmesh } from "./navmesh/Navmesh";
-import { createWasmAgent } from "./WAgentSpawner";
+import { createWasmAgent } from "./SpawnWAgent";
 
 type Point = { x: number; y: number };
 
@@ -162,7 +162,7 @@ export function updateWAgentGridSpawners(
   if (!spawners) return;
 
   // Skip spawning until WASM agents are initialized
-  if (!gs.wasm_agents.positions || !gs.wasm_agents.is_alive) {
+  if (!gs.wasm_agents.positions) {
     // console.log(`[WASM Grid Spawner] Skipping spawn - WASM agents not initialized`);
     return;
   }

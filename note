@@ -43,6 +43,10 @@ august 25-26
     debugging navigation, corners, offsets
 august 29-30
     separate ai, Event buffer, reversed corridor, QOL extension, tabs, whitespace
+september 1-7
+    chase, melee attack
+september 7-14
+    debugging navigation out of bounds, tinting, dead agents
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -83,106 +87,90 @@ there are convex pairs of triangles that did not form polygons
 1348, 1125
 
 
-{
-  "building": "commercial",
-  "num": "111",
-  "shop": "mall",
-  "name": "Dostyk Plaza",
-  "osm_id": "Ma201207930",
-  "area": 19243.337798487395
-}
-
-  name: 'PointError',
-  points: [
-    <ref *1> Point {
-      x: 1087.91,
-      y: -1414.46,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: 1088.93, y: -1415.13, _p2t_edge_list: null },
-          q: [Circular *1]
-        }
-      ]
-    }
-  ],
-  message: 'poly2tri Invalid Edge constructor: repeated points! (1087.91;-1414.46)'
-
-
-   name: 'PointError',
-  points: [
-    <ref *1> Point {
-      x: 117.53,
-      y: 597.11,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: 116.54, y: 596.25, _p2t_edge_list: [Array] },
-          q: [Circular *1]
-        }
-      ]
-    }
-  ],
-  message: 'poly2tri Invalid Edge constructor: repeated points! (117.53;597.11)'
-
-
- name: 'PointError',
-  points: [
-    <ref *1> Point {
-      x: -201.93,
-      y: 3340.93,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: -202.82, y: 3340.34, _p2t_edge_list: [Array] },
-          q: [Circular *1]
-        }
-      ]
-    }
-  ],
-  message: 'poly2tri Invalid Edge constructor: repeated points! (-201.93;3340.93)'
-
-
-//old center
- name: 'PointError',
-  points: [
-    <ref *1> Point {
-      x: -7965.58,
-      y: -3069.63,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: -7977.06, y: -3073.75, _p2t_edge_list: [Array] },
-          q: [Circular *1]
-        }
-      ]
-    },
-    <ref *2> Point {
-      x: -7960.46,
-      y: -3089.42,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: -7971.12, y: -3092.44, _p2t_edge_list: null },
-          q: [Circular *2]
-        },
-        Edge {
-          p: Point { x: -7947.79, y: -3127.13, _p2t_edge_list: null },
-          q: [Circular *2]
-        }
-      ]
-    },
-    <ref *3> Point {
-      x: -7966.1,
-      y: -3069.71,
-      _p2t_edge_list: [
-        Edge {
-          p: Point { x: -7959.61, y: -3088.7, _p2t_edge_list: null },
-          q: [Circular *3]
-        }
-      ]
-    },
-    Point { x: -7959.61, y: -3088.7, _p2t_edge_list: null }
-  ],
-  message: 'poly2tri Intersecting Constraints (-7965.58;-3069.63) (-7960.46;-3089.42) (-7966.1;-3069.71) (-7959.61;-3088.7)'
 
 
 The outer boundary needs to be more complex:
 Split the boundary edge that's facing the central area into SAW_TOOTH_COUNT_X * 2 or SAW_TOOTH_COUNT_Y * 2 parts with additional vertices.
 Every odd vertex must be moved towards the central area by SAW_TOOTH_DEPTH.
 Even vertices remain at the edge. This will give the outer boundary a saw-shaped inner surface which should help break down the larger triangles near the boundary.
+
+
+collision resolution assigns the nearest enemy
+wander cells rect to nearest enemy
+ChaseEnemy
+  set as target
+  stay within range
+  update path when target moves
+  loose target if times passed and it doesn't raycast or if it is too far
+  desireToPursue decreasess with distance and lack of vision
+
+on frame:
+  if target is in my poly - update and pursue
+  if target is not in my poly
+    find path to target and remember the poly
+    if target's poly changes - find another path, set find path cooldown
+
+
+
+
+
+When I'm targeted
+FleeEnemy
+  query 8 neighbors for ownership
+  choose the best and set target to a random poly in there
+  if time passed and not being chased - REMOVE
+
+
+
+proto{
+  vision_range : float
+  max_hp : int
+}
+
+weapon_proto{
+  attack_cd : float
+  damage_cd : float
+  melee_range : float
+  melee_splash_cos : float
+  reload_duration : float
+  magazine_size : int
+  ranged_range : float
+}
+
+projectile{
+  pos : Point2
+  dir : Point2
+  speed : float
+  team : int
+  damage : int
+  dieAt : float
+
+}
+
+
+slow down when reloading
+speed depends on look dir
+speed up when needed and has stamina
+
+
+Flee1
+  run away to safe cell
+
+Flee2
+  run away
+
+
+SpatialStats
+  polygonOwnership [2] //per polygon, decreaes with time, awarages with time, filled N agents per frame
+  cellOwnership [2] //per spatial index cell
+
+
+
+last_damaged_at:float
+
+
+
+fx of attack
+multi cell for move + attack
+!dead agents
+verying speed

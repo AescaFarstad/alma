@@ -5,6 +5,9 @@
 #include "constants_layout.h"
 #include "wasm_log.h"
 #include "event_handler.h"
+#include "raycasting.h"
+#include "agent_nav_utils.h"
+#include "nav_utils.h"
 
 extern EventBuffer g_event_buffer;
 extern AgentSoA agent_data;
@@ -62,6 +65,71 @@ void process_events() {
             // SET_ONLY: do nothing else; TS may set state/corners
           }
         }
+        break;
+      }
+      case CMD_NAVIGATE_TO_NEARBY_TARGET: {
+        if (size < 2) {
+          wasm_console_error("[WASM] CMD_NAVIGATE_TO_NEARBY_TARGET: invalid size");
+          break;
+        }
+        const uint32_t agent_idx = g_event_buffer.u32_base[p + 1];
+        if (agent_idx >= static_cast<uint32_t>(agent_data.capacity)) {
+          wasm_console_error("[WASM] CMD_NAVIGATE_TO_NEARBY_TARGET: invalid agent index");
+          break;
+        }
+
+        const uint32_t handle = agent_data.target[agent_idx];
+        if (handle == 0u) { break; }
+        const int target_idx = static_cast<int>(handle & INDEX_MASK);
+        // const uint16_t handle_gen = static_cast<uint16_t>(handle >> INDEX_BITS);
+        // if (target_idx < 0 || target_idx >= agent_data.capacity) { break; }
+        // if (!agent_data.generation || agent_data.generation[target_idx] != handle_gen) { break; }
+        // // verbose logs trimmed; re-enable if needed
+
+        Point2 target_pos = agent_data.positions[target_idx];
+        int target_tri = agent_data.current_tris[target_idx];
+        if (target_tri == -1){
+          target_tri = agent_data.last_valid_tris[target_idx];
+          target_pos = agent_data.last_valid_positions[target_idx];
+        }
+        const int start_tri = agent_data.current_tris[agent_idx];
+
+        if (start_tri == -1 || target_tri == -1) {
+          wasm_console_error("[WASM] navigate aborted: invalid start/target tri");
+          break;
+        }
+
+        agent_data.end_targets[agent_idx] = target_pos;
+        agent_data.end_target_tris[agent_idx] = target_tri;
+
+        // First, try straight visibility corridor
+        //wasm_console_log("raycasting corridor");
+        RaycastCorridorResult rc = raycastCorridor(agent_data.positions[agent_idx], target_pos, start_tri, target_tri);
+        const bool hit = (rc.hitV1_idx != -1);
+
+        if (!hit) {
+          // minimal raycast success context; re-enable if needed
+          std::vector<int> raycastPolyCorridor;
+          raycastPolyCorridor.reserve(rc.corridor.size());
+          for (int i = static_cast<int>(rc.corridor.size()) - 1; i >= 0; --i) {
+            const int poly = g_navmesh.triangle_to_polygon[rc.corridor[i]];
+            if (raycastPolyCorridor.empty() || raycastPolyCorridor.back() != poly) {
+              raycastPolyCorridor.push_back(poly);
+            }
+          }
+
+          agent_data.corridors[agent_idx] = std::move(raycastPolyCorridor);
+          agent_data.next_corners[agent_idx] = agent_data.end_targets[agent_idx];
+          agent_data.next_corner_tris[agent_idx] = agent_data.end_target_tris[agent_idx];
+          agent_data.num_valid_corners[agent_idx] = 1;
+          agent_data.path_frustrations[agent_idx] = 0.0f;
+          agent_data.last_visible_points_for_next_corner[agent_idx] = agent_data.positions[agent_idx];
+          //wasm_console_log("raycast success end");
+        } else {
+          //wasm_console_log("finding path");
+          findPathToDestination(g_navmesh, agent_idx, start_tri, target_tri, "cmdNavigateToNearbyTarget");
+        }
+        //wasm_console_log("CMD_NAVIGATE_TO_NEARBY_TARGET ends");
         break;
       }
       default:
