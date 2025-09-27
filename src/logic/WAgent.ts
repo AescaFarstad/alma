@@ -2,7 +2,8 @@ import { Brain } from "./agents/ai/Brain";
 import type { GameState } from "./GameState";
 
 export class WAgent {
-  constructor(public readonly idx: number, public display: string, public brain : Brain) {}
+  public brain! : Brain;
+  constructor(public readonly idx: number, public display: string) {}
 }
 
 export function serialize_wagent(gameState: GameState, idx: number) {

@@ -8,6 +8,7 @@ export enum AgentEventType {
   CMD_SET_CORRIDOR = 1,
   EVT_SELECTED_CORRIDOR = 2,
   CMD_NAVIGATE_TO_NEARBY_TARGET = 3,
+  CMD_ADD_AGENT_MOD = 4,
 }
 
 export enum CorridorAction {
@@ -18,17 +19,13 @@ export enum CorridorAction {
 
 export function handleEvents(gs: GameState) {
   const events = gs.wasm_agents.events;
-  // Always start reading from the beginning of the event buffer for this frame.
-  // JS writes use the same cursor later (after beginFrame()), so reset here.
   events.cursor = 0;
   while (events.u32[events.cursor] != 0) {
     const header = events.u32[events.cursor];
     const type = header & 0xffff;
     const size = (header >> 16) & 0xffff;
-    // Safety: prevent malformed events from freezing the main thread
     if (size <= 0 || (events.cursor + size) > events.capWords) {
-      try { console.error(`[EVT] Malformed header at ${events.cursor} type:${type} size:${size} cap:${events.capWords}`); } catch {}
-      // Skip the rest of the buffer defensively
+      console.error(`[EVT] Malformed header at ${events.cursor} type:${type} size:${size} cap:${events.capWords}`);
       events.cursor = events.capWords;
       break;
     }
@@ -40,17 +37,12 @@ export function handleEvents(gs: GameState) {
         for (let i = 0; i < count; i++) {
           corridor[i] = events.u32[events.cursor + 2 + i] | 0;
         }
-        // Publish to DynamicScene
         if (dynamicScene.selectedWAgentIdx === agentIdx) {
           dynamicScene.selectedWAgentCorridor = corridor;
         }
         break;
       }
-      // case AgentEventType.NONE:
-      //   break;
       default:
-        // Unknown events from WASM -> skip them safely
-        // console.warn(`Unknown event type from WASM: ${type}`);
         break;
     }
     events.cursor += size;
@@ -58,9 +50,9 @@ export function handleEvents(gs: GameState) {
 }
 
 export function cmdSetCorridor(buf: EventBuffer, agent_index: number, corridor1: number[], action: CorridorAction) {
-  const sizeWords = 3 + corridor1.length; // header + agent + action + N polys
+  const sizeWords = 3 + corridor1.length;
   buf.writeHeader(AgentEventType.CMD_SET_CORRIDOR, sizeWords);
-  const base = buf.cursor + 1; // payload starts after header
+  const base = buf.cursor + 1;
   buf.u32[base] = agent_index >>> 0;
   buf.u32[base + 1] = action >>> 0;
   for (let i = 0; i < corridor1.length; i++) {
@@ -69,12 +61,43 @@ export function cmdSetCorridor(buf: EventBuffer, agent_index: number, corridor1:
   buf.cursor += sizeWords;
 }
 
-// Ask WASM to navigate this agent to its implicit `target`.
-// Target is resolved in WASM: agent_data.target[agent_index].
 export function cmdNavigateToNearbyTarget(buf: EventBuffer, agent_index: number) {
-  const sizeWords = 2; // header + agent
+  const sizeWords = 2;
   buf.writeHeader(AgentEventType.CMD_NAVIGATE_TO_NEARBY_TARGET, sizeWords);
   const base = buf.cursor + 1;
   buf.u32[base] = agent_index >>> 0;
+  buf.cursor += sizeWords;
+}
+
+// Mod helpers (TS side must mirror C++ ids in agent_mods.h)
+export enum ModProperty { Accel = 1 }
+
+export enum ModOp { Multiply = 0, Add = 1 }
+
+import { Agents, INDEX_BITS } from "./Agents";
+
+export function cmdAddAgentMod(
+  buf: EventBuffer,
+  agents: Agents,
+  agentIndex: number,
+  property: ModProperty,
+  op: ModOp,
+  modValue: number,
+  endTime: number,
+  fadeAt: number = -1,
+) {
+  const sizeWords = 6;
+  buf.writeHeader(AgentEventType.CMD_ADD_AGENT_MOD, sizeWords);
+  const base = buf.cursor + 1;
+
+  const gen = agents.generation[agentIndex] >>> 0;
+  const handle = ((gen << INDEX_BITS) | (agentIndex & 0xffff)) >>> 0;
+  const packed = (((op & 0xff) << 8) | (property & 0xff)) >>> 0;
+
+  buf.u32[base + 0] = handle;
+  buf.u32[base + 1] = packed;
+  buf.f32[base + 2] = modValue;
+  buf.f32[base + 3] = endTime;
+  buf.f32[base + 4] = fadeAt;
   buf.cursor += sizeWords;
 }

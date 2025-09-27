@@ -5,6 +5,7 @@
 #include "constants_layout.h"
 #include "wasm_log.h"
 #include "event_handler.h"
+#include "agent_mods.h"
 #include "raycasting.h"
 #include "agent_nav_utils.h"
 #include "nav_utils.h"
@@ -19,7 +20,7 @@ enum CorridorAction : uint32_t {
   SET_AND_RECALC_CORNERS = 3,
 };
 
-void process_events() {
+void process_events(float now) {
   if (!g_event_buffer.u32_base) return;
   uint32_t p = 0u;
   while (g_event_buffer.u32_base[p] != 0u) {
@@ -28,6 +29,22 @@ void process_events() {
     const uint16_t size = static_cast<uint16_t>((header >> 16) & 0xffffu);
 
     switch (type) {
+      case CMD_ADD_AGENT_MOD: {
+        if (size < 6) {
+          wasm_console_error("[WASM] CMD_ADD_AGENT_MOD: invalid size");
+          break;
+        }
+        const uint32_t agent_handle = g_event_buffer.u32_base[p + 1];
+        const uint32_t packed = g_event_buffer.u32_base[p + 2];
+        const int8_t property_id = static_cast<int8_t>(packed & 0xffu);
+        const int8_t op = static_cast<int8_t>((packed >> 8) & 0xffu);
+        const float mod_value = g_event_buffer.f32_base[p + 3];
+        const float end_time = g_event_buffer.f32_base[p + 4];
+        const float fade_at = g_event_buffer.f32_base[p + 5];
+
+        add_agent_mod(agent_handle, property_id, op, mod_value, fade_at, end_time, now);
+        break;
+      }
       case CMD_SET_CORRIDOR: {
         const uint32_t agent_idx = g_event_buffer.u32_base[p + 1];
         const uint32_t action = g_event_buffer.u32_base[p + 2];
@@ -102,13 +119,10 @@ void process_events() {
         agent_data.end_targets[agent_idx] = target_pos;
         agent_data.end_target_tris[agent_idx] = target_tri;
 
-        // First, try straight visibility corridor
-        //wasm_console_log("raycasting corridor");
         RaycastCorridorResult rc = raycastCorridor(agent_data.positions[agent_idx], target_pos, start_tri, target_tri);
         const bool hit = (rc.hitV1_idx != -1);
 
         if (!hit) {
-          // minimal raycast success context; re-enable if needed
           std::vector<int> raycastPolyCorridor;
           raycastPolyCorridor.reserve(rc.corridor.size());
           for (int i = static_cast<int>(rc.corridor.size()) - 1; i >= 0; --i) {
@@ -124,12 +138,9 @@ void process_events() {
           agent_data.num_valid_corners[agent_idx] = 1;
           agent_data.path_frustrations[agent_idx] = 0.0f;
           agent_data.last_visible_points_for_next_corner[agent_idx] = agent_data.positions[agent_idx];
-          //wasm_console_log("raycast success end");
         } else {
-          //wasm_console_log("finding path");
           findPathToDestination(g_navmesh, agent_idx, start_tri, target_tri, "cmdNavigateToNearbyTarget");
         }
-        //wasm_console_log("CMD_NAVIGATE_TO_NEARBY_TARGET ends");
         break;
       }
       default:

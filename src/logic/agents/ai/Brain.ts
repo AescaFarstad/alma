@@ -11,6 +11,7 @@ import { ChaseEnemyBC } from "./ChaseEnemyBC";
 import { MeleeAttackBC } from "./MeleeAttackBC";
 import { WanderDirBC } from "./WanderDirBC";
 import { WanderFloatBC } from "./WanderFloatBC";
+import { Zombie1MBC } from "./Zombie1MBC";
 
 export class Brain{
   constructor(public stack : Array<BrainCell>) {}
@@ -18,7 +19,7 @@ export class Brain{
 
 export interface BrainCell{
   typeId : BrainCellType;
-  update(gs:GameState, a : WAgent, dt : number):void;
+  update(gs:GameState, a : WAgent, dt : number):BrainCellResult;
 }
 
 export enum BrainCellType{
@@ -27,13 +28,21 @@ export enum BrainCellType{
   WANDERER_FLOAT = 2,
   CHASE_ENEMY = 3,
   MELEE_ATTACK = 4,
+  ZOMBIE_1,
+}
+
+
+export enum BrainCellResult{
+  FAIL = 0,
+  RUNNING = 1,
+  SUCCESS = 2,
 }
 
 /*
 Brain cells must not set state Standing if they are not on the navmesh.
 */
 
-function update_random_journey(gs: GameState, a: WAgent, dt: number): void {
+function update_random_journey(gs: GameState, a: WAgent, dt: number): BrainCellResult {
   if (gs.wasm_agents.states[a.idx] == AgentState.Standing) {
     const data = gs.wasm_agents;
     const navmesh = gs.navmesh;
@@ -46,6 +55,7 @@ function update_random_journey(gs: GameState, a: WAgent, dt: number): void {
     data.predicament_ratings[a.idx] = 0;
     data.states[a.idx] = AgentState.Traveling;
   }
+  return BrainCellResult.RUNNING;
 }
 
 export class RandomJourneyCell implements BrainCell{
@@ -54,7 +64,7 @@ export class RandomJourneyCell implements BrainCell{
 }
 
 const randomJourneryCell = new RandomJourneyCell(); //stateless, thus one is enough.
-export function createBrain(cellTypes: BrainCellType[]): Brain {
+export function createBrain(cellTypes: BrainCellType[], gs: GameState, wAgent: WAgent): Brain {
   const cells: BrainCell[] = [];
   for (const typeId of cellTypes) {
     switch (typeId) {
@@ -63,6 +73,9 @@ export function createBrain(cellTypes: BrainCellType[]): Brain {
         break;
       case BrainCellType.WANDERER_DIR:
         cells.push(new WanderDirBC());
+        break;
+      case BrainCellType.ZOMBIE_1:
+        cells.push(new Zombie1MBC());
         break;
       case BrainCellType.WANDERER_FLOAT:
         cells.push(new WanderFloatBC());
@@ -73,6 +86,9 @@ export function createBrain(cellTypes: BrainCellType[]): Brain {
       case BrainCellType.MELEE_ATTACK:
         cells.push(new MeleeAttackBC());
         break;
+    }
+    if (cells[cells.length - 1].hasOwnProperty('init')){
+      (cells[cells.length - 1] as any).init(gs, wAgent);
     }
   }
   return new Brain(cells);

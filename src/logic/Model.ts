@@ -102,7 +102,7 @@ export function update(gs: GameState, deltaTime: number): void {
     }
     gs.agentGrid.clearAndReindex(gs.agents);
     if (gs.agents.length > 1) {
-      updateAgentCollisions(gs.agents, gs.agentGrid);
+      updateAgentCollisions(gs.agents, gs.agentGrid, effectiveDeltaTime);
     }
 
     for (const agent of gs.wagents) {

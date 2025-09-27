@@ -4,7 +4,7 @@ import { GameState } from "../../GameState";
 import { WAgent } from "../../WAgent";
 import { AgentState, STUCK_DANGER_1 } from "../Agent";
 import { Agents, INDEX_BITS, INDEX_MASK } from "../Agents";
-import { BrainCell, BrainCellType } from "./Brain";
+import { BrainCell, BrainCellResult, BrainCellType } from "./Brain";
 
 let desired_look : Point2 = { x: 0, y: 0 };
 let my_pos : Point2 = { x: 0, y: 0 };
@@ -14,58 +14,56 @@ export class MeleeAttackBC implements BrainCell{
 
   public static range : number = 7;
   public static attack_angle : number = Math.PI / 4;
-  public static attack_hit_delay : number = 0.3;
+  public static attack_hit_delay : number = 0.18;
+  public static movement_allowed_delay : number = .5;
   public static attack_duration : number = 1;
   public static damage : number = 10;
 
   private attack_started_at : number = 0;
   private attack_hit_done : boolean = false;
 
-  init(gs: GameState, a: WAgent, enemyIdx: number): void {
-    this.attack_started_at = gs.gameTime;
-    this.attack_hit_done = false;
-    gs.wasm_agents.cooldown[a.idx] = gs.gameTime + MeleeAttackBC.attack_duration;
-  }
-
-  update(gs: GameState, a: WAgent, dt: number): void {
+  update(gs: GameState, a: WAgent, dt: number): BrainCellResult {
     const data = gs.wasm_agents;
     const handle = data.target[a.idx];
-    if (handle === 0 || data.states[a.idx] == AgentState.Escaping){
-      data.target[a.idx] = 0;
-      a.brain.stack.pop();
-      return;
+    if (handle === 0){
+      return BrainCellResult.FAIL;
     }
     const enemyIdx = handle & INDEX_MASK;
     const gen = handle >>> INDEX_BITS;
     if (gen !== data.generation[enemyIdx]){
       data.target[a.idx] = 0;
-      a.brain.stack.pop();
-      return;
+      return BrainCellResult.FAIL;
     }
 
     set(my_pos, data.positions[a.idx * 2], data.positions[a.idx * 2 + 1]);
-    set(enemy_pos, data.positions[enemyIdx * 2], data.positions[enemyIdx * 2 + 1]);
-    const dSq = distance_sq(my_pos, enemy_pos);
-    if (dSq > MeleeAttackBC.range * MeleeAttackBC.range){
-      a.brain.stack.pop();
-      return;
-    }
-
     set(desired_look, data.positions[enemyIdx * 2] - my_pos.x, data.positions[enemyIdx * 2 + 1] - my_pos.y);
     const lookDiff = look_at(data, a, desired_look, dt);
-    if (lookDiff > MeleeAttackBC.attack_angle) return;
+    if (lookDiff > MeleeAttackBC.attack_angle) return BrainCellResult.FAIL;
 
-    if (data.cooldown[a.idx] < gs.gameTime && this.attack_hit_done){
+    if (data.cooldown[a.idx] < gs.gameTime){
       this.attack_started_at = gs.gameTime;
       data.cooldown[a.idx] = gs.gameTime + MeleeAttackBC.attack_duration;
       this.attack_hit_done = false;
+      data.states[a.idx] = AgentState.Standing;
     }
 
     const attackTimePassed = gs.gameTime - this.attack_started_at;
     if (attackTimePassed > MeleeAttackBC.attack_hit_delay && !this.attack_hit_done){
-      this.attack_hit_done = true;
-      damage_agent(data, enemyIdx, MeleeAttackBC.damage, gs.gameTime);
+      if (attackTimePassed < MeleeAttackBC.attack_duration){
+        this.attack_hit_done = true;
+        set(enemy_pos, data.positions[enemyIdx * 2], data.positions[enemyIdx * 2 + 1]);
+        const dSq = distance_sq(my_pos, enemy_pos);
+        if (dSq > MeleeAttackBC.range * MeleeAttackBC.range)
+          return BrainCellResult.FAIL;
+        damage_agent(data, enemyIdx, MeleeAttackBC.damage, gs.gameTime);
+      }
     }
+
+    return BrainCellResult.RUNNING;
+  }
+
+  public can_move(gs: GameState, a: WAgent): boolean {
+    return gs.gameTime - this.attack_started_at > MeleeAttackBC.movement_allowed_delay;
   }
 }
 

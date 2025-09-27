@@ -17,7 +17,7 @@ constexpr uint32_t GENERATION_MASK = (1u << GENERATION_BITS) - 1u;
 enum AgentState : uint8_t {
   Standing,
   Traveling,
-  Escaping,
+  Escaping
 };
 
 // Note: Navmesh data structures are now defined in navmesh.h
@@ -94,10 +94,6 @@ struct AgentGridData {
   std::vector<uint16_t> cell_data;
   std::vector<uint32_t> cell_offsets;
   std::vector<uint16_t> cell_counts;
-};
-
-struct BoundingBox {
-  float minX, minY, maxX, maxY;
 };
 
 extern AgentSoA agent_data;

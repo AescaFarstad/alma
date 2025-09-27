@@ -1,7 +1,6 @@
 <template>
   <div class="time-controls">
   <span class="current-timescale">{{ currentTimeScaleDisplay }}x</span>
-  <button @click="queueTickOnceCommand()" class="tick-button">Tick</button>
   <button
     v-for="control in timeControlScales"
     :key="control.label"
@@ -10,6 +9,7 @@
   >
     {{ control.label }}
   </button>
+  <button @click="queueTickOnceCommand()" class="tick-button">Tick</button>
   </div>
 </template>
 

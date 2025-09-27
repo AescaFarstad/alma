@@ -9,16 +9,17 @@ export class AgentConfigs {
   static readonly soldier1 = {
     proto: 1,
     coordinate: { x: 0, y: 0 },
-    accel: 150,
+    accel: 200,
     resistance: 0.997,
     maxFrustration: 14,
     intelligence: 1,
     arrivalDesiredSpeed: 0.05,
     arrivalThresholdSq: 25,
     display: "character_brown_white",
-    lookSpeed: 30,
+    lookSpeed: 10,
     maxSpeed: 217,
     brainCells: [BrainCellType.RANDOM_JOURNEY],
+    weight: 2,
   } as const;
 
   static readonly zombie1 = {
@@ -31,9 +32,9 @@ export class AgentConfigs {
     arrivalDesiredSpeed: 0.05,
     arrivalThresholdSq: 25,
     display: "character_black_green",
-    lookSpeed: 30,
+    lookSpeed: 10,
     maxSpeed: 217,
-    brainCells: [BrainCellType.WANDERER_DIR],
+    brainCells: [BrainCellType.ZOMBIE_1],
     team: 1,
   } as const;
 
@@ -47,7 +48,7 @@ export class AgentConfigs {
     arrivalDesiredSpeed: 0.05,
     arrivalThresholdSq: 25,
     display: "character_black_red",
-    lookSpeed: 30,
+    lookSpeed: 10,
     maxSpeed: 217,
     brainCells: [BrainCellType.WANDERER_FLOAT],
   } as const;
@@ -62,7 +63,7 @@ export class AgentConfigs {
     arrivalDesiredSpeed: 0.05,
     arrivalThresholdSq: 25,
     display: "character_black_green",
-    lookSpeed: 30,
+    lookSpeed: 10,
     maxSpeed: 217,
     brainCells: [BrainCellType.WANDERER_DIR],
   } as const;

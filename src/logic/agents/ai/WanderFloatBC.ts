@@ -3,7 +3,7 @@ import { GameState } from "../../GameState";
 import { WAgent } from "../../WAgent";
 import { AgentState, STUCK_DANGER_1 } from "../Agent";
 import { cmdSetCorridor, CorridorAction } from "../EventHandler";
-import { BrainCell, BrainCellType } from "./Brain";
+import { BrainCell, BrainCellResult, BrainCellType } from "./Brain";
 
 let corridor : number[] = [-2, -2];
 let optionsPoly: number[] = [];
@@ -13,9 +13,9 @@ let triAreas: number[] = [];
 export class WanderFloatBC implements BrainCell{
 
   typeId = BrainCellType.WANDERER_FLOAT;
-  update(gs: GameState, a: WAgent, dt: number): void {
+  update(gs: GameState, a: WAgent, dt: number): BrainCellResult {
     if (gs.wasm_agents.states[a.idx] !== AgentState.Standing && 
-        gs.wasm_agents.stuck_ratings[a.idx] < STUCK_DANGER_1) return;
+        gs.wasm_agents.stuck_ratings[a.idx] < STUCK_DANGER_1) return BrainCellResult.RUNNING;
     // Choose a neighboring walkable polygon weighted by edge length
     const navmesh = gs.navmesh;
     const data = gs.wasm_agents;
@@ -46,7 +46,7 @@ export class WanderFloatBC implements BrainCell{
       }
     }
 
-    if (optionsPoly.length === 0) return;
+    if (optionsPoly.length === 0) return BrainCellResult.FAIL;
 
     const r = seededRandom(gs.rngSeedW); gs.rngSeedW = r.newSeed;
     let pick = r.value * totalW;
@@ -72,9 +72,9 @@ export class WanderFloatBC implements BrainCell{
       data.end_targets[a.idx * 2] = first.x;
       data.end_targets[a.idx * 2 + 1] = first.y;
       data.end_target_tris[a.idx] = first.tri;
-    cmdSetCorridor(gs.wasm_agents.events, a.idx, corridor, CorridorAction.SET_AND_STRAIGHT_CORNER);
-    gs.wasm_agents.states[a.idx] = AgentState.Traveling;
-      return;
+      cmdSetCorridor(gs.wasm_agents.events, a.idx, corridor, CorridorAction.SET_AND_STRAIGHT_CORNER);
+      gs.wasm_agents.states[a.idx] = AgentState.Traveling;
+      return BrainCellResult.RUNNING;
     }
 
     // Fallback: pick in neighbor-of-neighbor poly, up to 5 attempts, then recalc corners in WASM
@@ -99,7 +99,7 @@ export class WanderFloatBC implements BrainCell{
       }
     }
 
-    if (optionsPoly.length === 0) return; // skip turn this frame
+    if (optionsPoly.length === 0) return BrainCellResult.FAIL; // skip turn this frame
 
     // Weighted pick among neighbor-of-neighbor polys
     const r2 = seededRandom(gs.rngSeedW); gs.rngSeedW = r2.newSeed;
@@ -111,7 +111,7 @@ export class WanderFloatBC implements BrainCell{
     }
 
     const second = tryFindPointInPoly(gs, nextPoly2, curX, curY, 5, MIN_DIST);
-    if (!second) return; // skip turn this frame
+    if (!second) return BrainCellResult.FAIL; // skip turn this frame
 
     corridor.length = 0;
     corridor.push(nextPoly2, nextPoly, curPoly);
@@ -120,6 +120,7 @@ export class WanderFloatBC implements BrainCell{
     data.end_target_tris[a.idx] = second.tri;
     cmdSetCorridor(gs.wasm_agents.events, a.idx, corridor, CorridorAction.SET_AND_RECALC_CORNERS);
     gs.wasm_agents.states[a.idx] = AgentState.Traveling;
+    return BrainCellResult.RUNNING;
   }
 }
 

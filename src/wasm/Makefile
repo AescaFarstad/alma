@@ -34,7 +34,8 @@ SRCS = main.cpp \
      wasm_impulse.cpp \
      range_view.cpp \
      event_buffer.cpp \
-     event_handler.cpp
+     event_handler.cpp \
+     agent_mods.cpp
 
 OBJDIR = ../../temp
 # Build all object files into OBJDIR to keep paths consistent

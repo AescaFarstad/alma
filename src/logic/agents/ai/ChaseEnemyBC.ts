@@ -5,19 +5,16 @@ import { WAgent } from "../../WAgent";
 import { AgentState } from "../Agent";
 import { Agents, INDEX_BITS, INDEX_MASK } from "../Agents";
 import { cmdNavigateToNearbyTarget, cmdSetCorridor, CorridorAction } from "../EventHandler";
-import { BrainCell, BrainCellType } from "./Brain";
+import { BrainCell, BrainCellResult, BrainCellType } from "./Brain";
 import { MeleeAttackBC } from "./MeleeAttackBC";
 
-export function try_start_chasing_enemy(gs: GameState, a: WAgent): boolean {
+export function try_start_chasing_enemy(gs: GameState, a: WAgent): number {
   const handle = gs.wasm_agents.nearest_enemy[a.idx];
-  if (handle === 0) return false;
+  if (handle === 0) return 0;
   const enemyIdx = handle & INDEX_MASK;
   const gen = handle >>> INDEX_BITS;
-  if (gen !== gs.wasm_agents.generation[enemyIdx]) return false;
-  const chase = new ChaseEnemyBC();
-  chase.init(gs, a, handle);
-  a.brain.stack.push(chase);
-  return true;
+  if (gen !== gs.wasm_agents.generation[enemyIdx]) return 0;
+  return handle;
 }
 
 const empty_corridor : number[] = [];
@@ -40,23 +37,20 @@ export class ChaseEnemyBC implements BrainCell{
     cmdNavigateToNearbyTarget(gs.wasm_agents.events, a.idx);
   }
 
-  update(gs: GameState, a: WAgent, dt: number): void {
+  update(gs: GameState, a: WAgent, dt: number): BrainCellResult {
     const data = gs.wasm_agents;
-    if (data.states[a.idx] == AgentState.Escaping || data.current_tris[a.idx] === -1){ return; }
     const handle = data.target[a.idx];
     if (handle === 0){
       data.states[a.idx] = AgentState.Standing;
       data.target[a.idx] = 0;
-      a.brain.stack.pop();
-      return;
+      return BrainCellResult.FAIL;
     }
     const enemyIdx = handle & INDEX_MASK;
     const gen = handle >>> INDEX_BITS;
     if (gen !== data.generation[enemyIdx] || gs.gameTime > this.loseInterestAt || data.predicament_ratings[a.idx] > 10){
       data.states[a.idx] = AgentState.Standing;
       data.target[a.idx] = 0;
-      a.brain.stack.pop();
-      return;
+      return BrainCellResult.FAIL;
     }
 
     if (gs.gameTime - this.lastSwitch > ChaseEnemyBC.switch_interval){
@@ -96,10 +90,12 @@ export class ChaseEnemyBC implements BrainCell{
     const posDiffY = data.positions[a.idx * 2 + 1] - data.positions[enemyIdx * 2 + 1];
     const distSq = posDiffX * posDiffX + posDiffY * posDiffY;
     if (distSq < MeleeAttackBC.range * MeleeAttackBC.range * 0.25){
-      const melee = new MeleeAttackBC();
-      melee.init(gs, a, enemyIdx);
-      a.brain.stack.push(melee);
-      return;
+      return BrainCellResult.SUCCESS;
     }
+    return BrainCellResult.RUNNING;
+  }
+
+  public renew_interest(gs: GameState): void {
+    this.loseInterestAt = gs.gameTime + 5;
   }
 }

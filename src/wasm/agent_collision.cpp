@@ -4,17 +4,17 @@
 #include "math_utils.h"
 #include <limits>
 
-const float AGENT_RADIUS = 2.5f;
-const float PUSH_FORCE = 10.0f;
-const float ESCAPING_WEIGHT_MULTIPLIER = 20.0f;
+const float AGENT_DIAMETER = 4.0f;
+const float PUSH_FORCE = 1000.0f;
+const float WEIGHT_MULTIPLIER[3] = {1.0f, 3.0f, 40.0f};
 
 extern AgentSoA agent_data;
 extern AgentGridData agent_grid;
 
 static std::vector<float> distancesSq;
 
-void update_agent_collisions(int num_agents) {
-  const float min_distance_sq = (AGENT_RADIUS * 2.0f) * (AGENT_RADIUS * 2.0f);
+void update_agent_collisions(int num_agents, float dt) {
+  const float min_distance_sq = AGENT_DIAMETER * AGENT_DIAMETER;
 
   for (int cell_index = 0; cell_index < agent_grid.cell_counts.size(); ++cell_index) {
     int count = agent_grid.cell_counts[cell_index];
@@ -69,16 +69,16 @@ void update_agent_collisions(int num_agents) {
           Point2 delta = pos1 - pos2;
           Point2 push_vec = delta / dist;
 
-          float overlap = (AGENT_RADIUS * 2.0f) - dist;
+          float overlap = AGENT_DIAMETER - dist;
           float force = overlap * PUSH_FORCE;
 
-          float weight1 = (agent_data.states[agent_index1] == AgentState::Escaping) ? ESCAPING_WEIGHT_MULTIPLIER : 1.0f;
-          float weight2 = (agent_data.states[agent_index2] == AgentState::Escaping) ? ESCAPING_WEIGHT_MULTIPLIER : 1.0f;
+          float weight1 = WEIGHT_MULTIPLIER[agent_data.states[agent_index1]];
+          float weight2 = WEIGHT_MULTIPLIER[agent_data.states[agent_index2]];
 
           float total_weight = weight1 + weight2;
 
-          Point2 push_force1 = push_vec * (force * (weight2 / total_weight));
-          Point2 push_force2 = push_vec * (-force * (weight1 / total_weight));
+          Point2 push_force1 = push_vec * (force * (weight2 / total_weight) * dt);
+          Point2 push_force2 = push_vec * (-force * (weight1 / total_weight) * dt);
 
           agent_data.velocities[agent_index1] += push_force1;
           agent_data.velocities[agent_index2] += push_force2;

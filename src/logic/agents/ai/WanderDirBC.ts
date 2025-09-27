@@ -6,7 +6,7 @@ import { WAgent } from "../../WAgent";
 import { AgentState } from "../Agent";
 import { cmdSetCorridor, CorridorAction } from "../EventHandler";
 import { NavConst } from "../NavConst";
-import { BrainCell, BrainCellType } from "./Brain";
+import { BrainCell, BrainCellResult, BrainCellType } from "./Brain";
 import { try_start_chasing_enemy } from "./ChaseEnemyBC";
 
 let raycastPoint : Point2 = { x: 0, y: 0 };
@@ -14,11 +14,10 @@ let raycastEndPoint : Point2 = { x: 0, y: 0 };
 let polyCorridor : number[] = [];
 
 export class WanderDirBC implements BrainCell{
-
   typeId = BrainCellType.WANDERER_DIR;
+
   private endAt: number = 0;
-  update(gs: GameState, a: WAgent, dt: number): void {
-    if (try_start_chasing_enemy(gs, a)) return;
+  update(gs: GameState, a: WAgent, dt: number): BrainCellResult {
     if (gs.wasm_agents.states[a.idx] === AgentState.Standing || gs.gameTime >= this.endAt){
       const data = gs.wasm_agents;
       const navmesh = gs.navmesh;
@@ -33,10 +32,9 @@ export class WanderDirBC implements BrainCell{
 
       const maxDist = 150;
       set(raycastEndPoint, raycastPoint.x + dx * maxDist, raycastPoint.y + dy * maxDist);
-      // Debug: raycast segment (black)
       // sceneState.addDebugLine({ x: raycastPoint.x, y: raycastPoint.y }, { x: raycastEndPoint.x, y: raycastEndPoint.y }, ACBLACK);
       const rc = raycastCorridor(navmesh, raycastPoint, raycastEndPoint, data.current_tris[a.idx]);
-      if (!rc.corridor || rc.corridor.length === 0) return;
+      if (!rc.corridor || rc.corridor.length === 0) return BrainCellResult.FAIL;
 
       // Poly corridor from tri corridor, assembled backwards (end->start) and dedup consecutive
       polyCorridor.length = 0;
@@ -47,7 +45,7 @@ export class WanderDirBC implements BrainCell{
           polyCorridor.push(poly);
         }
       }
-      if (polyCorridor.length < 1) return;
+      if (polyCorridor.length < 1) return BrainCellResult.FAIL;
 
       // End target = ray-wall intersection minus CORNER_OFFSET along ray
       const endTri = rc.corridor[rc.corridor.length - 1];
@@ -59,7 +57,6 @@ export class WanderDirBC implements BrainCell{
         const v2x = navmesh.vertices[rc.hitV2_idx * 2];
         const v2y = navmesh.vertices[rc.hitV2_idx * 2 + 1];
         // console.log(`hit edge: ${v1x.toFixed(2)}, ${v1y.toFixed(2)}, ${v2x.toFixed(2)}, ${v2y.toFixed(2)}`);
-        // Debug: hit edge (yellow)
         // sceneState.addDebugLine({ x: v1x, y: v1y }, { x: v2x, y: v2y }, ACYELLOW);
         const p = lineLineIntersect(
           raycastPoint.x, raycastPoint.y, raycastEndPoint.x, raycastEndPoint.y,
@@ -89,5 +86,6 @@ export class WanderDirBC implements BrainCell{
       cmdSetCorridor(gs.wasm_agents.events, a.idx, polyCorridor, CorridorAction.SET_AND_STRAIGHT_CORNER);
       data.states[a.idx] = AgentState.Traveling;
     }
+    return BrainCellResult.RUNNING;
   }
 }

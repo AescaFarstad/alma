@@ -7,6 +7,7 @@
 #include "agent_collision.h"
 #include <cstdint>
 #include "event_handler.h"
+#include "agent_mods.h"
 #include "event_buffer.h"
 #include "navmesh.h"
 #include "event_handler.h"
@@ -17,10 +18,10 @@ extern EventBuffer g_event_buffer;
 extern int g_selected_wagent_idx; // declared in main.cpp
 
 void Model::update_simulation(float dt, int active_agents) {
-  process_events();
-  g_event_buffer.begin_frame();
-
   sim_time += dt;
+  process_events(sim_time);
+  g_event_buffer.begin_frame();
+  update_agent_mods(sim_time);
 
   for (int i = 0; i < active_agents; ++i) {
     if (agent_data.is_alive[i]) {
@@ -31,7 +32,7 @@ void Model::update_simulation(float dt, int active_agents) {
   }
 
   clear_and_reindex_grid(active_agents);
-  update_agent_collisions(active_agents);
+  update_agent_collisions(active_agents, dt);
 
   // Emit selected agent's corridor event at end of simulation
   if (g_selected_wagent_idx >= 0 && g_selected_wagent_idx < active_agents) {

@@ -13,6 +13,7 @@
 #include "model.h"
 #include "event_buffer.h"
 #include "path_corridor.h"
+#include "agent_mods.h"
 
 // Global state for our agent simulation
 AgentSoA agent_data;
@@ -105,6 +106,9 @@ EMSCRIPTEN_KEEPALIVE void init_agents(uint8_t* sharedBuffer, int maxAgents, uint
 
   // Set zero/invalid defaults across all agent data
   initialize_agent_defaults();
+
+  // Initialize mods system
+  initialize_agent_mods(maxAgents);
 }
 
 /**

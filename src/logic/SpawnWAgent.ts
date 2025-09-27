@@ -14,21 +14,23 @@ export function createWasmAgent(
   const prototype = new Agent();
   Object.assign(prototype, agent);
 
+  if (prototype.resistance >= 1) prototype.maxSpeed = 0;
+  else if (prototype.resistance <= 0) prototype.maxSpeed = Infinity;
+  else prototype.maxSpeed = prototype.accel / -Math.log(1 - prototype.resistance);
+
+  let wAgent = createWasmAgentFromPrototype(gs, prototype);
+  if (!wAgent) {
+    return null;
+  }
+
   if (agent.brainCells) {
-    prototype.brain = createBrain(agent.brainCells as BrainCellType[]);
-  } else if (agent.brain) {
-    const cellTypes = agent.brain.stack.map(cell => cell.typeId);
-    prototype.brain = createBrain(cellTypes);
+    wAgent.brain = createBrain(agent.brainCells as BrainCellType[], gs, wAgent);
   } else {
     console.error("Agent configuration must provide either 'brain' or 'brainCells'.", agent);
     return null;
   }
 
-  if (prototype.resistance >= 1) prototype.maxSpeed = 0;
-  else if (prototype.resistance <= 0) prototype.maxSpeed = Infinity;
-  else prototype.maxSpeed = prototype.accel / -Math.log(1 - prototype.resistance);
-
-  return createWasmAgentFromPrototype(gs, prototype);
+  return wAgent;
 }
 
 // Creates a WASM-backed agent from a fully specified Agent prototype.
@@ -87,7 +89,7 @@ export function createWasmAgentFromPrototype(gs: GameState, agent: Agent): WAgen
   agents.frame_ids[idx] = frameId;
 
   // Create WAgent, assign the new index, return WAgent
-  const wAgent = new WAgent(idx, agent.display, new Brain([...agent.brain.stack]));
+  const wAgent = new WAgent(idx, agent.display);
   gs.wagents.push(wAgent);
 
   return wAgent;

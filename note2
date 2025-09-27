@@ -401,3 +401,117 @@ damage_agent in src/logic/agents/ai/MeleeAttackBC.ts should increment the agent'
 At the end of the model update killed agents must be removed from wagents array.
 A list of killed agents must be maintained.
 Instead of passing teh number of agents to c++ update, ts should pass start index and end index of agnets. Between these two indecies some dead agents may be present, but c++ model should filter those out based on is_alive property. ts simply passes the 
+
+delayed reaction
+chasing ahead of the enemy
+circling around teammates
+
+accelModifier = 1
+
+agent -> mod mapping
+
+mods {
+  agent handle
+  original value
+  recalcAt
+  mults[] //
+  times[]
+  lerps[]
+  type[]
+}
+
+max speed may decrease becasue injured, debuffed, 
+
+
+want to run - add weight and accel
+subtract stamina
+
+injured - add -
+
+if no space - consume least significant multiplier
+
+collect global state 
+
+
+update_agent_mods could be templated
+
+
+okay, let me explain how to actually do this.
+init cursor at 0 and run loop
+in this loop you take the property at the cursor and aggregate it over the remaining array until you encounter a different property or end. Then apply the result to the agent.
+then advance from the next position where the agregation stopped.
+
+Note that the items may expire, in which case they should not be agregated, but the iteration should continue in case there is another item with that property later in the array.
+
+The items must be inserted based on the property value when initially added. in the increasing order,
+
+[1,1,1,2,2,3,0] [1,0,9,9,9,9,0]
+add type 1
+add type 2
+add type 2
+add type 2
+
+
+
+
+i.e. we have properties [1,1,1,2,2,3,0], expiration times [0 (expired), 0, 35, 9, 4, 91, 0]
+then we add another mod with property 1. We see that the first slot is expired, we take note of that. We see that the second slot is expired. we see that the third slot is also property 1, so we can write the new mod in the previous expired slot. No we have properties [1,1,1,2,2,3,0], end times [0, 112, 35, 9, 4, 91, 0]
+then we add another mod with property 2. we see the first empty slot. but the second slot is property 1, we can't put 2 before one, so we continue. we go past 2s until we find an empty slot or the higher property. We encounter property 3. we must put 2 before 3, so we insert it there, moving 3 to the end. No we have [1,1,1,2,2,2,3]
+Then we add another property 2. We see that even though we should put 2 before 3, there is no space to move 3. However there was a blank slot before property 1. We erase that blank slot by shifting the rest and free space for 2 where it belongs. [1,1,2,2,2,2,3]
+Now if another 2 is added, then we would have switched to the extended mod before entering that function. If we entered, then we have ability to push additional mods into the vector. Since we have to free slots, we insert 2 at the end of the rest of the 2s and the result becomes [1,1,2,2,2,2,2,3])
+
+Before you write any code, reflect back teh idea to me and clarify ambiguities.
+
+
+if we overwrite expired slot, we should take the correct base value from it (because the value in agent data might still be modified i.e. there exists exactly one expired mod for the property)
+if we overwrite the expired slot of a foreign property, we should restore its base value to the agent data (the recompute will change it back if other mods for that property exist)
+
+extended arrays should compact back to regular ones
+
+recompute_for_agent should return the number of active mods.
+if we are using extendedMod, 
+  if the number of active ones is <= MODS_MAX_SLOTS_PER_AGENT / 2, then we should copy them to the smaller Mod again.
+  else if the number of active ones is < vector length / 1.5 then we need to compact the mods.
+
+
+  I wonder if this code would be better of if I used AoS instead of SoA for properties of Mod and ModExtended?
+
+
+expired slot - endTime != 0 && endTime <= now
+empty slot - endTime == 0
+
+create try_insert_sorted_inplace_simplified
+it is going to do the exact same job but in a more straighforward way:
+
+first pass - iterate through mods and convert all expired slots into empty slots. Restore the corresponding base values if propery doesn't match the type. Collect the propery's original base value if it exists.
+
+then if the original base value was not found - fetch it from the agent's data. Now we're guaranteed to have originalValue.
+
+Iterate over mods the second time.
+Key decisions happen either 
+1) when we encounter the given property id or any id higher than it. 
+2) we encounter empty slot.
+Case we encounter the given property id or any id higher than it:
+  if we already have an empty_slot ready - calculate how many items need to be shifter left in order to bring the slot next to the current index, shift them, and insert the modifier. Done.
+  else
+    if type == property_id
+      insert_here = idx
+    else if insert_here == -1 -> insert_here = idx
+
+Case we encounter empty slot:
+  if current type == property_id -> insert here. Done.
+  else
+    if insert_here == -1
+      empty_slot = idx
+    else
+      calculate how many items need to be shifter right to bring current index to insert_here ,shift them, insert mod. Done.
+
+if we got to the end of it -> no space for mod.
+
+Tests should also run this function along with the original - to compare.
+
+
+
+
+
+[3,4,0][3,4,0] add 1

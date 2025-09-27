@@ -47,6 +47,10 @@ september 1-7
     chase, melee attack
 september 7-14
     debugging navigation out of bounds, tinting, dead agents
+september 21
+    multi brain cell for zombies, collision respects dt, mods system design
+september 27
+    mods
 
 
 navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
@@ -55,63 +59,24 @@ navTriIndex doesn't affect much. ~the same at 512. STalls at 1024 at 10k+
 
 manual edits to data processing - a106560244 = roof or sub polygon hole
 w51155804 Ma1023116080 simply overlap
-some have "inscribedCenter":null
-
 w234872170 sole linestring
-
 Ma1036526660, Ma27375097540, Ma27375097480, Ma27375097520, Ma27375097500 unite into one
 
 
-8 fps -> 60 fps simply by removing memory allocations and reusing text nodes
-
-
 don't include sentinels in indexes
-
 why does main.cpp allocate. does it ever clear?
-
-
-
-optimise corner finding
-
-dual_funnel tri is incorrect because it is set before teh offsetting fo the corner
-
 try corner offsetting during data generation
-
 ts random generates garbage
-
+math utils generate garbage
+create proper seeded random
 
 floater brain should not reset if we are in the unwalkable territory
-there are convex pairs of triangles that did not form polygons
 
-
-1348, 1125
-
-
-
-
-The outer boundary needs to be more complex:
-Split the boundary edge that's facing the central area into SAW_TOOTH_COUNT_X * 2 or SAW_TOOTH_COUNT_Y * 2 parts with additional vertices.
-Every odd vertex must be moved towards the central area by SAW_TOOTH_DEPTH.
-Even vertices remain at the edge. This will give the outer boundary a saw-shaped inner surface which should help break down the larger triangles near the boundary.
-
-
-collision resolution assigns the nearest enemy
-wander cells rect to nearest enemy
-ChaseEnemy
-  set as target
-  stay within range
-  update path when target moves
   loose target if times passed and it doesn't raycast or if it is too far
   desireToPursue decreasess with distance and lack of vision
 
-on frame:
-  if target is in my poly - update and pursue
-  if target is not in my poly
-    find path to target and remember the poly
-    if target's poly changes - find another path, set find path cooldown
-
-
-
+quicker pathfinding for short distances
+truncate pathfinding for long distances
 
 
 When I'm targeted
@@ -164,9 +129,7 @@ SpatialStats
   polygonOwnership [2] //per polygon, decreaes with time, awarages with time, filled N agents per frame
   cellOwnership [2] //per spatial index cell
 
-
-
-last_damaged_at:float
+What if we don't re-add polygons if they G-score decreased by only a little?
 
 
 

@@ -8,16 +8,16 @@ import { distance_sq } from '../core/math';
  */
 
 // Configuration constants
-const AGENT_RADIUS = 2.5; // meters
-const PUSH_FORCE = 10.0;   // force multiplier
+const AGENT_DIAMETER = 4; // meters
+const PUSH_FORCE = 1000.0;   // force multiplier
 const ESCAPING_WEIGHT_MULTIPLIER = 20.0;
 
 /**
  * Process collisions using spatial grid optimization
  * Only agents in the same grid cell are checked for collisions
  */
-export function updateAgentCollisions(agents: Agent[], grid: AgentGrid): void {
-  const minDistance = AGENT_RADIUS * 2;
+export function updateAgentCollisions(agents: Agent[], grid: AgentGrid, deltaTime: number): void {
+  const minDistance = AGENT_DIAMETER;
   const minDistanceSq = minDistance * minDistance;
   const cellData = grid.cellData;
   const cellCounts = grid.cellCounts;
@@ -56,7 +56,7 @@ export function updateAgentCollisions(agents: Agent[], grid: AgentGrid): void {
           const weight2 = agent2.state === AgentState.Escaping ? ESCAPING_WEIGHT_MULTIPLIER : 1.0;
           const totalWeight = weight1 + weight2;
 
-          const pushMagnitude = depth * PUSH_FORCE;
+          const pushMagnitude = depth * PUSH_FORCE * deltaTime;
           const force1 = pushMagnitude * (weight2 / totalWeight);
           const force2 = pushMagnitude * (weight1 / totalWeight);
 
